@@ -454,9 +454,11 @@ function addChat(m) {
   while ($('clog').children.length > 8) $('clog').firstChild.remove();
 }
 function openChat() {
-  if (!showChat) return; chatOpen = true; releaseAll(); $('cin').hidden = false; $('ctx').focus(); renderChatChan();
+  if (!showChat || !playing) return; chatOpen = true; releaseAll(); $('cin').hidden = false; $('cbtn').hidden = true; $('ctx').focus(); renderChatChan();
 }
-function closeChat() { chatOpen = false; $('cin').hidden = true; $('ctx').value = ''; $('ctx').blur(); try { window.focus(); } catch (e) {} }
+function closeChat() { chatOpen = false; $('cin').hidden = true; $('cbtn').hidden = !playing; $('ctx').value = ''; $('ctx').blur(); try { window.focus(); } catch (e) {} }
+$('cbtn').addEventListener('click', e => { e.preventDefault(); openChat(); });
+setInterval(() => { if (!chatOpen) $('cbtn').hidden = !playing || !showChat; }, 300);
 function renderChatChan() { if (chatChan === 1 && !partyCode) chatChan = 0; $('cch').textContent = chatChan ? 'Party' : 'All'; $('cch').disabled = !partyCode; }
 $('cch').addEventListener('click', () => { chatChan = partyCode ? 1 - chatChan : 0; renderChatChan(); $('ctx').focus(); });
 $('ctx').addEventListener('keydown', e => {
