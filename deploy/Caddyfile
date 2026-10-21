@@ -1,0 +1,6 @@
+# Replace play.example.com with your own domain.
+# Caddy gets and renews the HTTPS certificate by itself.
+play.example.com {
+	encode gzip
+	reverse_proxy 127.0.0.1:8080
+}

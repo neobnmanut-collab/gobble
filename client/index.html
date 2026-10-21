@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Gobble</title>
+<meta name="description" content="Eat, grow and split in a shared arena.">
+<meta name="theme-color" content="#000000">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&display=swap">
+<style>
+[hidden]{display:none!important}
+
+/* Full-screen arena canvas; HUD cards float in the corners, clear of safe areas */
+:root{--bg:#000;--surface:#141414;--ink:#f2f2f2;--muted:#9a9a9a;--line:#2c2c2c;--acc:#2aa58b;--warn:#e0a02e;--font:"Bricolage Grotesque",system-ui,-apple-system,"Segoe UI",sans-serif;color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--ink);font-family:var(--font);user-select:none;-webkit-user-select:none}
+#c{position:fixed;inset:0;width:100%;height:100%;touch-action:none;display:block}
+.hud{position:fixed;pointer-events:none;background:color-mix(in srgb,var(--surface) 82%,transparent);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:.95rem;font-variant-numeric:tabular-nums}
+#hud{left:calc(env(safe-area-inset-left,0px) + 12px);top:calc(env(safe-area-inset-top,0px) + 12px);display:grid;grid-template-columns:auto auto;column-gap:10px;align-items:baseline}
+#hud b{font-size:1.3rem}
+#hud .k{color:var(--muted);font-size:.8rem;text-transform:uppercase;letter-spacing:.06em}
+#ct{grid-column:1/-1;color:var(--muted);font-size:.8rem;margin-top:2px;max-width:220px}
+#ct:empty{display:none}
+#lbw{right:calc(env(safe-area-inset-right,0px) + 12px);top:calc(env(safe-area-inset-top,0px) + 12px);min-width:160px}
+#lbw h2{margin:0 0 4px;font-size:.8rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+#lb{margin:0;padding-left:1.6em;font-size:.85rem;display:flex;flex-direction:column;gap:1px}
+#lb li{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:170px}
+#lb li.me{font-weight:800;color:var(--acc)}
+#lb li.gap{list-style:none;color:var(--muted);margin-left:-1.6em;padding-left:1.6em}
+#mm{position:fixed;right:calc(env(safe-area-inset-right,0px) + 12px);bottom:calc(env(safe-area-inset-bottom,0px) + 12px);width:168px;height:168px;border-radius:10px;border:1px solid var(--line);background:color-mix(in srgb,var(--surface) 70%,transparent);pointer-events:none}
+.ov{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,var(--bg) 55%,transparent);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);padding:16px;z-index:5}
+#st{z-index:10}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:24px;width:min(92vw,370px);max-height:calc(100% - 16px);overflow:auto;display:flex;flex-direction:column;gap:12px}
+.card h1{margin:0;font-size:2.6rem;font-weight:800;letter-spacing:-.03em;line-height:1;text-wrap:balance}
+.card p{margin:0;color:var(--muted);line-height:1.4}
+.card input[type=text]{font:inherit;padding:10px 12px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+.card label{display:flex;gap:8px;align-items:flex-start;font-size:.9rem;cursor:pointer}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;font-variant-numeric:tabular-nums}
+.stats div{border:1px solid var(--line);border-radius:10px;padding:8px;display:flex;flex-direction:column;gap:2px}
+.stats span{font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.stats b{font-size:1.15rem}
+.nb{color:var(--warn);font-weight:800}
+.keys{display:flex;flex-wrap:wrap;gap:6px;font-size:.78rem;color:var(--muted)}
+.keys span{border:1px solid var(--line);border-radius:6px;padding:3px 7px}
+.keys kbd{font:inherit;font-weight:700;color:var(--ink)}
+button{font:700 1rem var(--font);cursor:pointer}
+.primary{padding:12px;border:0;border-radius:10px;background:var(--acc);color:#fff}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border:1px solid var(--line);border-radius:12px;background:var(--bg)}
+.seg button{padding:10px;border:0;border-radius:8px;background:transparent;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line)}
+#mbh{font-size:.8rem;margin-top:-4px}
+:focus-visible{outline:3px solid var(--warn);outline-offset:2px}
+#tc{position:fixed;right:calc(env(safe-area-inset-right,0px) + 14px);bottom:calc(env(safe-area-inset-bottom,0px) + 14px);display:none;flex-direction:column;gap:10px;z-index:4}
+#tc button{width:66px;height:66px;border-radius:50%;border:1px solid var(--line);background:color-mix(in srgb,var(--surface) 85%,transparent);color:var(--ink);touch-action:none}
+#tc button:active{background:var(--acc);color:#fff}
+.kr{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:.9rem}
+.kb{min-width:140px;padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-size:.9rem}
+.card input[type=range]{width:100%}
+#gear{position:fixed;left:calc(env(safe-area-inset-left,0px) + 12px);bottom:calc(env(safe-area-inset-bottom,0px) + 12px);z-index:6;padding:8px 12px;border-radius:10px;border:1px solid var(--line);background:color-mix(in srgb,var(--surface) 85%,transparent);color:var(--ink)}
+#pz{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 14px);transform:translateX(-50%);z-index:6;padding:10px 16px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+.card.wide{width:min(94vw,580px);gap:14px}
+.sh{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.x{width:36px;height:36px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+.sec{border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.sec h2{margin:0;font-size:.95rem}
+.hint{font-size:.78rem!important}
+.kg{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:6px}
+.kg .kr{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 6px 6px 10px}
+.kg .kb{min-width:104px;background:var(--surface)}
+.kb.wait{border-color:var(--acc);color:var(--acc)}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:.9rem;flex-wrap:wrap}
+.row input[type=range]{flex:1 1 140px;min-width:0}
+.row b{font-variant-numeric:tabular-nums;min-width:58px;text-align:right}
+.card select,.card input[type=number]{font:inherit;font-size:.9rem;padding:7px 9px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+.card input[type=number]{width:70px}
+.card input[type=checkbox]{width:18px;height:18px;accent-color:var(--acc)}
+.btns{display:flex;gap:10px}.btns>*{flex:1}
+@media (pointer:coarse){#tc{display:flex}#mm{right:auto;left:calc(env(safe-area-inset-left,0px) + 12px);bottom:calc(env(safe-area-inset-bottom,0px) + 62px);width:112px;height:112px}.keys{display:none}}
+@media (max-width:560px){#lbw{min-width:120px;font-size:.8rem}#lb li{max-width:120px}#pz{top:auto;bottom:calc(env(safe-area-inset-bottom,0px) + 14px)}}
+@media (prefers-reduced-motion:reduce){.ov{backdrop-filter:none}}
+
+#net{font-size:.85rem;color:var(--warn);margin:0}
+#pc{font-size:.8rem;color:var(--muted);margin:0;text-align:center}
+#go:disabled{opacity:.5;cursor:not-allowed}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<canvas id="mm"></canvas>
+<div class="hud" id="hud"><span class="k">Mass</span><b id="sc">0</b><span class="k">Best</span><b id="bs">0</b><span class="k">Rank</span><b id="rk">–</b><span class="k">Sector</span><b id="sec">–</b><div id="ct"></div></div>
+<div class="hud" id="lbw"><h2>Top orbs</h2><ol id="lb"></ol></div>
+<div id="tc"><button id="bsp">Split</button><button id="bds">2× Split</button><button id="bej">Eject</button><button id="bsw" hidden>Swap</button><button id="bfd" hidden>Feed</button></div>
+<div class="ov" id="ov"><div class="card">
+  <h1 id="ot">Gobble</h1>
+  <p id="os">Eat pellets, swallow orbs a quarter smaller than you, and steer clear of the spikes once you’re big.</p>
+  <div class="stats" id="sts" hidden><div><span>Peak mass</span><b id="s1">0</b></div><div><span>Swallowed</span><b id="s2">0</b></div><div><span>Survived</span><b id="s3">0:00</b></div></div>
+  <input type="text" id="nm" maxlength="12" placeholder="Your name" autocomplete="off">
+  <div class="seg" role="group" aria-label="Game mode"><button type="button" id="mSolo" aria-pressed="false">Solo</button><button type="button" id="mMulti" aria-pressed="true">Multibox</button></div>
+  <p id="mbh"></p>
+  <button class="primary" id="go">Play</button>
+  <p id="net" hidden></p>
+  <p id="pc"></p>
+  <div class="keys" id="keys"></div>
+</div></div>
+<button id="gear">⚙ Controls</button>
+<div class="ov" id="st" hidden><div class="card wide">
+  <div class="sh"><h1 style="font-size:1.6rem">Controls</h1><button class="x" id="cl2" aria-label="Close">✕</button></div>
+  <div class="sec"><h2>Keys</h2><p class="hint">Click a key, then press the new key or mouse button. Backspace clears it, Esc cancels.</p><div class="kg" id="kl"></div></div>
+  <div class="sec"><h2>Mouse buttons</h2>
+    <div class="row"><span>Left button</span><select id="mm0"></select></div>
+    <div class="row"><span>Right button</span><select id="mm2"></select></div>
+    <p class="hint">An action picked here takes over that button from the key list.</p></div>
+  <div class="sec"><h2>Rapid feed</h2>
+    <div class="row"><span>Time between shots</span><input type="range" id="rf" min="40" max="200" step="5"><b id="rfv"></b></div></div>
+  <div class="sec"><h2>Line splits</h2>
+    <label class="row"><span>Split as soon as a line key is pressed</span><input type="checkbox" id="lsi"></label>
+    <div class="row"><span>Splits per line split</span><input type="number" id="lsn" min="1" max="4" step="1"></div>
+    <label class="row"><span>Move again right after a line split</span><input type="checkbox" id="mal"></label>
+    <p class="hint">Horizontal and vertical line keys lock your orb onto a straight line through it. Fixed line locks it onto the spot under your mouse.</p></div>
+  <div class="sec"><h2>Push splits</h2>
+    <div class="row"><span>Delay between splits</span><input type="range" id="pd" min="0" max="200" step="5"><b id="pdv"></b></div>
+    <p class="hint">Used by double, triple, quad and line splits. At 0 ms every split happens at once.</p></div>
+  <div class="sec"><h2>Toggles</h2>
+    <label class="row"><span>Line keys toggle on and off instead of holding</span><input type="checkbox" id="ltg"></label>
+    <label class="row"><span>Rapid feed toggles on and off instead of holding</span><input type="checkbox" id="ftg"></label>
+    <p class="hint">This is an online game, so it keeps running while this panel is open. Your browser’s own shortcuts are blocked while you play.</p></div>
+  <div class="btns"><button class="kb" id="rs">Reset defaults</button><button class="primary" id="cl">Done</button></div>
+</div></div>
+<script src="net.js"></script>
+<script src="game.js"></script>
+</body>
+</html>

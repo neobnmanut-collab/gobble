@@ -1,0 +1,15 @@
+{
+  "name": "orb-arena-server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Multiplayer server for the orb arena game",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "test:load": "node test/load.js"
+  },
+  "engines": { "node": ">=18" },
+  "dependencies": {
+    "ws": "8.18.0"
+  }
+}

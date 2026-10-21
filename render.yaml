@@ -1,0 +1,15 @@
+# Render blueprint: one web service in Frankfurt that runs the game server and serves the game page.
+services:
+  - type: web
+    name: gobble
+    runtime: node
+    region: frankfurt
+    plan: free            # free instances sleep after a while without visitors; switch to a paid plan to keep it always on
+    rootDir: server
+    buildCommand: npm ci --omit=dev
+    startCommand: node src/server.js
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
