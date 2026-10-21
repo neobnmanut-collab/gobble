@@ -1,14 +1,14 @@
 'use strict';
 // Every gameplay number lives here, so balance can be tuned without touching the game code.
 module.exports = {
-  WORLD: 10800,          // arena width and height
+  WORLD: 12000,          // arena width and height
   GRID: 100,             // pellet grid cell size
   TICK_HZ: 25,           // simulation steps per second
   SEND_EVERY: 1,         // send a world update every step (25 updates per second)
 
-  PELLETS: 2230,         // pellets kept on the map (same density as before on the smaller arena), each worth 14
+  PELLETS: 2750,         // pellets kept on the map, each worth 14
   PELLET_MASS: 14,
-  PELLET_REGROW: 120,    // pellets regrown per second, up to PELLETS
+  PELLET_REGROW: 150,    // pellets regrown per second, up to PELLETS
   SETTLED_EJECT_CAP: 6000, // ejected blobs that have stopped and lie on the map
 
   SPIKES: 32,
