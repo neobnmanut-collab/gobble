@@ -93,7 +93,7 @@ button{font:700 1rem var(--font);cursor:pointer}
 #chead{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 8px 6px 12px;border-bottom:1px solid var(--line);font-size:.8rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700}
 #cmin{padding:2px 8px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-size:.8rem;line-height:1.4}
 #clog{display:flex;flex-direction:column;gap:2px;height:170px;overflow-y:auto;padding:8px 10px;overscroll-behavior:contain}
-#clog:empty::before{content:"No messages yet. Say hi!";color:var(--muted);font-size:.85rem}
+#clog:empty::before{content:attr(data-empty);color:var(--muted);font-size:.85rem}
 .cm{font-size:.85rem;line-height:1.4;color:var(--ink);overflow-wrap:anywhere;user-select:text;-webkit-user-select:text;cursor:text}
 .ctag{font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;color:var(--acc);margin-right:5px;font-weight:700}
 #cin{display:flex;gap:6px;padding:8px;border-top:1px solid var(--line)}
@@ -119,56 +119,58 @@ button{font:700 1rem var(--font);cursor:pointer}
 <body>
 <canvas id="c"></canvas>
 <canvas id="mm"></canvas>
-<div class="hud" id="hud"><span class="k">Mass</span><b id="sc">0</b><span class="k">Best</span><b id="bs">0</b><span class="k">Rank</span><b id="rk">–</b><span class="k">Sector</span><b id="sec">–</b><span class="k">Ping</span><b id="png">–</b><span class="k">Online</span><b id="onl">–</b><div id="ct"></div></div>
-<div class="hud" id="lbw"><h2>Top orbs</h2><ol id="lb"></ol></div>
-<div id="tc"><button id="bsp">Split</button><button id="bds">2× Split</button><button id="bej">Eject</button><button id="bsw" hidden>Swap</button><button id="bfd" hidden>Feed</button></div>
+<div class="hud" id="hud"><span class="k" data-t="mass">Mass</span><b id="sc">0</b><span class="k" data-t="best">Best</span><b id="bs">0</b><span class="k" data-t="rank">Rank</span><b id="rk">–</b><span class="k" data-t="sector">Sector</span><b id="sec">–</b><span class="k" data-t="ping">Ping</span><b id="png">–</b><span class="k" data-t="online">Online</span><b id="onl">–</b><div id="ct"></div></div>
+<div class="hud" id="lbw"><h2 data-t="top">Top orbs</h2><ol id="lb"></ol></div>
+<div id="tc"><button id="bsp" data-t="split">Split</button><button id="bds" data-t="split2">2× Split</button><button id="bej" data-t="eject">Eject</button><button id="bsw" hidden data-t="swap">Swap</button><button id="bfd" hidden data-t="feed">Feed</button></div>
 <div class="ov" id="ov"><div class="card">
   <h1 id="ot">Gobble</h1>
-  <p id="os">Eat pellets, swallow orbs a quarter smaller than you, and steer clear of the spikes once you’re big. Pick how fast you grow below.</p>
-  <div class="stats" id="sts" hidden><div><span>Peak mass</span><b id="s1">0</b></div><div><span>Swallowed</span><b id="s2">0</b></div><div><span>Survived</span><b id="s3">0:00</b></div></div>
-  <input type="text" id="nm" maxlength="12" placeholder="Your name" autocomplete="off">
-  <div class="seg" role="group" aria-label="Game mode"><button type="button" id="mSolo" aria-pressed="false">Solo</button><button type="button" id="mMulti" aria-pressed="true">Multibox</button></div>
+  <p id="os" data-t="intro">Eat pellets, swallow orbs a quarter smaller than you, and steer clear of the spikes once you’re big. Pick how fast you grow below.</p>
+  <div class="stats" id="sts" hidden><div><span data-t="peak">Peak mass</span><b id="s1">0</b></div><div><span data-t="swallowed">Swallowed</span><b id="s2">0</b></div><div><span data-t="survived">Survived</span><b id="s3">0:00</b></div></div>
+  <input type="text" id="nm" maxlength="12" placeholder="Your name" data-tp="name_ph" autocomplete="off">
+  <div class="seg" role="group" aria-label="Game mode"><button type="button" id="mSolo" aria-pressed="false" data-t="solo">Solo</button><button type="button" id="mMulti" aria-pressed="true" data-t="multibox">Multibox</button></div>
   <p id="mbh"></p>
   <div class="seg" id="regions" role="group" aria-label="Server region"></div>
-  <div class="grow"><span>Growth speed</span><div class="seg" id="grow" role="group" aria-label="Growth speed"></div></div>
-  <div class="party"><input type="text" id="pty" maxlength="8" placeholder="Party code (optional)" autocomplete="off" aria-label="Party code"><button type="button" id="pnew">New party</button></div>
-  <div id="pinv" hidden><span id="plink"></span><button type="button" id="pcopy">Copy link</button><p id="pnote"></p></div>
-  <button class="primary" id="go">Play</button>
+  <div class="grow"><span data-t="growth">Growth speed</span><div class="seg" id="grow" role="group" aria-label="Growth speed"></div></div>
+  <div class="party"><input type="text" id="pty" maxlength="8" placeholder="Party code (optional)" data-tp="party_ph" autocomplete="off" aria-label="Party code"><button type="button" id="pnew" data-t="new_party">New party</button></div>
+  <div id="pinv" hidden><span id="plink"></span><button type="button" id="pcopy" data-t="copy_link">Copy link</button><p id="pnote"></p></div>
+  <button class="primary" id="go" data-t="play">Play</button>
   <p id="net" hidden></p>
-  <p id="wake" hidden>The server was resting while nobody played. It wakes up in under a minute; the game connects by itself.</p>
+  <p id="wake" hidden data-t="wake">The server was resting while nobody played. It wakes up in under a minute; the game connects by itself.</p>
   <p id="pc"></p>
   <div class="keys" id="keys"></div>
 </div></div>
-<div id="chat"><div id="chead"><span>Chat</span><button type="button" id="cmin" aria-label="Hide chat">–</button></div><div id="clog" aria-live="polite"></div><div id="cin"><button type="button" id="cch">All</button><input type="text" id="ctx" maxlength="120" placeholder="Press Play to chat" autocomplete="off" aria-label="Chat message" disabled><button type="button" id="csend" disabled>Send</button></div></div>
+<div id="chat"><div id="chead"><span data-t="chat">Chat</span><button type="button" id="cmin" aria-label="Hide chat">–</button></div><div id="clog" aria-live="polite"></div><div id="cin"><button type="button" id="cch">All</button><input type="text" id="ctx" maxlength="120" placeholder="Press Play to chat" autocomplete="off" aria-label="Chat message" disabled><button type="button" id="csend" disabled data-t="send">Send</button></div></div>
 <div id="live" hidden><i></i><span id="livet"></span></div>
-<button id="gear">⚙ Controls <kbd>Esc</kbd></button>
+<button id="gear">⚙ <span data-t="controls">Controls</span> <kbd>Esc</kbd></button>
 <div class="ov" id="st" hidden><div class="card wide">
-  <div class="sh"><h1 style="font-size:1.6rem">Controls</h1><button class="x" id="cl2" aria-label="Close">✕</button></div>
-  <div class="sec"><h2>Keys</h2><p class="hint">Click a key, then press the new key or mouse button. Backspace clears it, Esc cancels.</p><div class="kg" id="kl"></div></div>
-  <div class="sec"><h2>Mouse buttons</h2>
-    <div class="row"><span>Left button</span><select id="mm0"></select></div>
-    <div class="row"><span>Right button</span><select id="mm2"></select></div>
-    <p class="hint">An action picked here takes over that button from the key list.</p></div>
-  <div class="sec"><h2>Growth speed</h2><div class="seg" id="growc" role="group" aria-label="Growth speed"></div><p class="hint">How fast you grow from pellets and from orbs you eat. Changes right away, even mid-game.</p></div>
-  <div class="sec"><h2>Rapid feed</h2>
-    <div class="row"><span>Time between shots</span><input type="range" id="rf" min="40" max="200" step="5"><b id="rfv"></b></div></div>
-  <div class="sec"><h2>Line splits</h2>
-    <label class="row"><span>Split as soon as a line key is pressed</span><input type="checkbox" id="lsi"></label>
-    <div class="row"><span>Splits per line split</span><input type="number" id="lsn" min="1" max="4" step="1"></div>
-    <label class="row"><span>Move again right after a line split</span><input type="checkbox" id="mal"></label>
-    <p class="hint">Horizontal and vertical line keys lock your orb onto a straight line through it. Fixed line locks it onto the spot under your mouse.</p></div>
-  <div class="sec"><h2>Push splits</h2>
-    <div class="row"><span>Delay between splits</span><input type="range" id="pd" min="0" max="200" step="5"><b id="pdv"></b></div>
-    <p class="hint">Used by double, triple, quad and line splits. At 0 ms every split happens at once.</p></div>
-  <div class="sec"><h2>Toggles</h2>
-    <label class="row"><span>Line keys toggle on and off instead of holding</span><input type="checkbox" id="ltg"></label>
-    <label class="row"><span>Rapid feed toggles on and off instead of holding</span><input type="checkbox" id="ftg"></label>
-    <label class="row"><span>Show chat (Enter to type)</span><input type="checkbox" id="shc"></label>
-    <p class="hint">This is an online game, so it keeps running while this panel is open. Your browser’s own shortcuts are blocked while you play.</p></div>
-  <div class="btns"><button class="kb" id="rs">Reset defaults</button><button class="primary" id="cl">Done</button></div>
+  <div class="sh"><h1 style="font-size:1.6rem" data-t="controls">Controls</h1><button class="x" id="cl2" aria-label="Close" data-ta="close">✕</button></div>
+  <div class="sec"><div class="row"><h2 data-t="language" style="margin:0">Language</h2><select id="lng" aria-label="Language"></select></div></div>
+  <div class="sec"><h2 data-t="keys">Keys</h2><p class="hint" data-t="keys_hint">Click a key, then press the new key or mouse button. Backspace clears it, Esc cancels.</p><div class="kg" id="kl"></div></div>
+  <div class="sec"><h2 data-t="mouse_buttons">Mouse buttons</h2>
+    <div class="row"><span data-t="left_btn">Left button</span><select id="mm0"></select></div>
+    <div class="row"><span data-t="right_btn">Right button</span><select id="mm2"></select></div>
+    <p class="hint" data-t="mouse_hint">An action picked here takes over that button from the key list.</p></div>
+  <div class="sec"><h2 data-t="growth">Growth speed</h2><div class="seg" id="growc" role="group" aria-label="Growth speed"></div><p class="hint" data-t="growth_hint">How fast you grow from pellets and from orbs you eat. Changes right away, even mid-game.</p></div>
+  <div class="sec"><h2 data-t="rapid_feed">Rapid feed</h2>
+    <div class="row"><span data-t="time_shots">Time between shots</span><input type="range" id="rf" min="40" max="200" step="5"><b id="rfv"></b></div></div>
+  <div class="sec"><h2 data-t="line_splits">Line splits</h2>
+    <label class="row"><span data-t="ls_instant">Split as soon as a line key is pressed</span><input type="checkbox" id="lsi"></label>
+    <div class="row"><span data-t="ls_count">Splits per line split</span><input type="number" id="lsn" min="1" max="4" step="1"></div>
+    <label class="row"><span data-t="ls_move">Move again right after a line split</span><input type="checkbox" id="mal"></label>
+    <p class="hint" data-t="ls_hint">Horizontal and vertical line keys lock your orb onto a straight line through it. Fixed line locks it onto the spot under your mouse.</p></div>
+  <div class="sec"><h2 data-t="push_splits">Push splits</h2>
+    <div class="row"><span data-t="push_delay">Delay between splits</span><input type="range" id="pd" min="0" max="200" step="5"><b id="pdv"></b></div>
+    <p class="hint" data-t="push_hint">Used by double, triple, quad and line splits. At 0 ms every split happens at once.</p></div>
+  <div class="sec"><h2 data-t="toggles">Toggles</h2>
+    <label class="row"><span data-t="tg_line">Line keys toggle on and off instead of holding</span><input type="checkbox" id="ltg"></label>
+    <label class="row"><span data-t="tg_feed">Rapid feed toggles on and off instead of holding</span><input type="checkbox" id="ftg"></label>
+    <label class="row"><span data-t="tg_chat">Show chat (Enter to type)</span><input type="checkbox" id="shc"></label>
+    <p class="hint" data-t="toggles_hint">This is an online game, so it keeps running while this panel is open. Your browser’s own shortcuts are blocked while you play.</p></div>
+  <div class="btns"><button class="kb" id="rs" data-t="reset">Reset defaults</button><button class="primary" id="cl" data-t="done">Done</button></div>
 </div></div>
-<script src="servers.js?v=15"></script>
-<script src="net.js?v=15"></script>
-<script src="game.js?v=15"></script>
+<script src="i18n.js?v=16"></script>
+<script src="servers.js?v=16"></script>
+<script src="net.js?v=16"></script>
+<script src="game.js?v=16"></script>
 </body>
 </html>

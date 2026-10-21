@@ -1,7 +1,8 @@
 // Multiplayer client: draws what the server sends, sends the player's mouse and keys.
 (function () {
 'use strict';
-const GAME_NAME = 'Gobble'; // change here (and in index.html <title>) when the game gets its final name
+const GAME_NAME = 'Gobble';
+const tr = (k, v) => I18N.t(k, v); // every bit of game text goes through here, in the player's language // change here (and in index.html <title>) when the game gets its final name
 const $ = id => document.getElementById(id), cv = $('c'), g = cv.getContext('2d', { alpha: false }), mm = $('mm'), mg = mm.getContext('2d');
 const TAU = Math.PI * 2, clamp = (v, a, b) => (v < a ? a : v > b ? b : v), rad = m => 4 * Math.sqrt(m), dm = m => Math.floor(m / 2);
 let WS = 12000, SPEED = 1685, W = 0, H = 0, dpr = 1, T = 0;
@@ -9,8 +10,8 @@ const cam = { x: 6000, y: 6000, s: 0.5 }; let zm = 1;
 
 /* ---------- settings (same controls as the offline game) ---------- */
 const DEF = { split: 'Space', dsplit: 'KeyD', tsplit: 'KeyF', qsplit: 'KeyG', eject: 'KeyW', hline: 'KeyS', vline: 'KeyT', fline: '', respawn: 'KeyB', ping: 'KeyR', swap: 'Mouse2', feed: 'KeyE' };
-const ACT = [['split', 'Split'], ['dsplit', 'Double split'], ['tsplit', 'Triple split'], ['qsplit', 'Quad split'], ['eject', 'Rapid feed'], ['hline', 'Horizontal line'], ['vline', 'Vertical line'], ['fline', 'Fixed line'], ['respawn', 'Respawn'], ['ping', 'Ping'], ['swap', 'Switch box (multibox)'], ['feed', 'Feed other box']];
-const MACROS = [['none', 'None'], ['split', 'Split'], ['dsplit', 'Double split'], ['tsplit', 'Triple split'], ['qsplit', 'Quad split'], ['eject', 'Rapid feed'], ['swap', 'Switch box']];
+const ACT = ['split', 'dsplit', 'tsplit', 'qsplit', 'eject', 'hline', 'vline', 'fline', 'respawn', 'ping', 'swap', 'feed'].map(k => [k, 'a_' + k]);
+const MACROS = [['none', 'm_none'], ['split', 'a_split'], ['dsplit', 'a_dsplit'], ['tsplit', 'a_tsplit'], ['qsplit', 'a_qsplit'], ['eject', 'a_eject'], ['swap', 'm_swap']];
 let binds = Object.assign({}, DEF), rf = 40, pd = 50, lsi = false, lsn = 2, mal = true, ltg = false, ftg = false, mbtn = { 0: 'none', 2: 'none' };
 let best = 0;
 try { best = +localStorage.getItem('gobblebest_mp') || 0; } catch (e) {}
@@ -26,7 +27,7 @@ try {
 } catch (e) {}
 { const seen = new Set(); for (const [k] of ACT) { const v = binds[k]; if (!v) continue; if (seen.has(v)) binds[k] = Object.values(binds).includes(DEF[k]) ? '' : DEF[k]; seen.add(binds[k]); } }
 function saveCfg() { try { const old = JSON.parse(localStorage.getItem('gobblecfg') || '{}') || {}; localStorage.setItem('gobblecfg', JSON.stringify(Object.assign(old, { binds, rf, pd, lsi, lsn, mal, ltg, ftg, mbtn }))); } catch (e) {} }
-function label(b) { if (!b) return 'Unbound'; if (b.startsWith('Mouse')) { const n = +b.slice(5); return ['Left click', 'Middle click', 'Right click', 'Mouse 4', 'Mouse 5'][n] || 'Mouse ' + (n + 1); } return b.startsWith('Key') ? b.slice(3) : b.startsWith('Digit') ? b.slice(5) : b; }
+function label(b) { if (!b) return tr('unbound'); if (b.startsWith('Mouse')) { const n = +b.slice(5); return n <= 2 ? tr(['mouse_left', 'mouse_middle', 'mouse_right'][n]) : tr('mouse_n', { n: n + 1 }); } return b.startsWith('Key') ? b.slice(3) : b.startsWith('Digit') ? b.slice(5) : b; }
 
 /* ---------- world as last seen from the server ---------- */
 const ents = new Map(), spikes = new Map(), blobs = new Map(), pellets = new Map(), owners = new Map();
@@ -50,7 +51,7 @@ function renderRegions() {
   const box = $('regions'); box.textContent = ''; if (SERVERS.length < 2) return;
   for (const s of SERVERS) {
     const b = document.createElement('button'); b.type = 'button'; b.setAttribute('aria-pressed', s.id === region);
-    b.textContent = s.name; const sm = document.createElement('small'); sm.textContent = regionPing[s.id] ? regionPing[s.id] + ' ms' : 'checking…'; b.append(sm);
+    b.textContent = tr('r_' + s.id) === 'r_' + s.id ? s.name : tr('r_' + s.id); const sm = document.createElement('small'); sm.textContent = regionPing[s.id] ? regionPing[s.id] + ' ms' : tr('checking'); b.append(sm);
     b.onclick = () => { if (s.id === region) return; region = s.id; try { localStorage.setItem('gobbleregion', region); } catch (e) {} renderRegions(); switchServer(); };
     box.append(b);
   }
@@ -72,23 +73,23 @@ let everConnected = false, firstTry = 0;
 function wake() { try { fetch(serverUrl() + '/health', { mode: 'no-cors', cache: 'no-store' }).catch(() => {}); } catch (e) {} }
 function connect() {
   if (!firstTry) firstTry = performance.now();
-  setStatus(everConnected ? 'Reconnecting…' : 'Connecting to the server…');
+  setStatus(everConnected ? tr('st_reconnecting') : tr('st_connecting'));
   wake();
   try { ws = new WebSocket(wsUrl()); } catch (e) { return reconnect(); }
   ws.binaryType = 'arraybuffer';
   ws.onopen = () => { connected = true; everConnected = true; retry = 0; full = false; $('wake').hidden = true; setStatus(''); ws.send(Net.enc.size(innerWidth, innerHeight)); sendPing(); sendName(); };
   ws.onmessage = e => { if (typeof e.data !== 'string') handle(Net.decode(e.data, WS)); };
-  ws.onclose = () => { connected = false; if (playing) { playing = false; showMenu('Connection lost', 'Reconnecting to the server…'); } ents.clear(); spikes.clear(); blobs.clear(); pellets.clear(); owners.clear(); reconnect(); };
+  ws.onclose = () => { connected = false; if (playing) { playing = false; showMenu(tr('lost'), tr('lost_s')); } ents.clear(); spikes.clear(); blobs.clear(); pellets.clear(); owners.clear(); reconnect(); };
   ws.onerror = () => {};
 }
 function reconnect() {
   const waited = (performance.now() - firstTry) / 1000;
   if (!everConnected && waited < 120) {
     // first visit while the server is asleep: retry every 3 s and say what's happening
-    $('wake').hidden = false; setStatus('Starting the server… ' + Math.round(waited) + ' s');
+    $('wake').hidden = false; setStatus(tr('st_starting', { s: Math.round(waited) }));
     return setTimeout(connect, 3000);
   }
-  const wait = Math.min(10000, 800 * 2 ** retry++); setStatus('Can’t reach the server. Trying again in ' + Math.ceil(wait / 1000) + ' s…'); setTimeout(connect, wait);
+  const wait = Math.min(10000, 800 * 2 ** retry++); setStatus(tr('st_retry', { s: Math.ceil(wait / 1000) })); setTimeout(connect, wait);
 }
 function send(ab) { if (ws && ws.readyState === 1) ws.send(ab); }
 let pingT0 = 0, pingTok = 0, ping = 0;
@@ -137,10 +138,10 @@ function handle(m) {
       playing = false; held.clear(); feedOn = false; lock = null; sq.length = 0;
       const nb = m.peak > best; if (nb) { best = m.peak; try { localStorage.setItem('gobblebest_mp', best); } catch (e) {} }
       $('sts').hidden = false; $('s1').textContent = dm(m.peak).toLocaleString(); $('s2').textContent = m.kills; $('s3').textContent = fmtT(m.alive);
-      showMenu('You were eaten', nb ? 'New personal best!' : 'Best so far: ' + dm(best).toLocaleString() + ' mass.'); $('go').textContent = 'Play again';
+      showMenu(tr('eaten'), nb ? tr('new_best') : tr('best_so_far', { m: dm(best).toLocaleString() })); $('go').dataset.t = 'play_again'; $('go').textContent = tr('play_again');
       break;
     }
-    case 8: full = true; setStatus('This arena is full right now. Try again in a moment.'); break;
+    case 8: full = true; setStatus(tr('st_full')); break;
     case 10: addChat(m); break;
     case 11: partyCode = m.code; partyIds = new Set(m.ids); renderParty(); break;
     case 9: if (m.token === pingTok) { const p = performance.now() - pingT0; ping = ping ? Math.round(ping * 0.6 + p * 0.4) : Math.round(p); regionPing[region] = ping; } break;
@@ -148,7 +149,7 @@ function handle(m) {
 }
 let serverBuild = '';
 function reloadForUpdate() {
-  showMenu('Updating…', 'A new version of the game is out. Loading it now.'); setStatus('Updating…');
+  showMenu(tr('updating'), tr('updating_s')); setStatus(tr('updating'));
   const u = new URL(location.href); u.searchParams.set('u', Date.now().toString(36)); // skip any cached copy of the page
   setTimeout(() => location.replace(u.toString()), 600);
 }
@@ -160,7 +161,7 @@ function activeId() { return myBoxes[active]; }
 function showMenu(t, s) { $('ot').textContent = t; $('os').textContent = s; $('ov').hidden = false; }
 function startGame() {
   if (!connected || full) return;
-  const nm = ($('nm').value.trim() || 'Player').slice(0, 12);
+  const nm = ($('nm').value.trim() || tr('player')).slice(0, 12);
   try { localStorage.setItem('gobblename', nm); } catch (e) {}
   const pc = cleanCode($('pty').value); $('pty').value = pc; try { localStorage.setItem('gobbleparty', pc); } catch (e) {}
   send(Net.enc.join(multiChosen, innerWidth, innerHeight, nm, pc)); send(Net.enc.growth(growth));
@@ -170,7 +171,7 @@ function startGame() {
 function showMultiBtns(on) { $('bsw').hidden = $('bfd').hidden = !on; }
 function setMode(m) {
   multiChosen = m; $('mSolo').setAttribute('aria-pressed', !m); $('mMulti').setAttribute('aria-pressed', m);
-  $('mbh').textContent = m ? 'Control two orbs. Switch between them with ' + label(binds.swap) + '.' : 'Play with a single orb.';
+  $('mbh').textContent = m ? tr('mode_multi', { key: label(binds.swap) }) : tr('mode_solo');
   try { localStorage.setItem('gobblemb', m ? '1' : '0'); } catch (e) {}
 }
 
@@ -333,13 +334,13 @@ function hud() {
   $('rk').textContent = playing && lb.rank ? lb.rank + ' / ' + lb.total : '–';
   $('sec').textContent = playing && sm ? 'ABCDE'[clamp(Math.floor(sy / sm / WS * 5), 0, 4)] + (clamp(Math.floor(sx / sm / WS * 5), 0, 4) + 1) : '–';
   const multi = myBoxes.length > 1, ao = owners.get(activeId());
-  $('ct').textContent = playing && multi && ao ? 'Controlling ' + ao.name + ' · ' + label(binds.swap) + ' to switch' : '';
+  $('ct').textContent = playing && multi && ao ? tr('controlling', { name: ao.name, key: label(binds.swap) }) : '';
   const ol = $('lb'); ol.textContent = '';
   const row = (id, m, i) => { const li = document.createElement('li'); li.value = i + 1; const o = owners.get(id); li.textContent = (o ? o.name : '…') + ' · ' + dm(m).toLocaleString(); if (myBoxes.includes(id)) li.className = 'me'; ol.appendChild(li); };
   lb.top.slice(0, 6).forEach((t, i) => row(t.id, t.m, i));
-  if (playing && lb.rank > 6) { const li = document.createElement('li'); li.className = 'gap'; li.textContent = '…'; ol.appendChild(li); const li2 = document.createElement('li'); li2.value = lb.rank; li2.className = 'me'; li2.textContent = 'You · ' + dm(tot).toLocaleString(); ol.appendChild(li2); }
-  const who = lb.players >= 0 ? lb.players + (lb.players === 1 ? ' player' : ' players') + ' online · ' + lb.bots + ' bots' : lb.total + ' in the arena';
-  $('pc').textContent = connected ? who : ''; $('live').hidden = !(connected && playing && lb.players >= 0); $('livet').textContent = lb.players + (lb.players === 1 ? ' player' : ' players') + ' online · ' + lb.bots + ' bots'; $('onl').textContent = connected && lb.players >= 0 ? lb.players + (lb.players === 1 ? ' player · ' : ' players · ') + lb.bots + ' bots' : '–';
+  if (playing && lb.rank > 6) { const li = document.createElement('li'); li.className = 'gap'; li.textContent = '…'; ol.appendChild(li); const li2 = document.createElement('li'); li2.value = lb.rank; li2.className = 'me'; li2.textContent = tr('you') + ' · ' + dm(tot).toLocaleString(); ol.appendChild(li2); }
+  const who = lb.players >= 0 ? tr('players_bots', { p: lb.players, b: lb.bots }) : tr('in_arena', { n: lb.total });
+  $('pc').textContent = connected ? who : ''; $('live').hidden = !(connected && playing && lb.players >= 0); $('livet').textContent = who; $('onl').textContent = connected && lb.players >= 0 ? tr('hud_online', { p: lb.players, b: lb.bots }) : '–';
   $('png').textContent = connected && ping ? ping + ' ms' : '–';
   if (!$('ov').hidden) renderRegions();
 }
@@ -367,19 +368,19 @@ function release(c) { held.delete(c); for (const k in binds) if (binds[k] === c)
 function assign(a, code) { for (const k in binds) if (k !== a && binds[k] === code) binds[k] = binds[a]; binds[a] = code; saveCfg(); updateHelp(); }
 function updateHelp() {
   const kb = $('keys'); kb.textContent = '';
-  for (const [k, v] of [['Move', 'Mouse'], ['Split', label(binds.split)], ['Double split', label(binds.dsplit)], ['Rapid feed', label(binds.eject)], ['Line', label(binds.hline) + ' / ' + label(binds.vline)]]) { const s = document.createElement('span'); s.append(k + ' '); const b = document.createElement('kbd'); b.textContent = v; s.append(b); kb.append(s); }
+  for (const [k, v] of [[tr('k_move'), tr('k_mouse')], [tr('a_split'), label(binds.split)], [tr('a_dsplit'), label(binds.dsplit)], [tr('a_eject'), label(binds.eject)], [tr('k_line'), label(binds.hline) + ' / ' + label(binds.vline)]]) { const s = document.createElement('span'); s.append(k + ' '); const b = document.createElement('kbd'); b.textContent = v; s.append(b); kb.append(s); }
   setMode(multiChosen);
 }
 function renderSettings() {
   const kl = $('kl'); kl.textContent = '';
   for (const [k, n] of ACT) {
     const row = document.createElement('div'); row.className = 'kr';
-    const s = document.createElement('span'); s.textContent = n;
-    const b = document.createElement('button'); b.className = 'kb' + (listening === k ? ' wait' : ''); b.id = 'kb_' + k; b.textContent = listening === k ? 'Press a key…' : label(binds[k]);
+    const s = document.createElement('span'); s.textContent = tr(n);
+    const b = document.createElement('button'); b.className = 'kb' + (listening === k ? ' wait' : ''); b.id = 'kb_' + k; b.textContent = listening === k ? tr('press_key') : label(binds[k]);
     b.onclick = e => { e.stopPropagation(); listening = k; renderSettings(); };
     row.append(s, b); kl.appendChild(row);
   }
-  for (const b of [0, 2]) { const el = $('mm' + b); if (!el.options.length) for (const [v, t] of MACROS) { const o = document.createElement('option'); o.value = v; o.textContent = t; el.append(o); } el.value = mbtn[b]; }
+  for (const b of [0, 2]) { const el = $('mm' + b); if (!el.options.length) for (const [v, t] of MACROS) { const o = document.createElement('option'); o.value = v; o.textContent = tr(t); o.dataset.t = t; el.append(o); } el.value = mbtn[b]; }
   $('rf').value = rf; $('rfv').textContent = rf + ' ms'; $('pd').value = pd; $('pdv').textContent = pd + ' ms';
   $('lsi').checked = lsi; $('lsn').value = lsn; $('mal').checked = mal; $('ltg').checked = ltg; $('ftg').checked = ftg;
 }
@@ -461,13 +462,13 @@ function renderParty() {
   $('pinv').hidden = !code; if (!code) return;
   $('plink').textContent = inviteLink(code);
   const n = playing ? new Set([...partyIds].map(id => owners.get(id)?.name?.replace(/ [AB]$/, ''))).size : 0;
-  $('pnote').textContent = playing && partyCode ? 'Party ' + partyCode + ' · ' + n + ' playing' : 'Send this link to friends. Everyone with the same code plays as a team.';
+  $('pnote').textContent = playing && partyCode ? tr('party_note', { code: partyCode, n }) : tr('party_share');
 }
 $('pnew').addEventListener('click', () => { const a = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let c = ''; for (let i = 0; i < 5; i++) c += a[Math.floor(Math.random() * a.length)]; $('pty').value = c; renderParty(); });
 $('pty').addEventListener('input', () => { $('pty').value = cleanCode($('pty').value); renderParty(); });
 $('pcopy').addEventListener('click', () => {
   const t = $('plink').textContent;
-  (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => { $('pcopy').textContent = 'Copied'; setTimeout(() => $('pcopy').textContent = 'Copy link', 1500); })
+  (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => { $('pcopy').textContent = tr('copied'); setTimeout(() => $('pcopy').textContent = tr('copy_link'), 1500); })
     .catch(() => { const r = document.createRange(); r.selectNodeContents($('plink')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); });
 });
 
@@ -476,24 +477,24 @@ function addChat(m) {
   if (!showChat) return;
   const log = $('clog'), atBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 30;
   const li = document.createElement('div'); li.className = 'cm';
-  if (m.channel === 1) { const t = document.createElement('span'); t.className = 'ctag'; t.textContent = 'Party'; li.append(t); }
+  if (m.channel === 1) { const t = document.createElement('span'); t.className = 'ctag'; t.textContent = tr('party'); li.append(t); }
   const n = document.createElement('b'); n.textContent = m.name + ': '; n.style.color = 'hsl(' + m.hue + ' 75% 65%)'; li.append(n, document.createTextNode(m.text));
   log.append(li); while (log.children.length > 60) log.firstChild.remove();
   if (atBottom) log.scrollTop = log.scrollHeight;
-  if ($('chat').classList.contains('min')) $('cmin').textContent = '+ new';
+  if ($('chat').classList.contains('min')) $('cmin').textContent = tr('new_msg');
 }
 function openChat() { if (!showChat || !connected) return; $('chat').classList.remove('min'); $('cmin').textContent = '–'; releaseAll(); $('ctx').focus(); }
 function closeChat() { const ae = document.activeElement; if (ae && ae.blur) ae.blur(); $('ctx').blur(); try { window.focus(); } catch (e) {} }
 function sendChat() { const t = $('ctx').value.trim(); if (t && connected) send(Net.enc.chat(chatChan, t)); $('ctx').value = ''; }
-function chatReady() { const on = connected; $('ctx').disabled = $('csend').disabled = !on; $('ctx').placeholder = on ? 'Type a message…' : 'Connecting…'; }
+function chatReady() { const on = connected; $('ctx').disabled = $('csend').disabled = !on; $('ctx').placeholder = on ? tr('type_msg') : tr('connecting_short'); }
 // people on the menu chat under the name typed in the name box
-function sendName() { if (connected) send(Net.enc.name(($('nm').value.trim() || 'Guest').slice(0, 12))); }
+function sendName() { if (connected) send(Net.enc.name(($('nm').value.trim() || tr('guest')).slice(0, 12))); }
 $('nm').addEventListener('input', () => { clearTimeout(sendName.t); sendName.t = setTimeout(sendName, 400); });
 setInterval(chatReady, 300);
 $('csend').addEventListener('click', e => { e.preventDefault(); sendChat(); closeChat(); });
 $('cmin').addEventListener('click', () => { const m = $('chat').classList.toggle('min'); $('cmin').textContent = m ? '+' : '–'; });
 $('ctx').addEventListener('focus', () => releaseAll());
-function renderChatChan() { if (chatChan === 1 && !partyCode) chatChan = 0; $('cch').textContent = chatChan ? 'Party' : 'All'; $('cch').disabled = !partyCode; }
+function renderChatChan() { if (chatChan === 1 && !partyCode) chatChan = 0; $('cch').textContent = chatChan ? tr('party') : tr('all'); $('cch').disabled = !partyCode; }
 setInterval(renderChatChan, 1000);
 $('cch').addEventListener('click', () => { chatChan = partyCode ? 1 - chatChan : 0; renderChatChan(); $('ctx').focus(); });
 $('ctx').addEventListener('keydown', e => {
@@ -502,6 +503,16 @@ $('ctx').addEventListener('keydown', e => {
   else if (e.key === 'Escape') closeChat();
 });
 $('shc').addEventListener('change', e => { showChat = e.target.checked; $('chat').hidden = !showChat; try { localStorage.setItem('gobblechat', showChat ? '1' : '0'); } catch (x) {} });
+
+/* ---------- language ---------- */
+function renderLang() {
+  const el = $('lng'); el.textContent = '';
+  const auto = document.createElement('option'); auto.value = ''; auto.textContent = tr('lang_auto', { name: I18N.langs[I18N.auto] }); el.append(auto);
+  for (const [code, name] of Object.entries(I18N.langs)) { const o = document.createElement('option'); o.value = code; o.textContent = name; el.append(o); }
+  el.value = I18N.chosen;
+}
+$('lng').addEventListener('change', e => { I18N.set(e.target.value); renderLang(); renderSettings(); updateHelp(); renderRegions(); renderParty(); hud(); $('clog').dataset.empty = tr('no_msgs'); });
+I18N.apply(); renderLang(); $('clog').dataset.empty = tr('no_msgs');
 
 /* ---------- start ---------- */
 document.title = GAME_NAME; $('ot').textContent = GAME_NAME;
