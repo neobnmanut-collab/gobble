@@ -394,15 +394,10 @@ class Game {
         }
         const big = a.m > b.m ? a : b, sm = big === a ? b : a;
         const sib = this.siblings(a.o, b.o);
-        // friendly orbs (your two multibox boxes, party mates) bump into each other instead of piling up,
-        // so they never look like they're about to swallow one another. Party mates can never eat each other;
-        // your own two boxes still can, once one is clearly bigger.
+        // friendly orbs (your two multibox boxes, party mates) pass through each other freely.
+        // Party mates can never eat each other; your own two boxes can, once one is clearly bigger.
         const sameClient = sib && owners.get(a.o).client === owners.get(b.o).client;
-        if (sib && (!sameClient || big.m <= sm.m * C.EAT_RATIO)) {
-          const ov = rr - d;
-          if (ov > 0) { const k = Math.min(1, dt * 18) * 0.5, ux = d > 0.5 ? dx / d : 1, uy = d > 0.5 ? dy / d : 0; a.x -= ux * ov * k; a.y -= uy * ov * k; b.x += ux * ov * k; b.y += uy * ov * k; }
-          continue;
-        }
+        if (sib && !sameClient) continue;
         if (big.m <= sm.m * C.EAT_RATIO || sm.prot > 0) continue;
         if (d < big.r - sm.r * 0.35) {
           const bo = owners.get(big.o), so = owners.get(sm.o);

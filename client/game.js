@@ -240,8 +240,8 @@ function draw(dt) {
   const k = dd <= 0 ? 1 : smooth(dt / (dd / 1000 * 0.6)), now = performance.now(), aid = playing ? activeId() : -1, aim = playing ? aimPoint() : null;
   for (const e of ents.values()) {
     // draw delay: glide in a straight line from where the orb was drawn to its new position over dd milliseconds
-    const p = dd <= 0 ? 1 : Math.min(1, (now - e.lt) / dd);
-    e.x = e.ox + (e.tx - e.ox) * p; e.y = e.oy + (e.ty - e.oy) * p; e.r = e.or + (e.tr - e.or) * p;
+    const since = now - e.lt, p = dd <= 0 ? 1 : Math.min(1, since / dd), over = Math.min(0.12, Math.max(0, since - Math.max(dd, 34)) / 1000);
+    e.x = e.ox + (e.tx - e.ox) * p + e.vx * over; e.y = e.oy + (e.ty - e.oy) * p + e.vy * over; e.r = e.or + (e.tr - e.or) * p;
     if (false) { // (local prediction switched off: it made orbs look closer or safer than they were)
       // your own orb: move it locally toward the mouse right away, then pull it gently onto where the server has it
       const lat = Math.min(0.3, ping / 2000 + age), sx = e.tx + e.vx * lat, sy = e.ty + e.vy * lat;
