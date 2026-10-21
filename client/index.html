@@ -99,6 +99,9 @@ button{font:700 1rem var(--font);cursor:pointer}
 #cbtn kbd{font:inherit;font-size:.75rem;color:var(--muted);margin-left:4px}
 @media (pointer:coarse){#cbtn kbd{display:none}}
 #ctx{flex:1;min-width:0;font:inherit;font-size:.9rem;padding:9px 11px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+#csend{padding:8px 14px;border-radius:8px;border:0;background:var(--acc);color:#fff;font-size:.85rem;font-weight:700}
+#cx{padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-size:.85rem}
+#clog{pointer-events:auto;cursor:text}
 #cch{padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-size:.85rem}
 @media (pointer:coarse){#chat{bottom:calc(env(safe-area-inset-bottom,0px) + 170px);width:min(300px,60vw)}}
 #wake{font-size:.8rem;margin:0}
@@ -127,7 +130,7 @@ button{font:700 1rem var(--font);cursor:pointer}
   <p id="pc"></p>
   <div class="keys" id="keys"></div>
 </div></div>
-<div id="chat"><div id="clog" aria-live="polite"></div><button type="button" id="cbtn" hidden>Chat <kbd>Enter</kbd></button><div id="cin" hidden><button type="button" id="cch">All</button><input type="text" id="ctx" maxlength="120" placeholder="Say something… Enter to send, Esc to close" autocomplete="off" aria-label="Chat message"></div></div>
+<div id="chat"><div id="clog" aria-live="polite"></div><button type="button" id="cbtn" hidden>Chat <kbd>Enter</kbd></button><div id="cin" hidden><button type="button" id="cch">All</button><input type="text" id="ctx" maxlength="120" placeholder="Say something…" autocomplete="off" aria-label="Chat message"><button type="button" id="csend">Send</button><button type="button" id="cx" aria-label="Close chat">✕</button></div></div>
 <button id="gear">⚙ Controls</button>
 <div class="ov" id="st" hidden><div class="card wide">
   <div class="sh"><h1 style="font-size:1.6rem">Controls</h1><button class="x" id="cl2" aria-label="Close">✕</button></div>
@@ -153,8 +156,8 @@ button{font:700 1rem var(--font);cursor:pointer}
     <p class="hint">This is an online game, so it keeps running while this panel is open. Your browser’s own shortcuts are blocked while you play.</p></div>
   <div class="btns"><button class="kb" id="rs">Reset defaults</button><button class="primary" id="cl">Done</button></div>
 </div></div>
-<script src="servers.js?v=6"></script>
-<script src="net.js?v=6"></script>
-<script src="game.js?v=6"></script>
+<script src="servers.js?v=7"></script>
+<script src="net.js?v=7"></script>
+<script src="game.js?v=7"></script>
 </body>
 </html>

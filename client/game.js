@@ -458,12 +458,17 @@ function openChat() {
 }
 function closeChat() { chatOpen = false; $('cin').hidden = true; $('cbtn').hidden = !playing; $('ctx').value = ''; $('ctx').blur(); try { window.focus(); } catch (e) {} }
 $('cbtn').addEventListener('click', e => { e.preventDefault(); openChat(); });
+// click Send to send and keep typing; the chat box stays open until you close it
+function sendChat() { const t = $('ctx').value.trim(); if (t) send(Net.enc.chat(chatChan, t)); $('ctx').value = ''; }
+$('csend').addEventListener('click', e => { e.preventDefault(); sendChat(); $('ctx').focus(); });
+$('cx').addEventListener('click', e => { e.preventDefault(); closeChat(); });
+$('clog').addEventListener('click', () => { if (!chatOpen) openChat(); });
 setInterval(() => { if (!chatOpen) $('cbtn').hidden = !playing || !showChat; }, 300);
 function renderChatChan() { if (chatChan === 1 && !partyCode) chatChan = 0; $('cch').textContent = chatChan ? 'Party' : 'All'; $('cch').disabled = !partyCode; }
 $('cch').addEventListener('click', () => { chatChan = partyCode ? 1 - chatChan : 0; renderChatChan(); $('ctx').focus(); });
 $('ctx').addEventListener('keydown', e => {
   e.stopPropagation();
-  if (e.key === 'Enter') { const t = $('ctx').value.trim(); if (t) send(Net.enc.chat(chatChan, t)); closeChat(); }
+  if (e.key === 'Enter') { sendChat(); closeChat(); }
   else if (e.key === 'Escape') closeChat();
 });
 setInterval(() => { const now = Date.now(); for (const li of $('clog').children) li.classList.toggle('old', !chatOpen && now - li.dataset.t > 15000); }, 1000);
