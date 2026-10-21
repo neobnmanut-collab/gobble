@@ -13,3 +13,18 @@ services:
     envVars:
       - key: NODE_VERSION
         value: "22"
+
+  # second arena in the USA (east coast, the closest US region to Europe)
+  - type: web
+    name: gobble-us
+    runtime: node
+    region: virginia
+    plan: free
+    rootDir: server
+    buildCommand: npm ci --omit=dev
+    startCommand: node src/server.js
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "22"

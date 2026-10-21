@@ -3,8 +3,8 @@
 module.exports = {
   WORLD: 12000,          // arena width and height
   GRID: 100,             // pellet grid cell size
-  TICK_HZ: 40,           // simulation steps per second
-  SEND_EVERY: 2,         // send a world update every N steps (40 / 2 = 20 updates per second)
+  TICK_HZ: 30,           // simulation steps per second
+  SEND_EVERY: 1,         // send a world update every step (30 updates per second)
 
   PELLETS: 5500,         // pellets kept on the map
   PELLET_MASS: 7,

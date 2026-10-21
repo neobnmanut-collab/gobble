@@ -63,6 +63,7 @@ wss.on('connection', (ws, req) => {
       case 6: if (!cl.dead) game.swap(cl, m.x, m.y); break;
       case 7: if (!cl.dead) game.respawn(cl); break;
       case 8: cl.W = m.W; cl.H = m.H; break;
+      case 9: if (cl.ws.readyState === 1) cl.ws.send(enc.pong(m.token)); break;
     }
   });
   ws.on('close', () => game.leave(cl, false));
@@ -137,8 +138,8 @@ function loop() {
   game.step(DT); n++;
   for (const cl of game.clients) cl.splitBudget = Math.min(8, cl.splitBudget + 0.5); // at most ~20 splits a second
   if (n % C.SEND_EVERY === 0) for (const cl of game.clients) sendWorld(cl);
-  if (n % 20 === 0) sendLeaderboard();
-  if (n % 20 === 0) sendMinimap();
+  if (n % 15 === 0) sendLeaderboard();
+  if (n % 15 === 0) sendMinimap();
   stats.tickMs = stats.tickMs * 0.95 + (performance.now() - t0) * 0.05;
   next += DT * 1000; const wait = next - performance.now();
   if (wait < -250) next = performance.now(); // fell far behind: don't try to catch up all at once

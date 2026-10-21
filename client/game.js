@@ -36,18 +36,50 @@ const smooth = k => 1 - Math.exp(-k);
 
 /* ---------- connection ---------- */
 let ws = null, connected = false, retry = 0, full = false;
-function wsUrl() { const p = location.protocol === 'https:' ? 'wss:' : 'ws:'; return (window.GAME_SERVER || `${p}//${location.host}`) + '/ws'; }
+// regions: every listed server that has an address; this page's own server counts as one too
+const SERVERS = (window.GAME_SERVERS || []).filter(s => s.url);
+const here = location.protocol + '//' + location.host;
+if (/^https?:$/.test(location.protocol) && !SERVERS.some(s => s.url.replace(/\/$/, '') === here) && (!SERVERS.length || /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname))) SERVERS.unshift({ id: 'here', name: 'This computer', url: here });
+let region = null; try { region = localStorage.getItem('gobbleregion'); } catch (e) {}
+if (!SERVERS.some(s => s.id === region)) { const mine = SERVERS.find(s => s.url.replace(/\/$/, '') === here); region = (mine || SERVERS[0] || {}).id; }
+const regionPing = {};
+function serverUrl() { const s = SERVERS.find(x => x.id === region); return s ? s.url.replace(/\/$/, '') : here; }
+function wsUrl() { return serverUrl().replace(/^http/, 'ws') + '/ws'; }
+function renderRegions() {
+  const box = $('regions'); box.textContent = ''; if (SERVERS.length < 2) return;
+  for (const s of SERVERS) {
+    const b = document.createElement('button'); b.type = 'button'; b.setAttribute('aria-pressed', s.id === region);
+    b.textContent = s.name; const sm = document.createElement('small'); sm.textContent = regionPing[s.id] ? regionPing[s.id] + ' ms' : 'checking…'; b.append(sm);
+    b.onclick = () => { if (s.id === region) return; region = s.id; try { localStorage.setItem('gobbleregion', region); } catch (e) {} renderRegions(); switchServer(); };
+    box.append(b);
+  }
+}
+// quick ping of every region (a short separate connection each), refreshed every 20 s while on the menu
+function probeRegions() {
+  for (const s of SERVERS) {
+    let w; try { w = new WebSocket(s.url.replace(/\/$/, '').replace(/^http/, 'ws') + '/ws'); } catch (e) { continue; }
+    w.binaryType = 'arraybuffer'; const times = []; let t0 = 0, n = 0;
+    const next = () => { t0 = performance.now(); w.send(Net.enc.ping(++n)); };
+    w.onopen = next;
+    w.onmessage = e => { if (typeof e.data === 'string') return; const m = Net.decode(e.data, WS); if (!m || m.op !== 9) return; times.push(performance.now() - t0); if (times.length < 3) next(); else { regionPing[s.id] = Math.round(Math.min(...times)); w.close(); renderRegions(); } };
+    w.onerror = () => {}; setTimeout(() => { try { w.close(); } catch (e) {} }, 8000);
+  }
+}
+function switchServer() { if (ws) { ws.onclose = null; try { ws.close(); } catch (e) {} } playing = false; connected = false; ents.clear(); spikes.clear(); blobs.clear(); pellets.clear(); owners.clear(); myBoxes = []; connect(); }
 function connect() {
   setStatus('Connecting…');
   try { ws = new WebSocket(wsUrl()); } catch (e) { return reconnect(); }
   ws.binaryType = 'arraybuffer';
-  ws.onopen = () => { connected = true; retry = 0; full = false; setStatus(''); ws.send(Net.enc.size(innerWidth, innerHeight)); };
+  ws.onopen = () => { connected = true; retry = 0; full = false; setStatus(''); ws.send(Net.enc.size(innerWidth, innerHeight)); sendPing(); };
   ws.onmessage = e => { if (typeof e.data !== 'string') handle(Net.decode(e.data, WS)); };
   ws.onclose = () => { connected = false; if (playing) { playing = false; showMenu('Connection lost', 'Reconnecting to the server…'); } ents.clear(); spikes.clear(); blobs.clear(); pellets.clear(); owners.clear(); reconnect(); };
   ws.onerror = () => {};
 }
 function reconnect() { const wait = Math.min(10000, 800 * 2 ** retry++); setStatus('Can’t reach the server. Trying again in ' + Math.ceil(wait / 1000) + ' s…'); setTimeout(connect, wait); }
 function send(ab) { if (ws && ws.readyState === 1) ws.send(ab); }
+let pingT0 = 0, pingTok = 0, ping = 0;
+function sendPing() { pingT0 = performance.now(); send(Net.enc.ping(++pingTok)); }
+setInterval(() => { if (connected) sendPing(); }, 2000);
 function setStatus(t) { $('net').textContent = t; $('net').hidden = !t; $('go').disabled = !!t && !connected; }
 
 function handle(m) {
@@ -87,6 +119,7 @@ function handle(m) {
       break;
     }
     case 8: full = true; setStatus('This arena is full right now. Try again in a moment.'); break;
+    case 9: if (m.token === pingTok) { const p = performance.now() - pingT0; ping = ping ? Math.round(ping * 0.6 + p * 0.4) : Math.round(p); regionPing[region] = ping; } break;
   }
 }
 function fmtT(s) { s = Math.floor(s); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
@@ -172,8 +205,8 @@ function drawSpike(v) {
 }
 const fb = Array.from({ length: 12 }, () => []);
 function draw(dt) {
-  const k = smooth(dt * 16);
-  for (const e of ents.values()) { e.x += (e.tx - e.x) * k; e.y += (e.ty - e.y) * k; e.r += (e.tr - e.r) * k; }
+  const k = smooth(dt * 18), km = smooth(dt * 30);
+  for (const e of ents.values()) { const q = myBoxes.includes(e.o) ? km : k; e.x += (e.tx - e.x) * q; e.y += (e.ty - e.y) * q; e.r += (e.tr - e.r) * q; }
   for (const v of spikes.values()) { v.x += (v.tx - v.x) * k; v.y += (v.ty - v.y) * k; v.rot += dt * 0.3; }
   for (const b of blobs.values()) { b.x += (b.tx - b.x) * k; b.y += (b.ty - b.y) * k; }
   g.setTransform(dpr, 0, 0, dpr, 0, 0); g.fillStyle = '#000'; g.fillRect(0, 0, W, H);
@@ -258,6 +291,8 @@ function hud() {
   lb.top.slice(0, 6).forEach((t, i) => row(t.id, t.m, i));
   if (playing && lb.rank > 6) { const li = document.createElement('li'); li.className = 'gap'; li.textContent = '…'; ol.appendChild(li); const li2 = document.createElement('li'); li2.value = lb.rank; li2.className = 'me'; li2.textContent = 'You · ' + dm(tot).toLocaleString(); ol.appendChild(li2); }
   $('pc').textContent = connected ? lb.total + ' in the arena' : '';
+  $('png').textContent = connected && ping ? ping + ' ms' : '–';
+  if (!$('ov').hidden) renderRegions();
 }
 
 /* ---------- loop ---------- */
@@ -355,5 +390,6 @@ $('nm').addEventListener('keydown', e => { if (e.key === 'Enter') startGame(); }
 document.title = GAME_NAME; $('ot').textContent = GAME_NAME;
 try { $('nm').value = localStorage.getItem('gobblename') || ''; multiChosen = localStorage.getItem('gobblemb') !== '0'; } catch (e) {}
 updateHelp(); mx = W / 2; my = H / 2;
+renderRegions(); probeRegions(); setInterval(() => { if (!playing) probeRegions(); }, 20000);
 connect(); requestAnimationFrame(frame);
 })();

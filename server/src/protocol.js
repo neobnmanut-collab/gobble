@@ -10,6 +10,7 @@
 //   6 SWAP    f32 x, f32 y          (where the box you leave keeps heading)
 //   7 RESPAWN
 //   8 SIZE    u16 screenW, u16 screenH
+//   9 PING    u32 token             (answered at once with PONG, for the ping display)
 //
 // Server -> browser
 //   1 HELLO   f32 world size, u8 protocol version
@@ -26,6 +27,7 @@
 //             u8 n real players (u16 x, u16 y, u32 owner)  -- one dot per player box
 //   7 DEAD    u32 peak mass, u16 orbs eaten, u32 seconds alive
 //   8 FULL
+//   9 PONG    u32 token
 const VERSION = 1;
 const Q = 65535;
 
@@ -73,6 +75,7 @@ const enc = {
   },
   dead(peak, kills, alive) { const w = new Writer(11); w.u8(7); w.u32(peak); w.u16(kills); w.u32(alive); return w.done(); },
   full() { return Buffer.from([8]); },
+  pong(token) { const w = new Writer(5); w.u8(9); w.u32(token); return w.done(); },
 };
 
 // returns null for anything malformed
@@ -86,6 +89,7 @@ function decode(buf) {
       case 3: case 7: return { op };
       case 4: case 5: if (buf.length < 4) return null; return { op, on: !!buf[1], ms: buf.readUInt16LE(2) };
       case 8: if (buf.length < 5) return null; return { op, W: buf.readUInt16LE(1), H: buf.readUInt16LE(3) };
+      case 9: if (buf.length < 5) return null; return { op, token: buf.readUInt32LE(1) };
       default: return null;
     }
   } catch (e) { return null; }

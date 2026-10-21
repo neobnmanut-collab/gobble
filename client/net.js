@@ -43,6 +43,7 @@
       }
       case 7: return { op, peak: u32(), kills: u16(), alive: u32() };
       case 8: return { op };
+      case 9: return { op, token: u32() };
       default: return null;
     }
   }
@@ -61,6 +62,7 @@
     feed(on, ms) { return msg(4, d => { d.setUint8(0, 5); d.setUint8(1, on ? 1 : 0); d.setUint16(2, ms, true); }); },
     swap(x, y) { return msg(9, d => { d.setUint8(0, 6); d.setFloat32(1, x, true); d.setFloat32(5, y, true); }); },
     respawn() { return msg(1, d => d.setUint8(0, 7)); },
+    ping(token) { return msg(5, d => { d.setUint8(0, 9); d.setUint32(1, token >>> 0, true); }); },
     size(W, H) { return msg(5, d => { d.setUint8(0, 8); d.setUint16(1, Math.min(65535, W | 0), true); d.setUint16(3, Math.min(65535, H | 0), true); }); },
   };
 

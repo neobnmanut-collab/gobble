@@ -82,13 +82,15 @@ button{font:700 1rem var(--font);cursor:pointer}
 
 #net{font-size:.85rem;color:var(--warn);margin:0}
 #pc{font-size:.8rem;color:var(--muted);margin:0;text-align:center}
+#regions button small{display:block;font-weight:500;font-size:.75rem;color:var(--muted)}
+#regions:empty{display:none}
 #go:disabled{opacity:.5;cursor:not-allowed}
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
 <canvas id="mm"></canvas>
-<div class="hud" id="hud"><span class="k">Mass</span><b id="sc">0</b><span class="k">Best</span><b id="bs">0</b><span class="k">Rank</span><b id="rk">–</b><span class="k">Sector</span><b id="sec">–</b><div id="ct"></div></div>
+<div class="hud" id="hud"><span class="k">Mass</span><b id="sc">0</b><span class="k">Best</span><b id="bs">0</b><span class="k">Rank</span><b id="rk">–</b><span class="k">Sector</span><b id="sec">–</b><span class="k">Ping</span><b id="png">–</b><div id="ct"></div></div>
 <div class="hud" id="lbw"><h2>Top orbs</h2><ol id="lb"></ol></div>
 <div id="tc"><button id="bsp">Split</button><button id="bds">2× Split</button><button id="bej">Eject</button><button id="bsw" hidden>Swap</button><button id="bfd" hidden>Feed</button></div>
 <div class="ov" id="ov"><div class="card">
@@ -98,6 +100,7 @@ button{font:700 1rem var(--font);cursor:pointer}
   <input type="text" id="nm" maxlength="12" placeholder="Your name" autocomplete="off">
   <div class="seg" role="group" aria-label="Game mode"><button type="button" id="mSolo" aria-pressed="false">Solo</button><button type="button" id="mMulti" aria-pressed="true">Multibox</button></div>
   <p id="mbh"></p>
+  <div class="seg" id="regions" role="group" aria-label="Server region"></div>
   <button class="primary" id="go">Play</button>
   <p id="net" hidden></p>
   <p id="pc"></p>
@@ -127,6 +130,7 @@ button{font:700 1rem var(--font);cursor:pointer}
     <p class="hint">This is an online game, so it keeps running while this panel is open. Your browser’s own shortcuts are blocked while you play.</p></div>
   <div class="btns"><button class="kb" id="rs">Reset defaults</button><button class="primary" id="cl">Done</button></div>
 </div></div>
+<script src="servers.js"></script>
 <script src="net.js"></script>
 <script src="game.js"></script>
 </body>
