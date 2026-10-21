@@ -16,7 +16,7 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; cha
 const game = new Game();
 // changes with every deploy; browsers that see a new one reload themselves to get the latest game page
 const BUILD = (process.env.RENDER_GIT_COMMIT || '').slice(0, 12) || String(Date.now());
-let stats = { tickMs: 0, bytesOut: 0 };
+let stats = { tickMs: 0, bytesOut: 0, worstMs: 0, slow: 0, ticks: 0 };
 
 /* ---------- web page ---------- */
 const server = http.createServer((req, res) => {
@@ -24,7 +24,7 @@ const server = http.createServer((req, res) => {
   if (url.pathname === '/health') {
     let humans = 0; for (const c of game.clients) if (!c.dead) humans++;
     res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store', 'access-control-allow-origin': '*' });
-    return res.end(JSON.stringify({ ok: true, players: humans, connections: game.clients.size, orbs: game.cells.length, tickMs: +stats.tickMs.toFixed(2) }));
+    return res.end(JSON.stringify({ ok: true, players: humans, connections: game.clients.size, orbs: game.cells.length, tickMs: +stats.tickMs.toFixed(2), worstTickMs: +stats.worstMs.toFixed(1), slowTicks: stats.slow, ticks: stats.ticks, upMinutes: Math.round(process.uptime() / 60) }));
   }
   let rel = decodeURIComponent(url.pathname); if (rel.endsWith('/')) rel += 'index.html';
   const file = path.resolve(CLIENT_DIR, '.' + rel);
@@ -167,7 +167,8 @@ function loop() {
   if (n % C.SEND_EVERY === 0) for (const cl of game.clients) sendWorld(cl);
   if (n % 15 === 0) { sendLeaderboard(); sendParties(); }
   if (n % 15 === 0) sendMinimap();
-  stats.tickMs = stats.tickMs * 0.95 + (performance.now() - t0) * 0.05;
+  const took = performance.now() - t0, late = performance.now() - next; stats.tickMs = stats.tickMs * 0.95 + took * 0.05; stats.ticks++;
+  if (took > stats.worstMs) stats.worstMs = took; if (took > 25 || late > 60) stats.slow++; // a step that ran long, or the whole server woke up late
   next += DT * 1000; const wait = next - performance.now();
   if (wait < -250) next = performance.now(); // fell far behind: don't try to catch up all at once
   setTimeout(loop, Math.max(0, wait));

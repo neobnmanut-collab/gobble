@@ -12,7 +12,7 @@ const cam = { x: 6000, y: 6000, s: 0.5 }; let zm = 1;
 const DEF = { split: 'Space', dsplit: 'KeyD', tsplit: 'KeyF', qsplit: 'KeyG', eject: 'KeyW', hline: 'KeyS', vline: 'KeyT', fline: '', respawn: 'KeyB', ping: 'KeyR', swap: 'Mouse2', feed: 'KeyE' };
 const ACT = ['split', 'dsplit', 'tsplit', 'qsplit', 'eject', 'hline', 'vline', 'fline', 'respawn', 'ping', 'swap', 'feed'].map(k => [k, 'a_' + k]);
 const MACROS = [['none', 'm_none'], ['split', 'a_split'], ['dsplit', 'a_dsplit'], ['tsplit', 'a_tsplit'], ['qsplit', 'a_qsplit'], ['eject', 'a_eject'], ['swap', 'm_swap']];
-let binds = Object.assign({}, DEF), dd = 40, rf = 40, pd = 50, lsi = false, lsn = 2, mal = true, ltg = false, ftg = false, mbtn = { 0: 'none', 2: 'none' };
+let binds = Object.assign({}, DEF), dd = 60, rf = 40, pd = 50, lsi = false, lsn = 2, mal = true, ltg = false, ftg = false, mbtn = { 0: 'none', 2: 'none' };
 let best = 0;
 try { best = +localStorage.getItem('gobblebest_mp') || 0; } catch (e) {}
 try {
@@ -20,13 +20,13 @@ try {
   if (c) {
     if (c.binds) for (const k in DEF) if (typeof c.binds[k] === 'string') binds[k] = c.binds[k];
     const num = (k, a, b) => (typeof c[k] === 'number' ? clamp(c[k], a, b) : undefined), bool = k => (typeof c[k] === 'boolean' ? c[k] : undefined);
-    rf = num('rf', 40, 200) ?? rf; dd = num('dd', 0, 300) ?? dd; pd = num('pd', 0, 200) ?? pd; lsn = num('lsn', 1, 4) ?? lsn;
+    rf = num('rf', 40, 200) ?? rf; dd = num('dd2', 0, 300) ?? dd; pd = num('pd', 0, 200) ?? pd; lsn = num('lsn', 1, 4) ?? lsn;
     lsi = bool('lsi') ?? lsi; mal = bool('mal') ?? mal; ltg = bool('ltg') ?? ltg; ftg = bool('ftg') ?? ftg;
     if (c.mbtn) for (const b of [0, 2]) if (MACROS.some(m => m[0] === c.mbtn[b])) mbtn[b] = c.mbtn[b];
   }
 } catch (e) {}
 { const seen = new Set(); for (const [k] of ACT) { const v = binds[k]; if (!v) continue; if (seen.has(v)) binds[k] = Object.values(binds).includes(DEF[k]) ? '' : DEF[k]; seen.add(binds[k]); } }
-function saveCfg() { try { const old = JSON.parse(localStorage.getItem('gobblecfg') || '{}') || {}; localStorage.setItem('gobblecfg', JSON.stringify(Object.assign(old, { binds, dd, rf, pd, lsi, lsn, mal, ltg, ftg, mbtn }))); } catch (e) {} }
+function saveCfg() { try { const old = JSON.parse(localStorage.getItem('gobblecfg') || '{}') || {}; localStorage.setItem('gobblecfg', JSON.stringify(Object.assign(old, { binds, dd2: dd, rf, pd, lsi, lsn, mal, ltg, ftg, mbtn }))); } catch (e) {} }
 function label(b) { if (!b) return tr('unbound'); if (b.startsWith('Mouse')) { const n = +b.slice(5); return n <= 2 ? tr(['mouse_left', 'mouse_middle', 'mouse_right'][n]) : tr('mouse_n', { n: n + 1 }); } return b.startsWith('Key') ? b.slice(3) : b.startsWith('Digit') ? b.slice(5) : b; }
 
 /* ---------- world as last seen from the server ---------- */
@@ -115,9 +115,9 @@ function handle(m) {
         if (e) {
           const dtt = (lastTick - e.lt) / 1000;
           if (dtt > 0.008 && dtt < 0.5) { const k = 0.6; e.vx = e.vx * (1 - k) + (c.x - e.tx) / dtt * k; e.vy = e.vy * (1 - k) + (c.y - e.ty) / dtt * k; }
-          e.tx = c.x; e.ty = c.y; e.tr = c.r; e.m = c.m; e.o = c.o; e.lt = lastTick;
+          e.ox = e.x; e.oy = e.y; e.or = e.r; e.tx = c.x; e.ty = c.y; e.tr = c.r; e.m = c.m; e.o = c.o; e.lt = lastTick;
         }
-        else ents.set(c.id, { id: c.id, o: c.o, x: c.x, y: c.y, r: c.r, tx: c.x, ty: c.y, tr: c.r, m: c.m, vx: 0, vy: 0, lt: lastTick, pux: 0, puy: 0 });
+        else ents.set(c.id, { id: c.id, o: c.o, x: c.x, y: c.y, r: c.r, ox: c.x, oy: c.y, or: c.r, tx: c.x, ty: c.y, tr: c.r, m: c.m, vx: 0, vy: 0, lt: lastTick, pux: 0, puy: 0 });
       }
       for (const id of ents.keys()) if (!seen.has(id)) ents.delete(id);
       const ss = new Set();
@@ -239,9 +239,10 @@ const fb = Array.from({ length: 12 }, () => []);
 function draw(dt) {
   const k = dd <= 0 ? 1 : smooth(dt / (dd / 1000 * 0.6)), now = performance.now(), aid = playing ? activeId() : -1, aim = playing ? aimPoint() : null;
   for (const e of ents.values()) {
-    const age = Math.min(0.12, (now - e.lt) / 1000);
-    e.r += (e.tr - e.r) * smooth(dt * 14);
-    if (e.o === aid && false) { // (local prediction switched off: it made orbs look closer or safer than they were)
+    // draw delay: glide in a straight line from where the orb was drawn to its new position over dd milliseconds
+    const p = dd <= 0 ? 1 : Math.min(1, (now - e.lt) / dd);
+    e.x = e.ox + (e.tx - e.ox) * p; e.y = e.oy + (e.ty - e.oy) * p; e.r = e.or + (e.tr - e.or) * p;
+    if (false) { // (local prediction switched off: it made orbs look closer or safer than they were)
       // your own orb: move it locally toward the mouse right away, then pull it gently onto where the server has it
       const lat = Math.min(0.3, ping / 2000 + age), sx = e.tx + e.vx * lat, sy = e.ty + e.vy * lat;
       let dx = aim.x - e.x, dy = aim.y - e.y; const d = Math.hypot(dx, dy); let dvx = 0, dvy = 0;
@@ -250,9 +251,6 @@ function draw(dt) {
       e.x += e.pux * dt; e.y += e.puy * dt;
       const ex = sx - e.x, ey = sy - e.y, err = Math.hypot(ex, ey), c = smooth(dt * (err > e.r * 0.5 ? 14 : 4));
       e.x += ex * c; e.y += ey * c;
-    } else {
-      const gx = e.tx + e.vx * age, gy = e.ty + e.vy * age, q = k;
-      e.x += (gx - e.x) * q; e.y += (gy - e.y) * q;
     }
   }
   for (const v of spikes.values()) { v.x += (v.tx - v.x) * k; v.y += (v.ty - v.y) * k; v.rot += dt * 0.3; }
@@ -429,7 +427,7 @@ function tbtn(id, fn, hold) {
 }
 tbtn('bsp', d => d && multiSplit(1)); tbtn('bds', d => d && multiSplit(2)); tbtn('bej', d => act('eject', d), true); tbtn('bsw', d => d && act('swap', true)); tbtn('bfd', d => act('feed', d), true);
 $('gear').addEventListener('click', openSettings); $('cl').addEventListener('click', closeSettings); $('cl2').addEventListener('click', closeSettings);
-$('rs').addEventListener('click', () => { binds = Object.assign({}, DEF); dd = 40; rf = 40; pd = 50; lsi = false; lsn = 2; mal = true; ltg = false; ftg = false; mbtn = { 0: 'none', 2: 'none' }; saveCfg(); updateHelp(); renderSettings(); });
+$('rs').addEventListener('click', () => { binds = Object.assign({}, DEF); dd = 60; rf = 40; pd = 50; lsi = false; lsn = 2; mal = true; ltg = false; ftg = false; mbtn = { 0: 'none', 2: 'none' }; saveCfg(); updateHelp(); renderSettings(); });
 const setting = (id, ev, fn) => $(id).addEventListener(ev, e => { fn(e.target); saveCfg(); renderSettings(); });
 setting('dd', 'input', t => dd = +t.value); setting('rf', 'input', t => rf = +t.value); setting('pd', 'input', t => pd = +t.value);
 setting('lsi', 'change', t => lsi = t.checked); setting('lsn', 'change', t => lsn = clamp(Math.round(+t.value) || 1, 1, 4)); setting('mal', 'change', t => mal = t.checked);
