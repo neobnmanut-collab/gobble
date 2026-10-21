@@ -66,7 +66,7 @@ wss.on('connection', (ws, req) => {
       case 7: if (!cl.dead) game.respawn(cl); break;
       case 8: cl.W = m.W; cl.H = m.H; break;
       case 9: if (cl.ws.readyState === 1) cl.ws.send(enc.pong(m.token)); break;
-      case 11: cl.growth = Math.max(1, Math.min(C.GROWTH, m.growth | 0)) || C.GROWTH; break;
+      case 11: cl.growth = Math.max(1, Math.min(C.GROWTH, m.growth | 0)) || C.GROWTH_DEFAULT; break;
       case 10: { // chat: everyone in this arena, or just your party
         const now = Date.now(); if (!cl.name || now - (cl.chatT || 0) < 700) return; cl.chatT = now;
         const text = m.text.replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120); if (!text) return;

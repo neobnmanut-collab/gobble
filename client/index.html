@@ -94,7 +94,7 @@ button{font:700 1rem var(--font);cursor:pointer}
 #cmin{padding:2px 8px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-size:.8rem;line-height:1.4}
 #clog{display:flex;flex-direction:column;gap:2px;height:170px;overflow-y:auto;padding:8px 10px;overscroll-behavior:contain}
 #clog:empty::before{content:"No messages yet. Say hi!";color:var(--muted);font-size:.85rem}
-.cm{font-size:.85rem;line-height:1.4;color:var(--ink);overflow-wrap:anywhere}
+.cm{font-size:.85rem;line-height:1.4;color:var(--ink);overflow-wrap:anywhere;user-select:text;-webkit-user-select:text;cursor:text}
 .ctag{font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;color:var(--acc);margin-right:5px;font-weight:700}
 #cin{display:flex;gap:6px;padding:8px;border-top:1px solid var(--line)}
 #ctx{flex:1;min-width:0;font:inherit;font-size:.9rem;padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
@@ -107,7 +107,12 @@ button{font:700 1rem var(--font);cursor:pointer}
 @media (pointer:coarse){#chat{bottom:calc(env(safe-area-inset-bottom,0px) + 170px);width:min(300px,62vw)}#clog{height:110px}}
 #wake{font-size:.8rem;margin:0}
 .grow{display:flex;flex-direction:column;gap:6px}.grow>span{font-size:.8rem;color:var(--muted)}
-#grow{grid-template-columns:repeat(5,1fr)}#grow button{padding:8px 0}
+#grow,#growc{grid-template-columns:repeat(5,1fr)}#grow button,#growc button{padding:8px 0}
+#live{position:fixed;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + 12px);z-index:4;pointer-events:none;display:flex;align-items:center;gap:8px;padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:color-mix(in srgb,var(--surface) 82%,transparent);font-size:.85rem;font-variant-numeric:tabular-nums}
+#live i{width:8px;height:8px;border-radius:50%;background:#3ecf6e;box-shadow:0 0 6px #3ecf6e}
+#gear kbd{font:inherit;font-size:.75rem;color:var(--muted);margin-left:4px}
+@media (pointer:coarse){#gear kbd{display:none}}
+@media (max-width:560px){#live{top:auto;bottom:calc(env(safe-area-inset-bottom,0px) + 14px);font-size:.75rem}}
 #go:disabled{opacity:.5;cursor:not-allowed}
 </style>
 </head>
@@ -135,7 +140,8 @@ button{font:700 1rem var(--font);cursor:pointer}
   <div class="keys" id="keys"></div>
 </div></div>
 <div id="chat"><div id="chead"><span>Chat</span><button type="button" id="cmin" aria-label="Hide chat">–</button></div><div id="clog" aria-live="polite"></div><div id="cin"><button type="button" id="cch">All</button><input type="text" id="ctx" maxlength="120" placeholder="Press Play to chat" autocomplete="off" aria-label="Chat message" disabled><button type="button" id="csend" disabled>Send</button></div></div>
-<button id="gear">⚙ Controls</button>
+<div id="live" hidden><i></i><span id="livet"></span></div>
+<button id="gear">⚙ Controls <kbd>Esc</kbd></button>
 <div class="ov" id="st" hidden><div class="card wide">
   <div class="sh"><h1 style="font-size:1.6rem">Controls</h1><button class="x" id="cl2" aria-label="Close">✕</button></div>
   <div class="sec"><h2>Keys</h2><p class="hint">Click a key, then press the new key or mouse button. Backspace clears it, Esc cancels.</p><div class="kg" id="kl"></div></div>
@@ -143,6 +149,7 @@ button{font:700 1rem var(--font);cursor:pointer}
     <div class="row"><span>Left button</span><select id="mm0"></select></div>
     <div class="row"><span>Right button</span><select id="mm2"></select></div>
     <p class="hint">An action picked here takes over that button from the key list.</p></div>
+  <div class="sec"><h2>Growth speed</h2><div class="seg" id="growc" role="group" aria-label="Growth speed"></div><p class="hint">How fast you grow from pellets and from orbs you eat. Changes right away, even mid-game.</p></div>
   <div class="sec"><h2>Rapid feed</h2>
     <div class="row"><span>Time between shots</span><input type="range" id="rf" min="40" max="200" step="5"><b id="rfv"></b></div></div>
   <div class="sec"><h2>Line splits</h2>
@@ -160,8 +167,8 @@ button{font:700 1rem var(--font);cursor:pointer}
     <p class="hint">This is an online game, so it keeps running while this panel is open. Your browser’s own shortcuts are blocked while you play.</p></div>
   <div class="btns"><button class="kb" id="rs">Reset defaults</button><button class="primary" id="cl">Done</button></div>
 </div></div>
-<script src="servers.js?v=12"></script>
-<script src="net.js?v=12"></script>
-<script src="game.js?v=12"></script>
+<script src="servers.js?v=14"></script>
+<script src="net.js?v=14"></script>
+<script src="game.js?v=14"></script>
 </body>
 </html>

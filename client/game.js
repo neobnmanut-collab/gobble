@@ -339,7 +339,7 @@ function hud() {
   lb.top.slice(0, 6).forEach((t, i) => row(t.id, t.m, i));
   if (playing && lb.rank > 6) { const li = document.createElement('li'); li.className = 'gap'; li.textContent = '…'; ol.appendChild(li); const li2 = document.createElement('li'); li2.value = lb.rank; li2.className = 'me'; li2.textContent = 'You · ' + dm(tot).toLocaleString(); ol.appendChild(li2); }
   const who = lb.players >= 0 ? lb.players + (lb.players === 1 ? ' player' : ' players') + ' online · ' + lb.bots + ' bots' : lb.total + ' in the arena';
-  $('pc').textContent = connected ? who : ''; $('onl').textContent = connected && lb.players >= 0 ? lb.players + (lb.players === 1 ? ' player · ' : ' players · ') + lb.bots + ' bots' : '–';
+  $('pc').textContent = connected ? who : ''; $('live').hidden = !(connected && playing && lb.players >= 0); $('livet').textContent = lb.players + (lb.players === 1 ? ' player' : ' players') + ' online · ' + lb.bots + ' bots'; $('onl').textContent = connected && lb.players >= 0 ? lb.players + (lb.players === 1 ? ' player · ' : ' players · ') + lb.bots + ' bots' : '–';
   $('png').textContent = connected && ping ? ping + ' ms' : '–';
   if (!$('ov').hidden) renderRegions();
 }
@@ -389,15 +389,17 @@ function releaseAll() { for (const c of [...held]) release(c); held.clear(); for
 
 /* ---------- input ---------- */
 let steer = null;
-cv.addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse') { steer = e.pointerId; mx = e.clientX; my = e.clientY; } try { window.focus(); } catch (x) {} });
+cv.addEventListener('pointerdown', e => { const ae = document.activeElement; if (ae && ae !== document.body && /INPUT|SELECT|BUTTON|TEXTAREA/.test(ae.tagName)) ae.blur(); if (e.pointerType !== 'mouse') { steer = e.pointerId; mx = e.clientX; my = e.clientY; } try { window.focus(); } catch (x) {} });
 addEventListener('pointermove', e => { if (e.pointerType === 'mouse' || e.pointerId === steer) { mx = e.clientX; my = e.clientY; } });
 addEventListener('pointerup', e => { if (e.pointerId === steer) steer = null; });
 addEventListener('keydown', e => {
   if (listening) { e.preventDefault(); e.stopPropagation(); const k = listening; listening = null; if (e.code === 'Backspace' || e.code === 'Delete') { binds[k] = ''; saveCfg(); updateHelp(); } else if (e.code !== 'Escape') assign(k, e.code); renderSettings(); return; }
   if (!$('st').hidden) { if (e.code === 'Escape') closeSettings(); return; }
   const tag = e.target.tagName; if (tag === 'INPUT' || tag === 'SELECT') return;
+  if (e.code === 'Escape' && !isBound('Escape')) { e.preventDefault(); openSettings(); return; } // Esc opens Controls (Esc again closes)
   if (e.code === 'Enter' && !isBound('Enter') && connected) { e.preventDefault(); openChat(); return; }
   if (!playing) return;
+  if ((e.ctrlKey || e.metaKey) && e.code === 'KeyC' && String(getSelection()).length) return; // copy selected chat text
   e.preventDefault();
   if (e.repeat) return;
   if (isBound(e.code)) press(e.code);
@@ -415,7 +417,7 @@ addEventListener('mousedown', e => {
 }, true);
 addEventListener('mouseup', e => { if (e.button > 2 && playing) e.preventDefault(); const mac = mheld[e.button]; if (mac) { delete mheld[e.button]; act(mac, false); } release('Mouse' + e.button); });
 addEventListener('auxclick', e => { if (playing) e.preventDefault(); });
-addEventListener('contextmenu', e => { if (listening || playing || e.target === cv) e.preventDefault(); });
+addEventListener('contextmenu', e => { if (e.target.closest && e.target.closest('#clog')) return; if (listening || playing || e.target === cv) e.preventDefault(); });
 addEventListener('blur', releaseAll);
 document.addEventListener('visibilitychange', () => { if (document.hidden) releaseAll(); else try { window.focus(); } catch (x) {} });
 cv.addEventListener('wheel', e => { e.preventDefault(); zm = clamp(zm * Math.exp(-e.deltaY * 0.0015), 0.01, 3); }, { passive: false });
@@ -437,13 +439,15 @@ $('go').addEventListener('click', startGame);
 $('nm').addEventListener('keydown', e => { if (e.key === 'Enter') startGame(); });
 
 /* ---------- growth speed, 1x to 5x, each player's own choice ---------- */
-let growth = 5; try { growth = Math.min(5, Math.max(1, +localStorage.getItem('gobblegrowth') || 5)); } catch (e) {}
+let growth = 2; try { growth = Math.min(5, Math.max(1, +localStorage.getItem('gobblegrowth2') || 2)); } catch (e) {}
 function renderGrowth() {
-  const box = $('grow'); box.textContent = '';
-  for (let v = 1; v <= 5; v++) {
-    const b = document.createElement('button'); b.type = 'button'; b.textContent = v + '×'; b.setAttribute('aria-pressed', v === growth);
-    b.onclick = () => { growth = v; try { localStorage.setItem('gobblegrowth', v); } catch (e) {} renderGrowth(); if (playing) send(Net.enc.growth(v)); };
-    box.append(b);
+  for (const id of ['grow', 'growc']) {
+    const box = $(id); if (!box) continue; box.textContent = '';
+    for (let v = 1; v <= 5; v++) {
+      const b = document.createElement('button'); b.type = 'button'; b.textContent = v + '×'; b.setAttribute('aria-pressed', v === growth);
+      b.onclick = () => { growth = v; try { localStorage.setItem('gobblegrowth2', v); } catch (e) {} renderGrowth(); if (playing) send(Net.enc.growth(v)); };
+      box.append(b);
+    }
   }
 }
 renderGrowth();
@@ -479,11 +483,11 @@ function addChat(m) {
   if ($('chat').classList.contains('min')) $('cmin').textContent = '+ new';
 }
 function openChat() { if (!showChat || !playing) return; $('chat').classList.remove('min'); $('cmin').textContent = '–'; releaseAll(); $('ctx').focus(); }
-function closeChat() { $('ctx').blur(); try { window.focus(); } catch (e) {} }
+function closeChat() { const ae = document.activeElement; if (ae && ae.blur) ae.blur(); $('ctx').blur(); try { window.focus(); } catch (e) {} }
 function sendChat() { const t = $('ctx').value.trim(); if (t && playing) send(Net.enc.chat(chatChan, t)); $('ctx').value = ''; }
 function chatReady() { const on = playing && connected; $('ctx').disabled = $('csend').disabled = !on; $('ctx').placeholder = on ? 'Type a message…' : 'Press Play to chat'; }
 setInterval(chatReady, 300);
-$('csend').addEventListener('click', e => { e.preventDefault(); sendChat(); $('ctx').focus(); });
+$('csend').addEventListener('click', e => { e.preventDefault(); sendChat(); closeChat(); });
 $('cmin').addEventListener('click', () => { const m = $('chat').classList.toggle('min'); $('cmin').textContent = m ? '+' : '–'; });
 $('ctx').addEventListener('focus', () => releaseAll());
 function renderChatChan() { if (chatChan === 1 && !partyCode) chatChan = 0; $('cch').textContent = chatChan ? 'Party' : 'All'; $('cch').disabled = !partyCode; }
@@ -491,7 +495,7 @@ setInterval(renderChatChan, 1000);
 $('cch').addEventListener('click', () => { chatChan = partyCode ? 1 - chatChan : 0; renderChatChan(); $('ctx').focus(); });
 $('ctx').addEventListener('keydown', e => {
   e.stopPropagation();
-  if (e.key === 'Enter') { sendChat(); }
+  if (e.key === 'Enter') { sendChat(); closeChat(); }
   else if (e.key === 'Escape') closeChat();
 });
 $('shc').addEventListener('change', e => { showChat = e.target.checked; $('chat').hidden = !showChat; try { localStorage.setItem('gobblechat', showChat ? '1' : '0'); } catch (x) {} });
