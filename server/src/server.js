@@ -29,7 +29,7 @@ const server = http.createServer((req, res) => {
   if (!file.startsWith(CLIENT_DIR + path.sep)) { res.writeHead(403); return res.end(); }
   fs.readFile(file, (err, data) => {
     if (err) { res.writeHead(404, { 'content-type': 'text/plain' }); return res.end('Not found'); }
-    res.writeHead(200, { 'content-type': MIME[path.extname(file)] || 'application/octet-stream', 'cache-control': rel.endsWith('.html') ? 'no-cache' : 'public, max-age=3600' });
+    res.writeHead(200, { 'content-type': MIME[path.extname(file)] || 'application/octet-stream', 'cache-control': 'no-cache' });
     res.end(data);
   });
 });
