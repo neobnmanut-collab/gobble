@@ -8,6 +8,7 @@ const LANGS = {
 };
 const STR = {
 en: {
+  display: 'Display', draw_delay: 'Draw delay', draw_hint: 'How long orbs take to glide to each new position. Lower feels faster and snappier, higher looks smoother.',
   intro: 'Eat pellets, swallow orbs a quarter smaller than you, and steer clear of the spikes once you’re big. Pick how fast you grow below.',
   peak: 'Peak mass', swallowed: 'Swallowed', survived: 'Survived', name_ph: 'Your name',
   solo: 'Solo', multibox: 'Multibox', mode_multi: 'Control two orbs. Switch between them with {key}.', mode_solo: 'Play with a single orb.',
@@ -38,6 +39,7 @@ en: {
   r_eu: 'Europe', r_us: 'USA', r_here: 'This computer', checking: 'checking…', guest: 'Guest', player: 'Player',
 },
 es: {
+  display: 'Pantalla', draw_delay: 'Retraso de dibujo', draw_hint: 'Cuánto tardan los orbes en deslizarse a cada nueva posición. Más bajo se siente más rápido y ágil; más alto se ve más suave.',
   intro: 'Come bolitas, traga orbes un cuarto más pequeños que tú y aléjate de los pinchos cuando seas grande. Elige abajo lo rápido que creces.',
   peak: 'Masa máxima', swallowed: 'Tragados', survived: 'Sobreviviste', name_ph: 'Tu nombre',
   solo: 'Solo', multibox: 'Multibox', mode_multi: 'Controla dos orbes. Cambia entre ellos con {key}.', mode_solo: 'Juega con un solo orbe.',
@@ -68,6 +70,7 @@ es: {
   r_eu: 'Europa', r_us: 'EE. UU.', r_here: 'Este equipo', checking: 'comprobando…', guest: 'Invitado', player: 'Jugador',
 },
 pt: {
+  display: 'Tela', draw_delay: 'Atraso de desenho', draw_hint: 'Quanto tempo os orbes levam para deslizar até cada nova posição. Menor parece mais rápido e ágil; maior fica mais suave.',
   intro: 'Coma bolinhas, engula orbes um quarto menores que você e fuja dos espinhos quando estiver grande. Escolha abaixo a velocidade de crescimento.',
   peak: 'Massa máxima', swallowed: 'Engolidos', survived: 'Sobreviveu', name_ph: 'Seu nome',
   solo: 'Solo', multibox: 'Multibox', mode_multi: 'Controle dois orbes. Alterne entre eles com {key}.', mode_solo: 'Jogue com um único orbe.',
@@ -98,6 +101,7 @@ pt: {
   r_eu: 'Europa', r_us: 'EUA', r_here: 'Este computador', checking: 'verificando…', guest: 'Convidado', player: 'Jogador',
 },
 fr: {
+  display: 'Affichage', draw_delay: 'Délai d’affichage', draw_hint: 'Le temps que mettent les orbes à glisser vers chaque nouvelle position. Plus bas, c’est plus rapide et nerveux ; plus haut, plus fluide.',
   intro: 'Mange des billes, avale les orbes un quart plus petits que toi et évite les pics quand tu es gros. Choisis ci-dessous ta vitesse de croissance.',
   peak: 'Masse max', swallowed: 'Avalés', survived: 'Survie', name_ph: 'Ton pseudo',
   solo: 'Solo', multibox: 'Multibox', mode_multi: 'Contrôle deux orbes. Passe de l’un à l’autre avec {key}.', mode_solo: 'Joue avec un seul orbe.',
@@ -128,6 +132,7 @@ fr: {
   r_eu: 'Europe', r_us: 'États-Unis', r_here: 'Cet ordinateur', checking: 'vérification…', guest: 'Invité', player: 'Joueur',
 },
 de: {
+  display: 'Anzeige', draw_delay: 'Zeichenverzögerung', draw_hint: 'Wie lange Orbs zu jeder neuen Position gleiten. Niedriger fühlt sich schneller und direkter an, höher sieht weicher aus.',
   intro: 'Friss Kugeln, verschlinge Orbs, die ein Viertel kleiner sind als du, und meide die Stacheln, sobald du groß bist. Wähle unten, wie schnell du wächst.',
   peak: 'Höchste Masse', swallowed: 'Gefressen', survived: 'Überlebt', name_ph: 'Dein Name',
   solo: 'Solo', multibox: 'Multibox', mode_multi: 'Steuere zwei Orbs. Wechsle mit {key} zwischen ihnen.', mode_solo: 'Spiele mit einem einzelnen Orb.',
@@ -158,6 +163,7 @@ de: {
   r_eu: 'Europa', r_us: 'USA', r_here: 'Dieser Computer', checking: 'prüfe…', guest: 'Gast', player: 'Spieler',
 },
 it: {
+  display: 'Visualizzazione', draw_delay: 'Ritardo di disegno', draw_hint: 'Quanto impiegano gli orb a scivolare verso ogni nuova posizione. Più basso sembra più veloce e reattivo, più alto più fluido.',
   intro: 'Mangia le palline, inghiotti gli orb più piccoli di un quarto e stai lontano dalle punte quando sei grande. Scegli sotto quanto in fretta cresci.',
   peak: 'Massa massima', swallowed: 'Inghiottiti', survived: 'Sopravvissuto', name_ph: 'Il tuo nome',
   solo: 'Solo', multibox: 'Multibox', mode_multi: 'Controlla due orb. Passa dall’uno all’altro con {key}.', mode_solo: 'Gioca con un solo orb.',
@@ -188,6 +194,7 @@ it: {
   r_eu: 'Europa', r_us: 'USA', r_here: 'Questo computer', checking: 'verifica…', guest: 'Ospite', player: 'Giocatore',
 },
 pl: {
+  display: 'Wyświetlanie', draw_delay: 'Opóźnienie rysowania', draw_hint: 'Jak długo kule płyną do każdej nowej pozycji. Niżej jest szybciej i żywiej, wyżej płynniej.',
   intro: 'Jedz kulki, połykaj kule o ćwierć mniejsze od siebie i omijaj kolce, gdy już urośniesz. Poniżej wybierz tempo wzrostu.',
   peak: 'Największa masa', swallowed: 'Połknięte', survived: 'Przetrwano', name_ph: 'Twoja nazwa',
   solo: 'Solo', multibox: 'Multibox', mode_multi: 'Steruj dwiema kulami. Przełączaj się między nimi klawiszem {key}.', mode_solo: 'Graj jedną kulą.',
@@ -218,6 +225,7 @@ pl: {
   r_eu: 'Europa', r_us: 'USA', r_here: 'Ten komputer', checking: 'sprawdzanie…', guest: 'Gość', player: 'Gracz',
 },
 ru: {
+  display: 'Отображение', draw_delay: 'Задержка отрисовки', draw_hint: 'Сколько времени орбы плавно движутся к каждой новой позиции. Меньше — быстрее и резче, больше — плавнее.',
   intro: 'Ешь шарики, глотай орбы на четверть меньше себя и держись подальше от шипов, когда станешь большим. Ниже выбери скорость роста.',
   peak: 'Макс. масса', swallowed: 'Съедено', survived: 'Продержался', name_ph: 'Твоё имя',
   solo: 'Соло', multibox: 'Мультибокс', mode_multi: 'Управляй двумя орбами. Переключайся между ними клавишей {key}.', mode_solo: 'Играй одним орбом.',
@@ -248,6 +256,7 @@ ru: {
   r_eu: 'Европа', r_us: 'США', r_here: 'Этот компьютер', checking: 'проверка…', guest: 'Гость', player: 'Игрок',
 },
 uk: {
+  display: 'Відображення', draw_delay: 'Затримка відмальовування', draw_hint: 'Скільки часу орби плавно рухаються до кожної нової позиції. Менше — швидше й різкіше, більше — плавніше.',
   intro: 'Їж кульки, ковтай орби на чверть менші за тебе й тримайся подалі від шипів, коли станеш великим. Нижче обери швидкість росту.',
   peak: 'Макс. маса', swallowed: 'З’їдено', survived: 'Протримався', name_ph: 'Твоє ім’я',
   solo: 'Соло', multibox: 'Мультибокс', mode_multi: 'Керуй двома орбами. Перемикайся між ними клавішею {key}.', mode_solo: 'Грай одним орбом.',
@@ -278,6 +287,7 @@ uk: {
   r_eu: 'Європа', r_us: 'США', r_here: 'Цей комп’ютер', checking: 'перевірка…', guest: 'Гість', player: 'Гравець',
 },
 tr: {
+  display: 'Görünüm', draw_delay: 'Çizim gecikmesi', draw_hint: 'Kürelerin her yeni konuma ne kadar sürede kaydığı. Düşük değer daha hızlı ve keskin, yüksek değer daha akıcı görünür.',
   intro: 'Topçukları ye, senden dörtte bir küçük küreleri yut ve büyüyünce dikenlerden uzak dur. Aşağıdan ne kadar hızlı büyüyeceğini seç.',
   peak: 'En yüksek kütle', swallowed: 'Yutulan', survived: 'Hayatta kalma', name_ph: 'Adın',
   solo: 'Tekli', multibox: 'Multibox', mode_multi: 'İki küre yönet. Aralarında {key} ile geçiş yap.', mode_solo: 'Tek bir küreyle oyna.',
@@ -308,6 +318,7 @@ tr: {
   r_eu: 'Avrupa', r_us: 'ABD', r_here: 'Bu bilgisayar', checking: 'kontrol ediliyor…', guest: 'Misafir', player: 'Oyuncu',
 },
 lv: {
+  display: 'Attēlojums', draw_delay: 'Zīmēšanas aizture', draw_hint: 'Cik ilgi orbi slīd uz katru jauno vietu. Mazāka vērtība šķiet ātrāka un asāka, lielāka izskatās plūdenāka.',
   intro: 'Ēd bumbiņas, norij orbus, kas ir par ceturtdaļu mazāki par tevi, un, kad esi liels, turies pa gabalu no ērkšķiem. Zemāk izvēlies augšanas ātrumu.',
   peak: 'Lielākā masa', swallowed: 'Norīti', survived: 'Izdzīvoji', name_ph: 'Tavs vārds',
   solo: 'Solo', multibox: 'Multibox', mode_multi: 'Vadi divus orbus. Pārslēdzies starp tiem ar {key}.', mode_solo: 'Spēlē ar vienu orbu.',
@@ -338,6 +349,7 @@ lv: {
   r_eu: 'Eiropa', r_us: 'ASV', r_here: 'Šis dators', checking: 'pārbauda…', guest: 'Viesis', player: 'Spēlētājs',
 },
 zh: {
+  display: '显示', draw_delay: '绘制延迟', draw_hint: '球滑向每个新位置所用的时间。越低越快、越灵敏，越高越平滑。',
   intro: '吃掉小球，吞下比你小四分之一的球，长大后要避开尖刺。在下方选择你的成长速度。',
   peak: '最大质量', swallowed: '吞掉', survived: '存活时间', name_ph: '你的名字',
   solo: '单人', multibox: '双控', mode_multi: '同时控制两个球，用 {key} 切换。', mode_solo: '只控制一个球。',

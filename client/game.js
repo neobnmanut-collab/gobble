@@ -12,7 +12,7 @@ const cam = { x: 6000, y: 6000, s: 0.5 }; let zm = 1;
 const DEF = { split: 'Space', dsplit: 'KeyD', tsplit: 'KeyF', qsplit: 'KeyG', eject: 'KeyW', hline: 'KeyS', vline: 'KeyT', fline: '', respawn: 'KeyB', ping: 'KeyR', swap: 'Mouse2', feed: 'KeyE' };
 const ACT = ['split', 'dsplit', 'tsplit', 'qsplit', 'eject', 'hline', 'vline', 'fline', 'respawn', 'ping', 'swap', 'feed'].map(k => [k, 'a_' + k]);
 const MACROS = [['none', 'm_none'], ['split', 'a_split'], ['dsplit', 'a_dsplit'], ['tsplit', 'a_tsplit'], ['qsplit', 'a_qsplit'], ['eject', 'a_eject'], ['swap', 'm_swap']];
-let binds = Object.assign({}, DEF), rf = 40, pd = 50, lsi = false, lsn = 2, mal = true, ltg = false, ftg = false, mbtn = { 0: 'none', 2: 'none' };
+let binds = Object.assign({}, DEF), dd = 40, rf = 40, pd = 50, lsi = false, lsn = 2, mal = true, ltg = false, ftg = false, mbtn = { 0: 'none', 2: 'none' };
 let best = 0;
 try { best = +localStorage.getItem('gobblebest_mp') || 0; } catch (e) {}
 try {
@@ -20,13 +20,13 @@ try {
   if (c) {
     if (c.binds) for (const k in DEF) if (typeof c.binds[k] === 'string') binds[k] = c.binds[k];
     const num = (k, a, b) => (typeof c[k] === 'number' ? clamp(c[k], a, b) : undefined), bool = k => (typeof c[k] === 'boolean' ? c[k] : undefined);
-    rf = num('rf', 40, 200) ?? rf; pd = num('pd', 0, 200) ?? pd; lsn = num('lsn', 1, 4) ?? lsn;
+    rf = num('rf', 40, 200) ?? rf; dd = num('dd', 0, 300) ?? dd; pd = num('pd', 0, 200) ?? pd; lsn = num('lsn', 1, 4) ?? lsn;
     lsi = bool('lsi') ?? lsi; mal = bool('mal') ?? mal; ltg = bool('ltg') ?? ltg; ftg = bool('ftg') ?? ftg;
     if (c.mbtn) for (const b of [0, 2]) if (MACROS.some(m => m[0] === c.mbtn[b])) mbtn[b] = c.mbtn[b];
   }
 } catch (e) {}
 { const seen = new Set(); for (const [k] of ACT) { const v = binds[k]; if (!v) continue; if (seen.has(v)) binds[k] = Object.values(binds).includes(DEF[k]) ? '' : DEF[k]; seen.add(binds[k]); } }
-function saveCfg() { try { const old = JSON.parse(localStorage.getItem('gobblecfg') || '{}') || {}; localStorage.setItem('gobblecfg', JSON.stringify(Object.assign(old, { binds, rf, pd, lsi, lsn, mal, ltg, ftg, mbtn }))); } catch (e) {} }
+function saveCfg() { try { const old = JSON.parse(localStorage.getItem('gobblecfg') || '{}') || {}; localStorage.setItem('gobblecfg', JSON.stringify(Object.assign(old, { binds, dd, rf, pd, lsi, lsn, mal, ltg, ftg, mbtn }))); } catch (e) {} }
 function label(b) { if (!b) return tr('unbound'); if (b.startsWith('Mouse')) { const n = +b.slice(5); return n <= 2 ? tr(['mouse_left', 'mouse_middle', 'mouse_right'][n]) : tr('mouse_n', { n: n + 1 }); } return b.startsWith('Key') ? b.slice(3) : b.startsWith('Digit') ? b.slice(5) : b; }
 
 /* ---------- world as last seen from the server ---------- */
@@ -226,7 +226,7 @@ function camera(dt) {
   const base = clamp(Math.min(W, H) / 600, 0.7, 1.4) * 1.35;
   const sN = Math.min(base / (1 + Math.sqrt(sm) / 26), Math.min(W, H) * 0.45 / (ext + 80)), fit = Math.min(W, H) / (WS * 2.1), s = Math.max(fit, sN * zm);
   cam.v = [cx - W / 2 / sN * 1.2, cx + W / 2 / sN * 1.2, cy - H / 2 / sN * 1.2, cy + H / 2 / sN * 1.2];
-  const pr = smooth(dt * (mine.length ? 14 : 3)); cam.x += (cx - cam.x) * pr; cam.y += (cy - cam.y) * pr; cam.s += (s - cam.s) * smooth(dt * 3);
+  const pr = mine.length ? (dd <= 0 ? smooth(dt * 30) : smooth(dt / Math.max(0.025, dd / 1000 * 0.9))) : smooth(dt * 3); cam.x += (cx - cam.x) * pr; cam.y += (cy - cam.y) * pr; cam.s += (s - cam.s) * smooth(dt * 3);
 }
 function drawSpike(v) {
   const R = v.r;
@@ -237,7 +237,7 @@ function drawSpike(v) {
 }
 const fb = Array.from({ length: 12 }, () => []);
 function draw(dt) {
-  const k = smooth(dt * 18), now = performance.now(), aid = playing ? activeId() : -1, aim = playing ? aimPoint() : null;
+  const k = dd <= 0 ? 1 : smooth(dt / (dd / 1000 * 0.6)), now = performance.now(), aid = playing ? activeId() : -1, aim = playing ? aimPoint() : null;
   for (const e of ents.values()) {
     const age = Math.min(0.12, (now - e.lt) / 1000);
     e.r += (e.tr - e.r) * smooth(dt * 14);
@@ -251,7 +251,7 @@ function draw(dt) {
       const ex = sx - e.x, ey = sy - e.y, err = Math.hypot(ex, ey), c = smooth(dt * (err > e.r * 0.5 ? 14 : 4));
       e.x += ex * c; e.y += ey * c;
     } else {
-      const gx = e.tx + e.vx * age, gy = e.ty + e.vy * age, q = myBoxes.includes(e.o) ? smooth(dt * 28) : k;
+      const gx = e.tx + e.vx * age, gy = e.ty + e.vy * age, q = k;
       e.x += (gx - e.x) * q; e.y += (gy - e.y) * q;
     }
   }
@@ -381,7 +381,7 @@ function renderSettings() {
     row.append(s, b); kl.appendChild(row);
   }
   for (const b of [0, 2]) { const el = $('mm' + b); if (!el.options.length) for (const [v, t] of MACROS) { const o = document.createElement('option'); o.value = v; o.textContent = tr(t); o.dataset.t = t; el.append(o); } el.value = mbtn[b]; }
-  $('rf').value = rf; $('rfv').textContent = rf + ' ms'; $('pd').value = pd; $('pdv').textContent = pd + ' ms';
+  $('dd').value = dd; $('ddv').textContent = dd + ' ms'; $('rf').value = rf; $('rfv').textContent = rf + ' ms'; $('pd').value = pd; $('pdv').textContent = pd + ' ms';
   $('lsi').checked = lsi; $('lsn').value = lsn; $('mal').checked = mal; $('ltg').checked = ltg; $('ftg').checked = ftg;
 }
 function openSettings() { $('st').hidden = false; paused = true; listening = null; releaseAll(); renderSettings(); }
@@ -429,9 +429,9 @@ function tbtn(id, fn, hold) {
 }
 tbtn('bsp', d => d && multiSplit(1)); tbtn('bds', d => d && multiSplit(2)); tbtn('bej', d => act('eject', d), true); tbtn('bsw', d => d && act('swap', true)); tbtn('bfd', d => act('feed', d), true);
 $('gear').addEventListener('click', openSettings); $('cl').addEventListener('click', closeSettings); $('cl2').addEventListener('click', closeSettings);
-$('rs').addEventListener('click', () => { binds = Object.assign({}, DEF); rf = 40; pd = 50; lsi = false; lsn = 2; mal = true; ltg = false; ftg = false; mbtn = { 0: 'none', 2: 'none' }; saveCfg(); updateHelp(); renderSettings(); });
+$('rs').addEventListener('click', () => { binds = Object.assign({}, DEF); dd = 40; rf = 40; pd = 50; lsi = false; lsn = 2; mal = true; ltg = false; ftg = false; mbtn = { 0: 'none', 2: 'none' }; saveCfg(); updateHelp(); renderSettings(); });
 const setting = (id, ev, fn) => $(id).addEventListener(ev, e => { fn(e.target); saveCfg(); renderSettings(); });
-setting('rf', 'input', t => rf = +t.value); setting('pd', 'input', t => pd = +t.value);
+setting('dd', 'input', t => dd = +t.value); setting('rf', 'input', t => rf = +t.value); setting('pd', 'input', t => pd = +t.value);
 setting('lsi', 'change', t => lsi = t.checked); setting('lsn', 'change', t => lsn = clamp(Math.round(+t.value) || 1, 1, 4)); setting('mal', 'change', t => mal = t.checked);
 setting('ltg', 'change', t => { ltg = t.checked; lock = null; }); setting('ftg', 'change', t => { ftg = t.checked; feedOn = false; });
 setting('mm0', 'change', t => mbtn[0] = t.value); setting('mm2', 'change', t => mbtn[2] = t.value);
