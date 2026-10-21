@@ -170,7 +170,7 @@ function mineCells() { const out = []; for (const e of ents.values()) if (myBoxe
 function activeId() { return myBoxes[active]; }
 
 /* ---------- menu ---------- */
-function showMenu(t, s) { $('ot').textContent = t; $('os').textContent = s; $('ov').hidden = false; }
+function showMenu(t, s) { $('ot').textContent = t; $('ot').hidden = false; $('os').textContent = s; $('ov').hidden = false; }
 function startGame() {
   if (!connected || full) return;
   const nm = ($('nm').value.trim() || tr('player')).slice(0, 12);
