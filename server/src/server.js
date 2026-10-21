@@ -187,4 +187,14 @@ setInterval(() => { for (const cl of game.clients) { if (!cl.alive) { cl.ws.term
 if (process.env.LOG_STATS) setInterval(() => { let h = 0; for (const c of game.clients) if (!c.dead) h++; console.log(`players ${h}  connections ${game.clients.size}  orbs ${game.cells.length}  step ${stats.tickMs.toFixed(2)} ms  out ${(stats.bytesOut / 5 / 1024).toFixed(0)} KB/s`); stats.bytesOut = 0; }, 5000);
 
 server.listen(PORT, HOST, () => { console.log(`Arena running on http://${HOST}:${PORT}  (page from ${CLIENT_DIR})`); loop(); });
+
+// Render's free plan puts a server to sleep after 15 minutes without visitors. The server visits its own
+// public address every 10 minutes so it stays awake. Free hours (750 a month) only cover one always-on
+// server, so this is on for the Europe server and off for the USA one; set KEEP_AWAKE=1 or 0 to override.
+const SELF_URL = process.env.RENDER_EXTERNAL_URL;
+const KEEP_AWAKE = process.env.KEEP_AWAKE ? process.env.KEEP_AWAKE === '1' : process.env.RENDER_SERVICE_NAME !== 'gobble-us';
+if (SELF_URL && KEEP_AWAKE && typeof fetch === 'function') {
+  setInterval(() => { fetch(SELF_URL + '/health').catch(() => {}); }, 10 * 60 * 1000);
+  console.log('Keep-awake on: visiting ' + SELF_URL + '/health every 10 minutes');
+}
 module.exports = { game, server };
