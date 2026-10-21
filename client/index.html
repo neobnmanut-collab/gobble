@@ -106,6 +106,8 @@ button{font:700 1rem var(--font);cursor:pointer}
 #chat.min{width:auto}
 @media (pointer:coarse){#chat{bottom:calc(env(safe-area-inset-bottom,0px) + 170px);width:min(300px,62vw)}#clog{height:110px}}
 #wake{font-size:.8rem;margin:0}
+.grow{display:flex;flex-direction:column;gap:6px}.grow>span{font-size:.8rem;color:var(--muted)}
+#grow{grid-template-columns:repeat(5,1fr)}#grow button{padding:8px 0}
 #go:disabled{opacity:.5;cursor:not-allowed}
 </style>
 </head>
@@ -117,12 +119,13 @@ button{font:700 1rem var(--font);cursor:pointer}
 <div id="tc"><button id="bsp">Split</button><button id="bds">2× Split</button><button id="bej">Eject</button><button id="bsw" hidden>Swap</button><button id="bfd" hidden>Feed</button></div>
 <div class="ov" id="ov"><div class="card">
   <h1 id="ot">Gobble</h1>
-  <p id="os">Eat pellets, swallow orbs a quarter smaller than you, and steer clear of the spikes once you’re big. Everyone grows 5× faster here.</p>
+  <p id="os">Eat pellets, swallow orbs a quarter smaller than you, and steer clear of the spikes once you’re big. Pick how fast you grow below.</p>
   <div class="stats" id="sts" hidden><div><span>Peak mass</span><b id="s1">0</b></div><div><span>Swallowed</span><b id="s2">0</b></div><div><span>Survived</span><b id="s3">0:00</b></div></div>
   <input type="text" id="nm" maxlength="12" placeholder="Your name" autocomplete="off">
   <div class="seg" role="group" aria-label="Game mode"><button type="button" id="mSolo" aria-pressed="false">Solo</button><button type="button" id="mMulti" aria-pressed="true">Multibox</button></div>
   <p id="mbh"></p>
   <div class="seg" id="regions" role="group" aria-label="Server region"></div>
+  <div class="grow"><span>Growth speed</span><div class="seg" id="grow" role="group" aria-label="Growth speed"></div></div>
   <div class="party"><input type="text" id="pty" maxlength="8" placeholder="Party code (optional)" autocomplete="off" aria-label="Party code"><button type="button" id="pnew">New party</button></div>
   <div id="pinv" hidden><span id="plink"></span><button type="button" id="pcopy">Copy link</button><p id="pnote"></p></div>
   <button class="primary" id="go">Play</button>
@@ -157,8 +160,8 @@ button{font:700 1rem var(--font);cursor:pointer}
     <p class="hint">This is an online game, so it keeps running while this panel is open. Your browser’s own shortcuts are blocked while you play.</p></div>
   <div class="btns"><button class="kb" id="rs">Reset defaults</button><button class="primary" id="cl">Done</button></div>
 </div></div>
-<script src="servers.js?v=8"></script>
-<script src="net.js?v=8"></script>
-<script src="game.js?v=8"></script>
+<script src="servers.js?v=9"></script>
+<script src="net.js?v=9"></script>
+<script src="game.js?v=9"></script>
 </body>
 </html>

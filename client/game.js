@@ -153,7 +153,7 @@ function startGame() {
   const nm = ($('nm').value.trim() || 'Player').slice(0, 12);
   try { localStorage.setItem('gobblename', nm); } catch (e) {}
   const pc = cleanCode($('pty').value); $('pty').value = pc; try { localStorage.setItem('gobbleparty', pc); } catch (e) {}
-  send(Net.enc.join(multiChosen, innerWidth, innerHeight, nm, pc));
+  send(Net.enc.join(multiChosen, innerWidth, innerHeight, nm, pc)); send(Net.enc.growth(growth));
   playing = true; peak = 0; lock = null; sq.length = 0; feedOn = false; held.clear();
   $('ov').hidden = true; $('sts').hidden = true; showMultiBtns(multiChosen);
 }
@@ -424,6 +424,18 @@ setting('mm0', 'change', t => mbtn[0] = t.value); setting('mm2', 'change', t => 
 $('mSolo').addEventListener('click', () => setMode(false)); $('mMulti').addEventListener('click', () => setMode(true));
 $('go').addEventListener('click', startGame);
 $('nm').addEventListener('keydown', e => { if (e.key === 'Enter') startGame(); });
+
+/* ---------- growth speed, 1x to 5x, each player's own choice ---------- */
+let growth = 5; try { growth = Math.min(5, Math.max(1, +localStorage.getItem('gobblegrowth') || 5)); } catch (e) {}
+function renderGrowth() {
+  const box = $('grow'); box.textContent = '';
+  for (let v = 1; v <= 5; v++) {
+    const b = document.createElement('button'); b.type = 'button'; b.textContent = v + '×'; b.setAttribute('aria-pressed', v === growth);
+    b.onclick = () => { growth = v; try { localStorage.setItem('gobblegrowth', v); } catch (e) {} renderGrowth(); if (playing) send(Net.enc.growth(v)); };
+    box.append(b);
+  }
+}
+renderGrowth();
 
 /* ---------- parties ---------- */
 function cleanCode(s) { return String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8); }

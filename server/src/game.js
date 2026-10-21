@@ -403,7 +403,7 @@ class Game {
         if (big.m <= sm.m * C.EAT_RATIO || sm.prot > 0) continue;
         if (d < big.r - sm.r * 0.35) {
           const bo = owners.get(big.o), so = owners.get(sm.o);
-          big.m += sm.m * (bo && bo.kind === 'human' && !sib ? 1 + (C.GROWTH - 1) * 0.5 : 1); sm.dead = true;
+          big.m += sm.m * (bo && bo.kind === 'human' && !sib ? 1 + ((bo.client.growth || C.GROWTH) - 1) * 0.5 : 1); sm.dead = true;
           if (bo && bo.client && !sib && so) bo.client.kills = (bo.client.kills || 0) + 1;
           continue;
         }
@@ -452,7 +452,7 @@ class Game {
         const bk = this.grid[gy * GN + gx];
         for (let q = bk.length - 1; q >= 0; q--) {
           const f = bk[q], dx = f.x - c.x, dy = f.y - c.y;
-          if (dx * dx + dy * dy < r2) { c.m += human && !f.ej ? f.m * C.GROWTH : f.m; bk[q] = bk[bk.length - 1]; bk.pop(); if (f.ej) this.nSettled--; else this.nfood--; }
+          if (dx * dx + dy * dy < r2) { c.m += human && !f.ej ? f.m * (ow.client.growth || C.GROWTH) : f.m; bk[q] = bk[bk.length - 1]; bk.pop(); if (f.ej) this.nSettled--; else this.nfood--; }
         }
         const ea = ejG.size ? ejG.get(gy * GN + gx) : null;
         if (ea) for (const f of ea) { if (f.dead || (f.imm > 0 && f.own === c.o)) continue; const dx = f.x - c.x, dy = f.y - c.y; if (dx * dx + dy * dy < r2) { c.m += f.m; f.dead = true; } }
