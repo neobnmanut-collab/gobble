@@ -42,7 +42,7 @@ wss.on('connection', (ws, req) => {
   const cl = { ws, dead: true, boxes: [], W: 1280, H: 720, knownPellets: new Set(), knownOwners: new Set(), sentBoxes: '', alive: true, splitBudget: 8, lastJoin: 0 };
   game.clients.add(cl);
   ws.binaryType = 'nodebuffer';
-  send(cl, enc.hello(C.WORLD));
+  send(cl, enc.hello(C.WORLD, C.SPEED));
   if (humans >= C.MAX_PLAYERS) send(cl, enc.full());
   cl.onDeath = d => send(cl, enc.dead(d.peak, d.kills, d.alive));
   ws.on('pong', () => { cl.alive = true; });
@@ -54,7 +54,7 @@ wss.on('connection', (ws, req) => {
         const now = Date.now(); if (now - cl.lastJoin < 800) return; cl.lastJoin = now;
         let h = 0; for (const c of game.clients) if (!c.dead && c !== cl) h++;
         if (h >= C.MAX_PLAYERS) return send(cl, enc.full());
-        cl.W = m.W; cl.H = m.H; game.join(cl, m.name, m.multi); break;
+        cl.W = m.W; cl.H = m.H; game.join(cl, m.name, m.multi, m.party); cl.sentParty = ''; break;
       }
       case 2: if (!cl.dead) game.setTarget(cl, m.x, m.y); break;
       case 3: if (!cl.dead && cl.splitBudget >= 1) { cl.splitBudget--; game.split(cl); } break;
@@ -64,6 +64,15 @@ wss.on('connection', (ws, req) => {
       case 7: if (!cl.dead) game.respawn(cl); break;
       case 8: cl.W = m.W; cl.H = m.H; break;
       case 9: if (cl.ws.readyState === 1) cl.ws.send(enc.pong(m.token)); break;
+      case 10: { // chat: everyone in this arena, or just your party
+        const now = Date.now(); if (!cl.name || now - (cl.chatT || 0) < 700) return; cl.chatT = now;
+        const text = m.text.replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120); if (!text) return;
+        if (m.channel === 1 && !cl.party) return;
+        const hue = cl.boxes && cl.boxes.length ? (game.owners.get(cl.boxes[0])?.hue ?? 170) : 170;
+        const buf = enc.chat(m.channel, hue, cl.name, text);
+        for (const o of game.clients) if (m.channel === 0 || (o.party && o.party === cl.party)) send(o, buf);
+        break;
+      }
     }
   });
   ws.on('close', () => game.leave(cl, false));
@@ -103,6 +112,18 @@ function sendWorld(cl) {
   if (added.length > 4000) for (const f of added.slice(4000)) cl.knownPellets.delete(f.id);
 }
 
+// every party member's boxes, so teammates can be coloured and shown on the minimap
+function sendParties() {
+  const byParty = new Map();
+  for (const cl of game.clients) if (cl.party && !cl.dead && cl.boxes) { let a = byParty.get(cl.party); if (!a) byParty.set(cl.party, a = []); a.push(...cl.boxes); }
+  for (const cl of game.clients) {
+    const ids = cl.party ? (byParty.get(cl.party) || []) : [], key = cl.party + ':' + ids.join(',');
+    if (key === cl.sentParty) continue; cl.sentParty = key;
+    const unknown = ids.map(id => game.owners.get(id)).filter(o => o && !cl.knownOwners.has(o.id)); for (const o of unknown) cl.knownOwners.add(o.id);
+    if (unknown.length) send(cl, enc.owners(unknown));
+    send(cl, enc.party(cl.party, ids));
+  }
+}
 function sendLeaderboard() {
   const by = new Map();
   for (const c of game.cells) by.set(c.o, (by.get(c.o) || 0) + c.m);
@@ -138,7 +159,7 @@ function loop() {
   game.step(DT); n++;
   for (const cl of game.clients) cl.splitBudget = Math.min(8, cl.splitBudget + 0.5); // at most ~20 splits a second
   if (n % C.SEND_EVERY === 0) for (const cl of game.clients) sendWorld(cl);
-  if (n % 15 === 0) sendLeaderboard();
+  if (n % 15 === 0) { sendLeaderboard(); sendParties(); }
   if (n % 15 === 0) sendMinimap();
   stats.tickMs = stats.tickMs * 0.95 + (performance.now() - t0) * 0.05;
   next += DT * 1000; const wait = next - performance.now();

@@ -13,7 +13,7 @@
     const pos = () => u16() / Q * world;
     const op = u8();
     switch (op) {
-      case 1: return { op, world: f32(), version: u8() };
+      case 1: { const world = f32(), version = u8(), speed = o + 4 <= ab.byteLength ? f32() : 1685; return { op, world, version, speed }; }
       case 2: { const n = u8(), ids = []; for (let i = 0; i < n; i++) ids.push(u32()); return { op, ids, active: u8() }; }
       case 3: {
         const n = u16(), list = [];
@@ -44,17 +44,23 @@
       case 7: return { op, peak: u32(), kills: u16(), alive: u32() };
       case 8: return { op };
       case 9: return { op, token: u32() };
+      case 10: { const channel = u8(), hue = u16(), nl = u8(); const name = td.decode(new Uint8Array(ab, o, nl)); o += nl; return { op, channel, hue, name, text: td.decode(new Uint8Array(ab, o)) }; }
+      case 11: { const cl = u8(); const code = td.decode(new Uint8Array(ab, o, cl)); o += cl; const n = u8(), ids = []; for (let i = 0; i < n; i++) ids.push(u32()); return { op, code, ids }; }
       default: return null;
     }
   }
 
   function msg(size, fill) { const ab = new ArrayBuffer(size), dv = new DataView(ab); fill(dv); return ab; }
   const enc = {
-    join(multi, W, H, name) {
-      const nb = te.encode(String(name).slice(0, 14)).slice(0, 48);
-      const ab = new ArrayBuffer(6 + nb.length), dv = new DataView(ab);
+    join(multi, W, H, name, party) {
+      const nb = te.encode(String(name).slice(0, 14)).slice(0, 48), pb = te.encode(String(party || '')).slice(0, 16);
+      const ab = new ArrayBuffer(7 + pb.length + nb.length), dv = new DataView(ab);
       dv.setUint8(0, 1); dv.setUint8(1, multi ? 1 : 0); dv.setUint16(2, Math.min(65535, W | 0), true); dv.setUint16(4, Math.min(65535, H | 0), true);
-      new Uint8Array(ab, 6).set(nb); return ab;
+      dv.setUint8(6, pb.length); new Uint8Array(ab, 7).set(pb); new Uint8Array(ab, 7 + pb.length).set(nb); return ab;
+    },
+    chat(channel, text) {
+      const tb = te.encode(String(text).slice(0, 120)).slice(0, 240), ab = new ArrayBuffer(2 + tb.length);
+      new Uint8Array(ab)[0] = 10; new Uint8Array(ab)[1] = channel ? 1 : 0; new Uint8Array(ab, 2).set(tb); return ab;
     },
     mouse(x, y) { return msg(9, d => { d.setUint8(0, 2); d.setFloat32(1, x, true); d.setFloat32(5, y, true); }); },
     split() { return msg(1, d => d.setUint8(0, 3)); },

@@ -75,16 +75,16 @@ class Game {
   }
   // start a new player fairly close to someone already playing, so real people meet quickly
   spotNearPlayers(client) {
-    const others = [];
+    const others = [], mates = [];
     for (const cl of this.clients) if (cl !== client && !cl.dead && cl.boxes && cl.boxes.length) {
       const me = this.cells.filter(c => cl.boxes.includes(c.o)); if (!me.length) continue;
       let sx = 0, sy = 0, sm = 0; for (const c of me) { sx += c.x * c.m; sy += c.y * c.m; sm += c.m; }
-      others.push({ x: sx / sm, y: sy / sm });
+      (client.party && cl.party === client.party ? mates : others).push({ x: sx / sm, y: sy / sm });
     }
-    if (!others.length) return null;
-    const r = rad(C.START_MASS);
+    const pool = mates.length ? mates : others; if (!pool.length) return null;
+    const r = rad(C.START_MASS), near = mates.length ? [350, 700] : [900, 1600];
     for (let k = 0; k < 24; k++) {
-      const o = others[Math.floor(Math.random() * others.length)], a = rnd(0, TAU), d = rnd(900, 1600);
+      const o = pool[Math.floor(Math.random() * pool.length)], a = rnd(0, TAU), d = rnd(near[0], near[1]);
       const x = clamp(o.x + Math.cos(a) * d, 300, WS - 300), y = clamp(o.y + Math.sin(a) * d, 300, WS - 300);
       let ok = true;
       for (const c of this.cells) { const lim = c.m > C.START_MASS * 1.1 ? c.r + r + 300 : c.r + r + 40; if (Math.abs(c.x - x) < lim && Math.abs(c.y - y) < lim && Math.hypot(c.x - x, c.y - y) < lim) { ok = false; break; } }
@@ -98,15 +98,17 @@ class Game {
     const r = rad(C.SPIKE_DRAW_MASS);
     this.spikes.push({ id: this.nextCell++, x: p.x, y: p.y, r, vx: 0, vy: 0, fed: 0, dx: 1, dy: 0, dead: false });
   }
-  siblings(a, b) { // the two boxes of one multibox player
+  siblings(a, b) { // the two boxes of one multibox player, or players in the same party: they can't eat or pull each other
     if (a === b) return false;
     const A = this.owners.get(a), B = this.owners.get(b);
-    return !!(A && B && A.client && A.client === B.client);
+    if (!(A && B && A.client && B.client)) return false;
+    return A.client === B.client || (!!A.client.party && A.client.party === B.client.party);
   }
 
   /* ---------- players ---------- */
-  join(client, name, multi) {
+  join(client, name, multi, party) {
     this.leave(client, true);
+    client.party = String(party || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
     name = String(name || '').replace(/[\u0000-\u001f]/g, '').trim().slice(0, 14) || 'Player';
     client.name = name; client.multi = !!multi; client.active = 0; client.boxes = [];
     client.dead = false; client.kills = 0; client.peak = 0; client.born = this.t;
@@ -161,7 +163,7 @@ class Game {
     }
     client.active = o;
   }
-  respawn(client) { if (!client.boxes || !client.boxes.length) return; this.join(client, client.name, client.multi); }
+  respawn(client) { if (!client.boxes || !client.boxes.length) return; this.join(client, client.name, client.multi, client.party); }
   shoot(c, dx, dy, v, j = 0.3) {
     const a = (Math.random() - 0.5) * j, co = Math.cos(a), si = Math.sin(a), ex = dx * co - dy * si, ey = dx * si + dy * co;
     const sv = v * (1 + (Math.random() - 0.5) * j * 0.6), ih = j > 0.1 ? 1 : 0;

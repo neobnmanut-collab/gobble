@@ -84,6 +84,20 @@ button{font:700 1rem var(--font);cursor:pointer}
 #pc{font-size:.8rem;color:var(--muted);margin:0;text-align:center}
 #regions button small{display:block;font-weight:500;font-size:.75rem;color:var(--muted)}
 #regions:empty{display:none}
+.party{display:flex;gap:8px}.party input{flex:1;min-width:0;text-transform:uppercase;letter-spacing:.08em}
+.party button,#pcopy{padding:10px 12px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-size:.9rem}
+#pinv{display:flex;flex-direction:column;gap:6px;border:1px dashed var(--line);border-radius:10px;padding:10px}
+#plink{font-size:.78rem;color:var(--ink);word-break:break-all;user-select:text;-webkit-user-select:text}
+#pnote{font-size:.78rem;margin:0}
+#chat{position:fixed;left:calc(env(safe-area-inset-left,0px) + 12px);bottom:calc(env(safe-area-inset-bottom,0px) + 60px);width:min(380px,calc(100vw - 24px));z-index:4;display:flex;flex-direction:column;gap:6px;pointer-events:none}
+#clog{display:flex;flex-direction:column;gap:3px}
+.cm{font-size:.85rem;line-height:1.35;color:var(--ink);background:color-mix(in srgb,var(--surface) 70%,transparent);border-radius:8px;padding:4px 8px;width:fit-content;max-width:100%;overflow-wrap:anywhere;transition:opacity .6s}
+.cm.old{opacity:0}
+.ctag{font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:var(--acc);margin-right:6px;font-weight:700}
+#cin{display:flex;gap:6px;pointer-events:auto}
+#ctx{flex:1;min-width:0;font:inherit;font-size:.9rem;padding:9px 11px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+#cch{padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-size:.85rem}
+@media (pointer:coarse){#chat{bottom:calc(env(safe-area-inset-bottom,0px) + 170px);width:min(300px,60vw)}}
 #go:disabled{opacity:.5;cursor:not-allowed}
 </style>
 </head>
@@ -101,11 +115,14 @@ button{font:700 1rem var(--font);cursor:pointer}
   <div class="seg" role="group" aria-label="Game mode"><button type="button" id="mSolo" aria-pressed="false">Solo</button><button type="button" id="mMulti" aria-pressed="true">Multibox</button></div>
   <p id="mbh"></p>
   <div class="seg" id="regions" role="group" aria-label="Server region"></div>
+  <div class="party"><input type="text" id="pty" maxlength="8" placeholder="Party code (optional)" autocomplete="off" aria-label="Party code"><button type="button" id="pnew">New party</button></div>
+  <div id="pinv" hidden><span id="plink"></span><button type="button" id="pcopy">Copy link</button><p id="pnote"></p></div>
   <button class="primary" id="go">Play</button>
   <p id="net" hidden></p>
   <p id="pc"></p>
   <div class="keys" id="keys"></div>
 </div></div>
+<div id="chat"><div id="clog" aria-live="polite"></div><div id="cin" hidden><button type="button" id="cch">All</button><input type="text" id="ctx" maxlength="120" placeholder="Say something… Enter to send, Esc to close" autocomplete="off" aria-label="Chat message"></div></div>
 <button id="gear">⚙ Controls</button>
 <div class="ov" id="st" hidden><div class="card wide">
   <div class="sh"><h1 style="font-size:1.6rem">Controls</h1><button class="x" id="cl2" aria-label="Close">✕</button></div>
@@ -127,11 +144,12 @@ button{font:700 1rem var(--font);cursor:pointer}
   <div class="sec"><h2>Toggles</h2>
     <label class="row"><span>Line keys toggle on and off instead of holding</span><input type="checkbox" id="ltg"></label>
     <label class="row"><span>Rapid feed toggles on and off instead of holding</span><input type="checkbox" id="ftg"></label>
+    <label class="row"><span>Show chat (Enter to type)</span><input type="checkbox" id="shc"></label>
     <p class="hint">This is an online game, so it keeps running while this panel is open. Your browser’s own shortcuts are blocked while you play.</p></div>
   <div class="btns"><button class="kb" id="rs">Reset defaults</button><button class="primary" id="cl">Done</button></div>
 </div></div>
-<script src="servers.js?v=3"></script>
-<script src="net.js?v=3"></script>
-<script src="game.js?v=3"></script>
+<script src="servers.js?v=4"></script>
+<script src="net.js?v=4"></script>
+<script src="game.js?v=4"></script>
 </body>
 </html>

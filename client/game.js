@@ -4,7 +4,7 @@
 const GAME_NAME = 'Gobble'; // change here (and in index.html <title>) when the game gets its final name
 const $ = id => document.getElementById(id), cv = $('c'), g = cv.getContext('2d', { alpha: false }), mm = $('mm'), mg = mm.getContext('2d');
 const TAU = Math.PI * 2, clamp = (v, a, b) => (v < a ? a : v > b ? b : v), rad = m => 4 * Math.sqrt(m), dm = m => Math.floor(m / 2);
-let WS = 12000, W = 0, H = 0, dpr = 1, T = 0;
+let WS = 12000, SPEED = 1685, W = 0, H = 0, dpr = 1, T = 0;
 const cam = { x: 6000, y: 6000, s: 0.5 }; let zm = 1;
 
 /* ---------- settings (same controls as the offline game) ---------- */
@@ -32,6 +32,7 @@ function label(b) { if (!b) return 'Unbound'; if (b.startsWith('Mouse')) { const
 const ents = new Map(), spikes = new Map(), blobs = new Map(), pellets = new Map(), owners = new Map();
 let myBoxes = [], active = 0, playing = false, multiChosen = true, view = { x: 6000, y: 6000 };
 let lb = { rank: 0, total: 0, top: [] }, mini = { spikes: [], big: [], people: [] }, peak = 0, lastTick = 0;
+let partyCode = '', partyIds = new Set(), showChat = true, chatOpen = false, chatChan = 0;
 const smooth = k => 1 - Math.exp(-k);
 
 /* ---------- connection ---------- */
@@ -85,7 +86,7 @@ function setStatus(t) { $('net').textContent = t; $('net').hidden = !t; $('go').
 function handle(m) {
   if (!m) return;
   switch (m.op) {
-    case 1: WS = m.world; break;
+    case 1: WS = m.world; SPEED = m.speed || SPEED; break;
     case 2: myBoxes = m.ids; active = m.active; break;
     case 3: for (const o of m.list) owners.set(o.id, o); break;
     case 4: {
@@ -93,8 +94,12 @@ function handle(m) {
       const seen = new Set();
       for (const c of m.cells) {
         seen.add(c.id); const e = ents.get(c.id);
-        if (e) { e.tx = c.x; e.ty = c.y; e.tr = c.r; e.m = c.m; e.o = c.o; }
-        else ents.set(c.id, { id: c.id, o: c.o, x: c.x, y: c.y, r: c.r, tx: c.x, ty: c.y, tr: c.r, m: c.m });
+        if (e) {
+          const dtt = (lastTick - e.lt) / 1000;
+          if (dtt > 0.008 && dtt < 0.5) { const k = 0.6; e.vx = e.vx * (1 - k) + (c.x - e.tx) / dtt * k; e.vy = e.vy * (1 - k) + (c.y - e.ty) / dtt * k; }
+          e.tx = c.x; e.ty = c.y; e.tr = c.r; e.m = c.m; e.o = c.o; e.lt = lastTick;
+        }
+        else ents.set(c.id, { id: c.id, o: c.o, x: c.x, y: c.y, r: c.r, tx: c.x, ty: c.y, tr: c.r, m: c.m, vx: 0, vy: 0, lt: lastTick, pux: 0, puy: 0 });
       }
       for (const id of ents.keys()) if (!seen.has(id)) ents.delete(id);
       const ss = new Set();
@@ -119,6 +124,8 @@ function handle(m) {
       break;
     }
     case 8: full = true; setStatus('This arena is full right now. Try again in a moment.'); break;
+    case 10: addChat(m); break;
+    case 11: partyCode = m.code; partyIds = new Set(m.ids); renderParty(); break;
     case 9: if (m.token === pingTok) { const p = performance.now() - pingT0; ping = ping ? Math.round(ping * 0.6 + p * 0.4) : Math.round(p); regionPing[region] = ping; } break;
   }
 }
@@ -132,7 +139,8 @@ function startGame() {
   if (!connected || full) return;
   const nm = ($('nm').value.trim() || 'Player').slice(0, 12);
   try { localStorage.setItem('gobblename', nm); } catch (e) {}
-  send(Net.enc.join(multiChosen, innerWidth, innerHeight, nm));
+  const pc = cleanCode($('pty').value); $('pty').value = pc; try { localStorage.setItem('gobbleparty', pc); } catch (e) {}
+  send(Net.enc.join(multiChosen, innerWidth, innerHeight, nm, pc));
   playing = true; peak = 0; lock = null; sq.length = 0; feedOn = false; held.clear();
   $('ov').hidden = true; $('sts').hidden = true; showMultiBtns(multiChosen);
 }
@@ -194,7 +202,7 @@ function camera(dt) {
   const base = clamp(Math.min(W, H) / 600, 0.7, 1.4) * 1.35;
   const sN = Math.min(base / (1 + Math.sqrt(sm) / 26), Math.min(W, H) * 0.45 / (ext + 80)), fit = Math.min(W, H) / (WS * 2.1), s = Math.max(fit, sN * zm);
   cam.v = [cx - W / 2 / sN * 1.2, cx + W / 2 / sN * 1.2, cy - H / 2 / sN * 1.2, cy + H / 2 / sN * 1.2];
-  const pr = smooth(dt * (mine.length ? 10 : 3)); cam.x += (cx - cam.x) * pr; cam.y += (cy - cam.y) * pr; cam.s += (s - cam.s) * smooth(dt * 3);
+  const pr = smooth(dt * (mine.length ? 14 : 3)); cam.x += (cx - cam.x) * pr; cam.y += (cy - cam.y) * pr; cam.s += (s - cam.s) * smooth(dt * 3);
 }
 function drawSpike(v) {
   const R = v.r;
@@ -205,8 +213,24 @@ function drawSpike(v) {
 }
 const fb = Array.from({ length: 12 }, () => []);
 function draw(dt) {
-  const k = smooth(dt * 18), km = smooth(dt * 30);
-  for (const e of ents.values()) { const q = myBoxes.includes(e.o) ? km : k; e.x += (e.tx - e.x) * q; e.y += (e.ty - e.y) * q; e.r += (e.tr - e.r) * q; }
+  const k = smooth(dt * 18), now = performance.now(), aid = playing ? activeId() : -1, aim = playing ? aimPoint() : null;
+  for (const e of ents.values()) {
+    const age = Math.min(0.12, (now - e.lt) / 1000);
+    e.r += (e.tr - e.r) * smooth(dt * 14);
+    if (e.o === aid) {
+      // your own orb: move it locally toward the mouse right away, then pull it gently onto where the server has it
+      const lat = Math.min(0.3, ping / 2000 + age), sx = e.tx + e.vx * lat, sy = e.ty + e.vy * lat;
+      let dx = aim.x - e.x, dy = aim.y - e.y; const d = Math.hypot(dx, dy); let dvx = 0, dvy = 0;
+      if (d > 2) { const s = SPEED * Math.pow(e.m, -0.25) * Math.min(1, d / (e.r + 20)); dvx = dx / d * s; dvy = dy / d * s; }
+      const kk = Math.min(1, dt * 7); e.pux += (dvx - e.pux) * kk; e.puy += (dvy - e.puy) * kk;
+      e.x += e.pux * dt; e.y += e.puy * dt;
+      const ex = sx - e.x, ey = sy - e.y, err = Math.hypot(ex, ey), c = smooth(dt * (err > e.r * 0.5 ? 14 : 4));
+      e.x += ex * c; e.y += ey * c;
+    } else {
+      const gx = e.tx + e.vx * age, gy = e.ty + e.vy * age;
+      e.x += (gx - e.x) * k; e.y += (gy - e.y) * k;
+    }
+  }
   for (const v of spikes.values()) { v.x += (v.tx - v.x) * k; v.y += (v.ty - v.y) * k; v.rot += dt * 0.3; }
   for (const b of blobs.values()) { b.x += (b.tx - b.x) * k; b.y += (b.ty - b.y) * k; }
   g.setTransform(dpr, 0, 0, dpr, 0, 0); g.fillStyle = '#000'; g.fillRect(0, 0, W, H);
@@ -233,7 +257,8 @@ function draw(dt) {
   for (const c of list) {
     const mineC = myBoxes.includes(c.o), ow = owners.get(c.o), R = c.r;
     const white = multi && mineC && c.o === activeId(), red = multi && mineC && c.o !== activeId();
-    g.fillStyle = white ? '#f4f4f4' : red ? '#e0443e' : 'hsl(' + (ow ? ow.hue : 0) + ' 72% 52%)';
+    const mate = !mineC && partyIds.has(c.o);
+    g.fillStyle = white ? '#f4f4f4' : red ? '#e0443e' : mate ? 'hsl(' + partyHue() + ' 80% 58%)' : 'hsl(' + (ow ? ow.hue : 0) + ' 72% 52%)';
     g.beginPath(); g.arc(c.x, c.y, R, 0, TAU); g.fill();
     if (R * cam.s > 16) {
       const fs = Math.max(12, R * 0.34), name = ow ? ow.name : '';
@@ -270,9 +295,9 @@ function drawMM() {
   // other real players: a gold ring so you can go and find them
   mg.font = '700 9px system-ui,sans-serif'; mg.textAlign = 'center'; mg.textBaseline = 'bottom';
   for (const p of mini.people || []) {
-    if (myBoxes.includes(p.o)) continue; const x = p.x * k, y = p.y * k, ow = owners.get(p.o);
-    mg.strokeStyle = '#ffd25a'; mg.lineWidth = 2; mg.beginPath(); mg.arc(x, y, 3.5, 0, TAU); mg.stroke();
-    if (ow && s >= 140) { mg.fillStyle = 'rgba(255,210,90,.85)'; mg.fillText(ow.name.slice(0, 10), x, y - 5); }
+    if (myBoxes.includes(p.o)) continue; const x = p.x * k, y = p.y * k, ow = owners.get(p.o), mate = partyIds.has(p.o);
+    mg.strokeStyle = mate ? 'hsl(' + partyHue() + ' 85% 62%)' : '#ffd25a'; mg.lineWidth = 2; mg.beginPath(); mg.arc(x, y, 3.5, 0, TAU); mg.stroke();
+    if (ow && (s >= 140 || mate)) { mg.fillStyle = mate ? 'hsl(' + partyHue() + ' 85% 70%)' : 'rgba(255,210,90,.85)'; mg.fillText(ow.name.slice(0, 10), x, y - 5); }
   }
   const multi = myBoxes.length > 1;
   for (const c of mineCells()) { mg.fillStyle = !multi ? '#2a9a83' : c.o === activeId() ? '#f4f4f4' : '#e0443e'; mg.beginPath(); mg.arc(c.x * k, c.y * k, Math.max(2.5, c.r * k), 0, TAU); mg.fill(); }
@@ -302,7 +327,7 @@ function frame(t) {
   if (playing && !paused) {
     for (let i = sq.length - 1; i >= 0; i--) { sq[i] -= dt; if (sq[i] <= 0) { sq.splice(i, 1); split(); } }
     if (unlockT > 0) { unlockT -= dt; if (unlockT <= 0) { unlockT = 0; lock = null; } }
-    aimT -= dt; if (aimT <= 0) { aimT = 1 / 30; sendAim(); }
+    aimT -= dt; if (aimT <= 0) { aimT = 1 / 60; sendAim(); }
   }
   if (pings.length) pings = pings.filter(p => (p.t -= dt) > 0);
   camera(dt); draw(dt);
@@ -347,6 +372,7 @@ addEventListener('keydown', e => {
   if (listening) { e.preventDefault(); e.stopPropagation(); const k = listening; listening = null; if (e.code === 'Backspace' || e.code === 'Delete') { binds[k] = ''; saveCfg(); updateHelp(); } else if (e.code !== 'Escape') assign(k, e.code); renderSettings(); return; }
   if (!$('st').hidden) { if (e.code === 'Escape') closeSettings(); return; }
   const tag = e.target.tagName; if (tag === 'INPUT' || tag === 'SELECT') return;
+  if (e.code === 'Enter' && !isBound('Enter') && connected) { e.preventDefault(); openChat(); return; }
   if (!playing) return;
   e.preventDefault();
   if (e.repeat) return;
@@ -386,9 +412,57 @@ $('mSolo').addEventListener('click', () => setMode(false)); $('mMulti').addEvent
 $('go').addEventListener('click', startGame);
 $('nm').addEventListener('keydown', e => { if (e.key === 'Enter') startGame(); });
 
+/* ---------- parties ---------- */
+function cleanCode(s) { return String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8); }
+function partyHue() { let h = 0; for (const ch of partyCode || $('pty').value) h = (h * 31 + ch.charCodeAt(0)) % 360; return (h + 190) % 360; }
+function inviteLink(code) { const u = new URL(location.href); u.search = ''; u.hash = ''; u.searchParams.set('party', code); if (region && region !== 'here') u.searchParams.set('r', region); return u.toString(); }
+function renderParty() {
+  const code = cleanCode($('pty').value);
+  $('pinv').hidden = !code; if (!code) return;
+  $('plink').textContent = inviteLink(code);
+  const n = playing ? new Set([...partyIds].map(id => owners.get(id)?.name?.replace(/ [AB]$/, ''))).size : 0;
+  $('pnote').textContent = playing && partyCode ? 'Party ' + partyCode + ' · ' + n + ' playing' : 'Send this link to friends. Everyone with the same code plays as a team.';
+}
+$('pnew').addEventListener('click', () => { const a = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let c = ''; for (let i = 0; i < 5; i++) c += a[Math.floor(Math.random() * a.length)]; $('pty').value = c; renderParty(); });
+$('pty').addEventListener('input', () => { $('pty').value = cleanCode($('pty').value); renderParty(); });
+$('pcopy').addEventListener('click', () => {
+  const t = $('plink').textContent;
+  (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => { $('pcopy').textContent = 'Copied'; setTimeout(() => $('pcopy').textContent = 'Copy link', 1500); })
+    .catch(() => { const r = document.createRange(); r.selectNodeContents($('plink')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); });
+});
+
+/* ---------- chat ---------- */
+function addChat(m) {
+  if (!showChat) return;
+  const li = document.createElement('div'); li.className = 'cm';
+  if (m.channel === 1) { const t = document.createElement('span'); t.className = 'ctag'; t.textContent = 'Party'; li.append(t); }
+  const n = document.createElement('b'); n.textContent = m.name + ': '; n.style.color = 'hsl(' + m.hue + ' 75% 65%)'; li.append(n, document.createTextNode(m.text));
+  li.dataset.t = Date.now(); $('clog').append(li);
+  while ($('clog').children.length > 8) $('clog').firstChild.remove();
+}
+function openChat() {
+  if (!showChat) return; chatOpen = true; releaseAll(); $('cin').hidden = false; $('ctx').focus(); renderChatChan();
+}
+function closeChat() { chatOpen = false; $('cin').hidden = true; $('ctx').value = ''; $('ctx').blur(); try { window.focus(); } catch (e) {} }
+function renderChatChan() { if (chatChan === 1 && !partyCode) chatChan = 0; $('cch').textContent = chatChan ? 'Party' : 'All'; $('cch').disabled = !partyCode; }
+$('cch').addEventListener('click', () => { chatChan = partyCode ? 1 - chatChan : 0; renderChatChan(); $('ctx').focus(); });
+$('ctx').addEventListener('keydown', e => {
+  e.stopPropagation();
+  if (e.key === 'Enter') { const t = $('ctx').value.trim(); if (t) send(Net.enc.chat(chatChan, t)); closeChat(); }
+  else if (e.key === 'Escape') closeChat();
+});
+setInterval(() => { const now = Date.now(); for (const li of $('clog').children) li.classList.toggle('old', !chatOpen && now - li.dataset.t > 15000); }, 1000);
+$('shc').addEventListener('change', e => { showChat = e.target.checked; $('chat').hidden = !showChat; try { localStorage.setItem('gobblechat', showChat ? '1' : '0'); } catch (x) {} });
+
 /* ---------- start ---------- */
 document.title = GAME_NAME; $('ot').textContent = GAME_NAME;
-try { $('nm').value = localStorage.getItem('gobblename') || ''; multiChosen = localStorage.getItem('gobblemb') !== '0'; } catch (e) {}
+try { $('nm').value = localStorage.getItem('gobblename') || ''; multiChosen = localStorage.getItem('gobblemb') !== '0'; $('pty').value = localStorage.getItem('gobbleparty') || ''; showChat = localStorage.getItem('gobblechat') !== '0'; } catch (e) {}
+{ // invite links: ?party=CODE&r=region
+  const q = new URLSearchParams(location.search), pq = cleanCode(q.get('party')), rq = q.get('r');
+  if (pq) $('pty').value = pq;
+  if (rq && SERVERS.some(s => s.id === rq)) { region = rq; try { localStorage.setItem('gobbleregion', region); } catch (e) {} }
+}
+$('shc').checked = showChat; $('chat').hidden = !showChat; renderParty();
 updateHelp(); mx = W / 2; my = H / 2;
 renderRegions(); probeRegions(); setInterval(() => { if (!playing) probeRegions(); }, 20000);
 connect(); requestAnimationFrame(frame);

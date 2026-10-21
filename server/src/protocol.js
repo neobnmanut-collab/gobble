@@ -2,7 +2,7 @@
 // Binary messages, little-endian. The browser side lives in client/net.js and must match.
 //
 // Browser -> server
-//   1 JOIN    u8 multibox, u16 screenW, u16 screenH, utf8 name
+//   1 JOIN    u8 multibox, u16 screenW, u16 screenH, u8 party code length, party code, utf8 name
 //   2 MOUSE   f32 x, f32 y          (world point the active box steers to)
 //   3 SPLIT
 //   4 EJECT   u8 on, u16 ms between shots
@@ -11,9 +11,10 @@
 //   7 RESPAWN
 //   8 SIZE    u16 screenW, u16 screenH
 //   9 PING    u32 token             (answered at once with PONG, for the ping display)
+//  10 CHAT    u8 channel 0=everyone 1=party, utf8 text
 //
 // Server -> browser
-//   1 HELLO   f32 world size, u8 protocol version
+//   1 HELLO   f32 world size, u8 protocol version, f32 speed constant
 //   2 BOXES   u8 n, n x u32 owner id, u8 active index
 //   3 OWNERS  u16 n, n x (u32 id, u16 hue, u8 kind 0=bot 1=player, u8 len, utf8 name)
 //   4 TICK    f32 viewX, f32 viewY,
@@ -28,7 +29,9 @@
 //   7 DEAD    u32 peak mass, u16 orbs eaten, u32 seconds alive
 //   8 FULL
 //   9 PONG    u32 token
-const VERSION = 1;
+//  10 CHAT    u8 channel, u16 hue, u8 name length, name, utf8 text
+//  11 PARTY   u8 code length, code, u8 n, n x u32 owner id of every box in your party
+const VERSION = 2;
 const Q = 65535;
 
 function q(v, world) { const n = Math.round(v / world * Q); return n < 0 ? 0 : n > Q ? Q : n; }
@@ -46,7 +49,7 @@ class Writer {
 }
 
 const enc = {
-  hello(world) { const w = new Writer(6); w.u8(1); w.f32(world); w.u8(VERSION); return w.done(); },
+  hello(world, speed) { const w = new Writer(10); w.u8(1); w.f32(world); w.u8(VERSION); w.f32(speed); return w.done(); },
   boxes(ids, active) { const w = new Writer(3 + ids.length * 4); w.u8(2); w.u8(ids.length); for (const id of ids) w.u32(id); w.u8(active); return w.done(); },
   owners(list) {
     const names = list.map(o => Buffer.from(String(o.name).slice(0, 16), 'utf8').subarray(0, 48));
@@ -75,6 +78,14 @@ const enc = {
   },
   dead(peak, kills, alive) { const w = new Writer(11); w.u8(7); w.u32(peak); w.u16(kills); w.u32(alive); return w.done(); },
   full() { return Buffer.from([8]); },
+  chat(channel, hue, name, text) {
+    const nb = Buffer.from(String(name).slice(0, 16), 'utf8').subarray(0, 48), tb = Buffer.from(String(text), 'utf8').subarray(0, 400);
+    const w = new Writer(5 + nb.length + tb.length); w.u8(10); w.u8(channel); w.u16(hue); w.u8(nb.length); w.bytes(nb); w.bytes(tb); return w.done();
+  },
+  party(code, ids) {
+    const cb = Buffer.from(String(code || ''), 'utf8').subarray(0, 16), list = ids.slice(0, 64);
+    const w = new Writer(3 + cb.length + list.length * 4); w.u8(11); w.u8(cb.length); w.bytes(cb); w.u8(list.length); for (const id of list) w.u32(id); return w.done();
+  },
   pong(token) { const w = new Writer(5); w.u8(9); w.u32(token); return w.done(); },
 };
 
@@ -84,12 +95,13 @@ function decode(buf) {
   const op = buf[0];
   try {
     switch (op) {
-      case 1: if (buf.length < 6) return null; return { op, multi: !!buf[1], W: buf.readUInt16LE(2), H: buf.readUInt16LE(4), name: buf.subarray(6, 6 + 48).toString('utf8') };
+      case 1: { if (buf.length < 7) return null; const pl = Math.min(buf[6], 16); return { op, multi: !!buf[1], W: buf.readUInt16LE(2), H: buf.readUInt16LE(4), party: buf.subarray(7, 7 + pl).toString('utf8'), name: buf.subarray(7 + pl, 7 + pl + 48).toString('utf8') }; }
       case 2: case 6: if (buf.length < 9) return null; { const x = buf.readFloatLE(1), y = buf.readFloatLE(5); if (!Number.isFinite(x) || !Number.isFinite(y)) return null; return { op, x, y }; }
       case 3: case 7: return { op };
       case 4: case 5: if (buf.length < 4) return null; return { op, on: !!buf[1], ms: buf.readUInt16LE(2) };
       case 8: if (buf.length < 5) return null; return { op, W: buf.readUInt16LE(1), H: buf.readUInt16LE(3) };
       case 9: if (buf.length < 5) return null; return { op, token: buf.readUInt32LE(1) };
+      case 10: if (buf.length < 3) return null; return { op, channel: buf[1] === 1 ? 1 : 0, text: buf.subarray(2, 2 + 240).toString('utf8') };
       default: return null;
     }
   } catch (e) { return null; }
