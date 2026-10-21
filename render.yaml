@@ -7,7 +7,7 @@ services:
     plan: free            # free instances sleep after a while without visitors; switch to a paid plan to keep it always on
     rootDir: server
     buildCommand: npm ci --omit=dev
-    startCommand: node src/server.js
+    startCommand: node --max-semi-space-size=16 src/server.js
     healthCheckPath: /health
     autoDeploy: true
     envVars:
@@ -22,7 +22,7 @@ services:
     plan: free
     rootDir: server
     buildCommand: npm ci --omit=dev
-    startCommand: node src/server.js
+    startCommand: node --max-semi-space-size=16 src/server.js
     healthCheckPath: /health
     autoDeploy: true
     envVars:

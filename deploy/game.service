@@ -8,7 +8,7 @@ User=game
 WorkingDirectory=/opt/game/server
 Environment=PORT=8080
 Environment=HOST=127.0.0.1
-ExecStart=/usr/bin/node src/server.js
+ExecStart=/usr/bin/node --max-semi-space-size=16 src/server.js
 Restart=always
 RestartSec=2
 # basic hardening

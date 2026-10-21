@@ -3,12 +3,12 @@
 module.exports = {
   WORLD: 12000,          // arena width and height
   GRID: 100,             // pellet grid cell size
-  TICK_HZ: 30,           // simulation steps per second
-  SEND_EVERY: 1,         // send a world update every step (30 updates per second)
+  TICK_HZ: 25,           // simulation steps per second
+  SEND_EVERY: 1,         // send a world update every step (25 updates per second)
 
-  PELLETS: 5500,         // pellets kept on the map
-  PELLET_MASS: 7,
-  PELLET_REGROW: 300,    // pellets regrown per second, up to PELLETS
+  PELLETS: 2750,         // pellets kept on the map: half as many as before, each worth twice as much (same total food, less work)
+  PELLET_MASS: 14,
+  PELLET_REGROW: 150,    // pellets regrown per second, up to PELLETS
   SETTLED_EJECT_CAP: 6000, // ejected blobs that have stopped and lie on the map
 
   SPIKES: 40,
@@ -33,9 +33,9 @@ module.exports = {
   GROWTH_DEFAULT: 4,     // growth a player gets until they pick one
   GROWTH: 5,             // highest growth boost a player can pick (1x up to this): pellets give this many times their mass, eaten orbs give 1 + (GROWTH-1)/2 times (3x at 5)
 
-  BOT_FILL: 40,          // bots fill the arena up to this many players
+  BOT_FILL: 30,          // bots fill the arena up to this many players
   MAX_PLAYERS: 120,      // human players allowed at once
   SPAWN_PROTECT: 3,      // seconds a new orb cannot be eaten
 
-  VIEW_SCALE: 1.2,       // how far past the screen a player can see
+  VIEW_SCALE: 1.0,       // how far past the screen a player can see (client/game.js has the same number)
 };

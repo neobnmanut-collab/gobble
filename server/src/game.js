@@ -215,7 +215,7 @@ class Game {
     this.owners.set(id, {
       id, kind: 'bot', name: BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)], hue: Math.floor(rnd(0, 360)),
       b: { ox: 0, oy: 0, tox: 0, toy: 0, wx: p.x, wy: p.y, tt: rnd(0, 0.3), agg: rnd(0.6, 1.5), caut: rnd(0.8, 1.35), skill: rnd(0.35, 1),
-        react: rnd(0.14, 0.32), wa: rnd(0, TAU), ign: null, ignT: 0, chase: null, chT: 0, chD: 0, gu: 5 },
+        react: rnd(0.2, 0.38), wa: rnd(0, TAU), ign: null, ignT: 0, chase: null, chT: 0, chD: 0, gu: 5 },
     });
     this.cells.push(this.mkCell(id, p.x, p.y, m));
   }

@@ -5,6 +5,7 @@ const GAME_NAME = 'Gobble';
 const tr = (k, v) => I18N.t(k, v); // every bit of game text goes through here, in the player's language // change here (and in index.html <title>) when the game gets its final name
 const $ = id => document.getElementById(id), cv = $('c'), g = cv.getContext('2d', { alpha: false }), mm = $('mm'), mg = mm.getContext('2d');
 const TAU = Math.PI * 2, clamp = (v, a, b) => (v < a ? a : v > b ? b : v), rad = m => 4 * Math.sqrt(m), dm = m => Math.floor(m / 2);
+const VIEW_SCALE = 1.0; // must match the server's VIEW_SCALE
 let WS = 12000, SPEED = 1685, W = 0, H = 0, dpr = 1, T = 0;
 const cam = { x: 6000, y: 6000, s: 0.5 }; let zm = 1;
 
@@ -180,8 +181,13 @@ let mx = 0, my = 0, lock = null, unlockT = 0, feedOn = false, sq = [], pings = [
 const held = new Set(), mheld = {};
 function s2w(x, y) { return { x: (x - W / 2) / cam.s + cam.x, y: (y - H / 2) / cam.s + cam.y }; }
 function aimPoint() { const w = s2w(mx, my); if (lock) { if (lock.t === 'h') w.y = lock.y; else if (lock.t === 'v') w.x = lock.x; else { w.x = lock.x; w.y = lock.y; } } return w; }
-function sendAim() { if (!playing) return; const w = aimPoint(); send(Net.enc.mouse(clamp(w.x, 0, WS), clamp(w.y, 0, WS))); }
-function split() { if (!playing) return; sendAim(); send(Net.enc.split()); }
+let lastAim = { x: -1, y: -1, t: 0 };
+function sendAim(force) {
+  if (!playing) return; const w = aimPoint(), x = clamp(w.x, 0, WS), y = clamp(w.y, 0, WS), now = performance.now();
+  if (!force && Math.abs(x - lastAim.x) < 2 && Math.abs(y - lastAim.y) < 2 && now - lastAim.t < 500) return;
+  lastAim = { x, y, t: now }; send(Net.enc.mouse(x, y));
+}
+function split() { if (!playing) return; sendAim(true); send(Net.enc.split()); }
 function multiSplit(n) {
   if (!playing || paused) return; split();
   for (let i = 1; i < n; i++) { if (pd <= 0) split(); else sq.push(i * pd / 1000); }
@@ -225,7 +231,7 @@ function camera(dt) {
   if (mine.length) { let sx = 0, sy = 0; sm = 0; for (const c of mine) { sx += c.x * c.m; sy += c.y * c.m; sm += c.m; } cx = sx / sm; cy = sy / sm; for (const c of mine) ext = Math.max(ext, Math.hypot(c.x - cx, c.y - cy) + c.r); }
   const base = clamp(Math.min(W, H) / 600, 0.7, 1.4) * 1.35;
   const sN = Math.min(base / (1 + Math.sqrt(sm) / 26), Math.min(W, H) * 0.45 / (ext + 80)), fit = Math.min(W, H) / (WS * 2.1), s = Math.max(fit, sN * zm);
-  cam.v = [cx - W / 2 / sN * 1.2, cx + W / 2 / sN * 1.2, cy - H / 2 / sN * 1.2, cy + H / 2 / sN * 1.2];
+  const vs = VIEW_SCALE; cam.v = [cx - W / 2 / sN * vs, cx + W / 2 / sN * vs, cy - H / 2 / sN * vs, cy + H / 2 / sN * vs];
   const pr = mine.length ? (dd <= 0 ? smooth(dt * 30) : smooth(dt / Math.max(0.025, dd / 1000 * 0.9))) : smooth(dt * 3); cam.x += (cx - cam.x) * pr; cam.y += (cy - cam.y) * pr; cam.s += (s - cam.s) * smooth(dt * 3);
 }
 function drawSpike(v) {
@@ -350,7 +356,7 @@ function frame(t) {
   if (playing && !paused) {
     for (let i = sq.length - 1; i >= 0; i--) { sq[i] -= dt; if (sq[i] <= 0) { sq.splice(i, 1); split(); } }
     if (unlockT > 0) { unlockT -= dt; if (unlockT <= 0) { unlockT = 0; lock = null; } }
-    aimT -= dt; if (aimT <= 0) { aimT = 1 / 60; sendAim(); }
+    aimT -= dt; if (aimT <= 0) { aimT = 1 / 25; sendAim(); }
   }
   if (pings.length) pings = pings.filter(p => (p.t -= dt) > 0);
   camera(dt); draw(dt);

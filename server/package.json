@@ -5,7 +5,7 @@
   "description": "Multiplayer server for the orb arena game",
   "main": "src/server.js",
   "scripts": {
-    "start": "node src/server.js",
+    "start": "node --max-semi-space-size=16 src/server.js",
     "test:load": "node test/load.js"
   },
   "engines": { "node": ">=18" },

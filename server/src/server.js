@@ -98,14 +98,17 @@ function sendWorld(cl) {
   for (const c of game.cells) if (c.x + c.r > v.x0 - pad && c.x - c.r < v.x1 + pad && c.y + c.r > v.y0 - pad && c.y - c.r < v.y1 + pad) cells.push(c);
   const spikes = game.spikes.filter(s => s.x + s.r > v.x0 && s.x - s.r < v.x1 && s.y + s.r > v.y0 && s.y - s.r < v.y1);
   const ejected = game.ejected.filter(f => f.x > v.x0 && f.x < v.x1 && f.y > v.y0 && f.y < v.y1);
-  // pellets: only send what changed in view since last time
-  const now = new Set(), added = [];
-  const bx0 = gi(v.x0), bx1 = gi(v.x1), by0 = gi(v.y0), by1 = gi(v.y1);
-  for (let gy = by0; gy <= by1; gy++) for (let gx = bx0; gx <= bx1; gx++) for (const f of game.grid[gy * GN + gx]) {
-    now.add(f.id); if (!cl.knownPellets.has(f.id)) added.push(f);
+  // pellets: only what changed in view, and only every other update (they don't move, so this is plenty)
+  const added = [], removed = [];
+  if ((cl.pelletTurn = (cl.pelletTurn || 0) + 1) % 2 === 0) {
+    const now = new Set();
+    const bx0 = gi(v.x0), bx1 = gi(v.x1), by0 = gi(v.y0), by1 = gi(v.y1);
+    for (let gy = by0; gy <= by1; gy++) for (let gx = bx0; gx <= bx1; gx++) for (const f of game.grid[gy * GN + gx]) {
+      now.add(f.id); if (!cl.knownPellets.has(f.id)) added.push(f);
+    }
+    for (const id of cl.knownPellets) if (!now.has(id)) removed.push(id);
+    cl.knownPellets = now;
   }
-  const removed = []; for (const id of cl.knownPellets) if (!now.has(id)) removed.push(id);
-  cl.knownPellets = now;
   // names for anything new on screen
   const newOwners = [];
   for (const c of cells) if (!cl.knownOwners.has(c.o)) { const o = game.owners.get(c.o); if (o) { cl.knownOwners.add(c.o); newOwners.push(o); } }
