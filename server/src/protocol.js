@@ -12,6 +12,7 @@
 //   8 SIZE    u16 screenW, u16 screenH
 //   9 PING    u32 token             (answered at once with PONG, for the ping display)
 //  10 CHAT    u8 channel 0=everyone 1=party, utf8 text
+//  12 NAME    utf8 name (so people on the menu can chat before playing)
 //  11 GROWTH  u8 growth speed 1-5 (this player's own boost; sent after JOIN and whenever changed)
 //
 // Server -> browser
@@ -103,6 +104,7 @@ function decode(buf) {
       case 8: if (buf.length < 5) return null; return { op, W: buf.readUInt16LE(1), H: buf.readUInt16LE(3) };
       case 9: if (buf.length < 5) return null; return { op, token: buf.readUInt32LE(1) };
       case 11: if (buf.length < 2) return null; return { op, growth: buf[1] };
+      case 12: return { op, name: buf.subarray(1, 49).toString('utf8') };
       case 10: if (buf.length < 3) return null; return { op, channel: buf[1] === 1 ? 1 : 0, text: buf.subarray(2, 2 + 240).toString('utf8') };
       default: return null;
     }

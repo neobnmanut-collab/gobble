@@ -66,13 +66,15 @@ wss.on('connection', (ws, req) => {
       case 7: if (!cl.dead) game.respawn(cl); break;
       case 8: cl.W = m.W; cl.H = m.H; break;
       case 9: if (cl.ws.readyState === 1) cl.ws.send(enc.pong(m.token)); break;
+      case 12: cl.chatName = String(m.name).replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 14); break;
       case 11: cl.growth = Math.max(1, Math.min(C.GROWTH, m.growth | 0)) || C.GROWTH_DEFAULT; break;
       case 10: { // chat: everyone in this arena, or just your party
-        const now = Date.now(); if (!cl.name || now - (cl.chatT || 0) < 700) return; cl.chatT = now;
+        const now = Date.now(); if (now - (cl.chatT || 0) < 700) return; cl.chatT = now;
+        const who = (!cl.dead && cl.name) || cl.chatName || cl.name || 'Guest';
         const text = m.text.replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120); if (!text) return;
         if (m.channel === 1 && !cl.party) return;
         const hue = cl.boxes && cl.boxes.length ? (game.owners.get(cl.boxes[0])?.hue ?? 170) : 170;
-        const buf = enc.chat(m.channel, hue, cl.name, text);
+        const buf = enc.chat(m.channel, hue, who, text);
         for (const o of game.clients) if (m.channel === 0 || (o.party && o.party === cl.party)) send(o, buf);
         break;
       }

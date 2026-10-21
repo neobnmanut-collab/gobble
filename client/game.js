@@ -76,7 +76,7 @@ function connect() {
   wake();
   try { ws = new WebSocket(wsUrl()); } catch (e) { return reconnect(); }
   ws.binaryType = 'arraybuffer';
-  ws.onopen = () => { connected = true; everConnected = true; retry = 0; full = false; $('wake').hidden = true; setStatus(''); ws.send(Net.enc.size(innerWidth, innerHeight)); sendPing(); };
+  ws.onopen = () => { connected = true; everConnected = true; retry = 0; full = false; $('wake').hidden = true; setStatus(''); ws.send(Net.enc.size(innerWidth, innerHeight)); sendPing(); sendName(); };
   ws.onmessage = e => { if (typeof e.data !== 'string') handle(Net.decode(e.data, WS)); };
   ws.onclose = () => { connected = false; if (playing) { playing = false; showMenu('Connection lost', 'Reconnecting to the server…'); } ents.clear(); spikes.clear(); blobs.clear(); pellets.clear(); owners.clear(); reconnect(); };
   ws.onerror = () => {};
@@ -482,10 +482,13 @@ function addChat(m) {
   if (atBottom) log.scrollTop = log.scrollHeight;
   if ($('chat').classList.contains('min')) $('cmin').textContent = '+ new';
 }
-function openChat() { if (!showChat || !playing) return; $('chat').classList.remove('min'); $('cmin').textContent = '–'; releaseAll(); $('ctx').focus(); }
+function openChat() { if (!showChat || !connected) return; $('chat').classList.remove('min'); $('cmin').textContent = '–'; releaseAll(); $('ctx').focus(); }
 function closeChat() { const ae = document.activeElement; if (ae && ae.blur) ae.blur(); $('ctx').blur(); try { window.focus(); } catch (e) {} }
-function sendChat() { const t = $('ctx').value.trim(); if (t && playing) send(Net.enc.chat(chatChan, t)); $('ctx').value = ''; }
-function chatReady() { const on = playing && connected; $('ctx').disabled = $('csend').disabled = !on; $('ctx').placeholder = on ? 'Type a message…' : 'Press Play to chat'; }
+function sendChat() { const t = $('ctx').value.trim(); if (t && connected) send(Net.enc.chat(chatChan, t)); $('ctx').value = ''; }
+function chatReady() { const on = connected; $('ctx').disabled = $('csend').disabled = !on; $('ctx').placeholder = on ? 'Type a message…' : 'Connecting…'; }
+// people on the menu chat under the name typed in the name box
+function sendName() { if (connected) send(Net.enc.name(($('nm').value.trim() || 'Guest').slice(0, 12))); }
+$('nm').addEventListener('input', () => { clearTimeout(sendName.t); sendName.t = setTimeout(sendName, 400); });
 setInterval(chatReady, 300);
 $('csend').addEventListener('click', e => { e.preventDefault(); sendChat(); closeChat(); });
 $('cmin').addEventListener('click', () => { const m = $('chat').classList.toggle('min'); $('cmin').textContent = m ? '+' : '–'; });
@@ -509,6 +512,7 @@ try { $('nm').value = localStorage.getItem('gobblename') || ''; multiChosen = lo
   if (rq && SERVERS.some(s => s.id === rq)) { region = rq; try { localStorage.setItem('gobbleregion', region); } catch (e) {} }
 }
 $('shc').checked = showChat; $('chat').hidden = !showChat; renderParty();
+if (innerWidth < 760) { $('chat').classList.add('min'); $('cmin').textContent = '+'; } // small screens: chat starts folded so it doesn't cover the menu
 updateHelp(); mx = W / 2; my = H / 2;
 renderRegions(); probeRegions(); setInterval(() => { if (!playing) probeRegions(); }, 20000);
 connect(); requestAnimationFrame(frame);

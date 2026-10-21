@@ -89,7 +89,7 @@ button{font:700 1rem var(--font);cursor:pointer}
 #pinv{display:flex;flex-direction:column;gap:6px;border:1px dashed var(--line);border-radius:10px;padding:10px}
 #plink{font-size:.78rem;color:var(--ink);word-break:break-all;user-select:text;-webkit-user-select:text}
 #pnote{font-size:.78rem;margin:0}
-#chat{position:fixed;left:calc(env(safe-area-inset-left,0px) + 12px);bottom:calc(env(safe-area-inset-bottom,0px) + 60px);width:min(360px,calc(100vw - 24px));z-index:4;display:flex;flex-direction:column;background:color-mix(in srgb,var(--surface) 82%,transparent);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+#chat{position:fixed;left:calc(env(safe-area-inset-left,0px) + 12px);bottom:calc(env(safe-area-inset-bottom,0px) + 60px);width:min(360px,calc(100vw - 24px));z-index:7;display:flex;flex-direction:column;background:color-mix(in srgb,var(--surface) 82%,transparent);border:1px solid var(--line);border-radius:12px;overflow:hidden}
 #chead{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 8px 6px 12px;border-bottom:1px solid var(--line);font-size:.8rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700}
 #cmin{padding:2px 8px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-size:.8rem;line-height:1.4}
 #clog{display:flex;flex-direction:column;gap:2px;height:170px;overflow-y:auto;padding:8px 10px;overscroll-behavior:contain}
@@ -167,8 +167,8 @@ button{font:700 1rem var(--font);cursor:pointer}
     <p class="hint">This is an online game, so it keeps running while this panel is open. Your browser’s own shortcuts are blocked while you play.</p></div>
   <div class="btns"><button class="kb" id="rs">Reset defaults</button><button class="primary" id="cl">Done</button></div>
 </div></div>
-<script src="servers.js?v=14"></script>
-<script src="net.js?v=14"></script>
-<script src="game.js?v=14"></script>
+<script src="servers.js?v=15"></script>
+<script src="net.js?v=15"></script>
+<script src="game.js?v=15"></script>
 </body>
 </html>
