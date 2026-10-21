@@ -31,6 +31,7 @@
 //   7 DEAD    u32 peak mass, u16 orbs eaten, u32 seconds alive
 //   8 FULL
 //   9 PONG    u32 token
+//  13 BATCH   repeated (u32 length, message): several messages sent as one, to save per-message work
 //  10 CHAT    u8 channel, u16 hue, u8 name length, name, utf8 text
 //  11 PARTY   u8 code length, code, u8 n, n x u32 owner id of every box in your party
 const VERSION = 2;
@@ -80,6 +81,7 @@ const enc = {
   },
   dead(peak, kills, alive) { const w = new Writer(11); w.u8(7); w.u32(peak); w.u16(kills); w.u32(alive); return w.done(); },
   full() { return Buffer.from([8]); },
+  batch(list) { let size = 1; for (const b of list) size += 4 + b.length; const w = new Writer(size); w.u8(13); for (const b of list) { w.u32(b.length); w.bytes(b); } return w.done(); },
   chat(channel, hue, name, text) {
     const nb = Buffer.from(String(name).slice(0, 16), 'utf8').subarray(0, 48), tb = Buffer.from(String(text), 'utf8').subarray(0, 400);
     const w = new Writer(5 + nb.length + tb.length); w.u8(10); w.u8(channel); w.u16(hue); w.u8(nb.length); w.bytes(nb); w.bytes(tb); return w.done();

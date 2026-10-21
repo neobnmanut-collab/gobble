@@ -84,8 +84,10 @@ wss.on('connection', (ws, req) => {
   ws.on('error', () => {});
 });
 
+let batching = false;
 function send(cl, buf) {
   if (cl.ws.readyState !== 1) return;
+  if (batching) { (cl.out || (cl.out = [])).push(buf); return; }
   if (cl.ws.bufferedAmount > 512 * 1024) return; // a stalled connection drops updates instead of piling them up
   cl.ws.send(buf); stats.bytesOut += buf.length;
 }
@@ -164,12 +166,17 @@ function sendMinimap() {
 const DT = 1 / C.TICK_HZ;
 let n = 0, next = performance.now();
 function loop() {
-  const t0 = performance.now();
-  game.step(DT); n++;
+  const t0 = performance.now(); n++;
+  let playing = false; for (const cl of game.clients) if (!cl.dead) { playing = true; break; }
+  if (playing) game.step(DT); else if (n % 2 === 0) game.step(DT * 2);
   for (const cl of game.clients) cl.splitBudget = Math.min(8, cl.splitBudget + 0.5); // at most ~20 splits a second
-  if (n % C.SEND_EVERY === 0) for (const cl of game.clients) sendWorld(cl);
+  batching = true;
+  // people on the menu only watch the arena in the background: 5 updates a second is plenty for them
+  if (n % C.SEND_EVERY === 0) for (const cl of game.clients) if (!cl.dead || n % 5 === 0) sendWorld(cl);
   if (n % 15 === 0) { sendLeaderboard(); sendParties(); }
   if (n % 15 === 0) sendMinimap();
+  batching = false;
+  for (const cl of game.clients) { const o = cl.out; if (!o || !o.length) continue; cl.out = null; send(cl, o.length === 1 ? o[0] : enc.batch(o)); }
   const took = performance.now() - t0, late = performance.now() - next; stats.tickMs = stats.tickMs * 0.95 + took * 0.05; stats.ticks++;
   if (took > stats.worstMs) stats.worstMs = took; if (took > 25 || late > 60) stats.slow++; // a step that ran long, or the whole server woke up late
   next += DT * 1000; const wait = next - performance.now();

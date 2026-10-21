@@ -100,6 +100,7 @@ function setStatus(t) { $('net').textContent = t; $('net').hidden = !t; $('go').
 
 function handle(m) {
   if (!m) return;
+  if (m.op === 13) { for (const p of m.parts) handle(Net.decode(p, WS)); return; }
   switch (m.op) {
     case 1:
       WS = m.world; SPEED = m.speed || SPEED;
