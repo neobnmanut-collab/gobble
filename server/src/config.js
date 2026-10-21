@@ -24,7 +24,8 @@ module.exports = {
   EJECT_MASS: 16,
   EJECT_MIN_MS: 40,      // fastest allowed rapid feed
   SPEED: 1685,           // speed = SPEED * mass^-0.25
-  SPLIT_SPEED: 806,
+  SPLIT_SPEED: 806,      // launch speed of a split piece for small orbs...
+  SPLIT_SIZE: 8.5,       // ...bigger orbs launch at this many times the piece's radius, so the split clears the parent
   EAT_RATIO: 1.25,
   MERGE_BASE: 18,        // seconds split pieces must wait before they can join again...
   MERGE_PER_MASS: 0.004, // ...plus this many seconds per unit of piece mass...

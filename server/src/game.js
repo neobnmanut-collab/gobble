@@ -7,6 +7,9 @@ const MINM = C.MIN_PIECE, MAXC = C.MAX_PIECES, VPOP = C.SPIKE_POP_MASS;
 const rnd = (a, b) => a + Math.random() * (b - a);
 const rad = m => 4 * Math.sqrt(m);
 const spd = m => C.SPEED * Math.pow(m, -0.25);
+// split launch speed grows with size, so a big orb's split flies clear of it instead of staying buried inside
+const splitV = m => Math.max(C.SPLIT_SPEED, C.SPLIT_SIZE * rad(m / 2));
+const splitReach = m => splitV(m) / 4; // how far a split piece travels (speed fades at 4 per second)
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const gi = v => clamp(Math.floor(v / G), 0, GN - 1);
 
@@ -147,7 +150,7 @@ class Game {
   doSplit(c, dx, dy) {
     c.m /= 2; c.r = rad(c.m);
     const t = this.mkCell(c.o, c.x, c.y, c.m);
-    t.vx = dx * C.SPLIT_SPEED + c.vx * 0.5; t.vy = dy * C.SPLIT_SPEED + c.vy * 0.5; t.ux = c.ux; t.uy = c.uy; t.sc = 7; t.prot = c.prot;
+    const v = splitV(c.m * 2); t.vx = dx * v + c.vx * 0.5; t.vy = dy * v + c.vy * 0.5; t.ux = c.ux; t.uy = c.uy; t.sc = 7; t.prot = c.prot;
     t.fr = 0.4; c.mt = t.mt = Math.min(C.MERGE_MAX, C.MERGE_BASE + c.m * C.MERGE_PER_MASS); c.sc = 7;
     this.cells.push(t); return t;
   }
@@ -249,7 +252,7 @@ class Game {
         if (q.m <= p.m * C.EAT_RATIO) continue;
         const dx = q.x - p.x, dy = q.y - p.y, d = Math.hypot(dx, dy) || 1;
         const canSplit = q.m / 2 > p.m * C.EAT_RATIO && q.m >= 2 * MINM && (oc.get(q.o) || 0) < MAXC;
-        const zone = (q.r + p.r * 0.3 + (canSplit ? q.r * 0.4 + 228 : 0) + 100) * b.caut;
+        const zone = (q.r + p.r * 0.3 + (canSplit ? splitReach(q.m) + q.r * 0.2 : 0) + 100) * b.caut;
         if (d < zone * 1.7) {
           if (Math.random() < (1 - b.skill) * 0.1) continue;
           threats.push({ x: q.x + q.ux * 0.3, y: q.y + q.uy * 0.3, px: p.x, py: p.y, d, zone, w: 0.4 + 0.6 * p.m / lead.m });
@@ -274,7 +277,7 @@ class Game {
     if (tgt) { const t = Math.min(1, td / Math.max(60, mySp)); px = tgt.x + (tgt.ux + tgt.vx) * t; py = tgt.y + (tgt.uy + tgt.vy) * t; }
     if (tgt && !threats.length && lead.sc <= 0 && lead.m >= 2 * MINM && lead.m / 2 > tgt.m * 1.3 && ps.length < 4 && Math.random() < 0.35 + b.skill * 0.5) {
       const dd = Math.hypot(px - lead.x, py - lead.y) || 1;
-      if (dd < lead.r * 0.5 + 234 && dd > lead.r * 0.6) {
+      if (dd < splitReach(lead.m) + lead.r * 0.3 && dd > lead.r * 0.6) {
         let safe = true;
         for (const q of cells) if (q.o !== o && q.o !== tgt.o && q.m > lead.m / 2 * C.EAT_RATIO && Math.hypot(q.x - lead.x, q.y - lead.y) < q.r + 700) { safe = false; break; }
         if (safe && lead.m / 2 > VPOP) for (const v of spikes) if (Math.hypot(v.x - (lead.x + px) / 2, v.y - (lead.y + py) / 2) < v.r + lead.r * 0.6) { safe = false; break; }
