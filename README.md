@@ -14,6 +14,10 @@ The game name is a placeholder. When you pick the final name, change `GAME_NAME`
 
 ## Try it on your own computer
 
+**Quickest:** double-click `start-windows.bat` (Windows) or `start-mac.command` (Mac). It installs what it needs the first time, starts the game and opens it in your browser. Close the window to stop it.
+
+Or by hand:
+
 You need Node.js 18 or newer (https://nodejs.org).
 
 ```
