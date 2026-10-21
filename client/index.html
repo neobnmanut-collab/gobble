@@ -89,21 +89,22 @@ button{font:700 1rem var(--font);cursor:pointer}
 #pinv{display:flex;flex-direction:column;gap:6px;border:1px dashed var(--line);border-radius:10px;padding:10px}
 #plink{font-size:.78rem;color:var(--ink);word-break:break-all;user-select:text;-webkit-user-select:text}
 #pnote{font-size:.78rem;margin:0}
-#chat{position:fixed;left:calc(env(safe-area-inset-left,0px) + 12px);bottom:calc(env(safe-area-inset-bottom,0px) + 60px);width:min(380px,calc(100vw - 24px));z-index:4;display:flex;flex-direction:column;gap:6px;pointer-events:none}
-#clog{display:flex;flex-direction:column;gap:3px}
-.cm{font-size:.85rem;line-height:1.35;color:var(--ink);background:color-mix(in srgb,var(--surface) 70%,transparent);border-radius:8px;padding:4px 8px;width:fit-content;max-width:100%;overflow-wrap:anywhere;transition:opacity .6s}
-.cm.old{opacity:0}
-.ctag{font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:var(--acc);margin-right:6px;font-weight:700}
-#cin{display:flex;gap:6px;pointer-events:auto}
-#cbtn{pointer-events:auto;width:fit-content;padding:7px 12px;border-radius:999px;border:1px solid var(--line);background:color-mix(in srgb,var(--surface) 85%,transparent);color:var(--ink);font-size:.85rem}
-#cbtn kbd{font:inherit;font-size:.75rem;color:var(--muted);margin-left:4px}
-@media (pointer:coarse){#cbtn kbd{display:none}}
-#ctx{flex:1;min-width:0;font:inherit;font-size:.9rem;padding:9px 11px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
-#csend{padding:8px 14px;border-radius:8px;border:0;background:var(--acc);color:#fff;font-size:.85rem;font-weight:700}
-#cx{padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-size:.85rem}
-#clog{pointer-events:auto;cursor:text}
-#cch{padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-size:.85rem}
-@media (pointer:coarse){#chat{bottom:calc(env(safe-area-inset-bottom,0px) + 170px);width:min(300px,60vw)}}
+#chat{position:fixed;left:calc(env(safe-area-inset-left,0px) + 12px);bottom:calc(env(safe-area-inset-bottom,0px) + 60px);width:min(360px,calc(100vw - 24px));z-index:4;display:flex;flex-direction:column;background:color-mix(in srgb,var(--surface) 82%,transparent);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+#chead{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 8px 6px 12px;border-bottom:1px solid var(--line);font-size:.8rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700}
+#cmin{padding:2px 8px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-size:.8rem;line-height:1.4}
+#clog{display:flex;flex-direction:column;gap:2px;height:170px;overflow-y:auto;padding:8px 10px;overscroll-behavior:contain}
+#clog:empty::before{content:"No messages yet. Say hi!";color:var(--muted);font-size:.85rem}
+.cm{font-size:.85rem;line-height:1.4;color:var(--ink);overflow-wrap:anywhere}
+.ctag{font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;color:var(--acc);margin-right:5px;font-weight:700}
+#cin{display:flex;gap:6px;padding:8px;border-top:1px solid var(--line)}
+#ctx{flex:1;min-width:0;font:inherit;font-size:.9rem;padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+#ctx:disabled{opacity:.6}
+#csend{padding:8px 12px;border-radius:8px;border:0;background:var(--acc);color:#fff;font-size:.85rem;font-weight:700}
+#csend:disabled{opacity:.5}
+#cch{padding:8px 9px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-size:.8rem}
+#chat.min #clog,#chat.min #cin{display:none}
+#chat.min{width:auto}
+@media (pointer:coarse){#chat{bottom:calc(env(safe-area-inset-bottom,0px) + 170px);width:min(300px,62vw)}#clog{height:110px}}
 #wake{font-size:.8rem;margin:0}
 #go:disabled{opacity:.5;cursor:not-allowed}
 </style>
@@ -130,7 +131,7 @@ button{font:700 1rem var(--font);cursor:pointer}
   <p id="pc"></p>
   <div class="keys" id="keys"></div>
 </div></div>
-<div id="chat"><div id="clog" aria-live="polite"></div><button type="button" id="cbtn" hidden>Chat <kbd>Enter</kbd></button><div id="cin" hidden><button type="button" id="cch">All</button><input type="text" id="ctx" maxlength="120" placeholder="Say something…" autocomplete="off" aria-label="Chat message"><button type="button" id="csend">Send</button><button type="button" id="cx" aria-label="Close chat">✕</button></div></div>
+<div id="chat"><div id="chead"><span>Chat</span><button type="button" id="cmin" aria-label="Hide chat">–</button></div><div id="clog" aria-live="polite"></div><div id="cin"><button type="button" id="cch">All</button><input type="text" id="ctx" maxlength="120" placeholder="Press Play to chat" autocomplete="off" aria-label="Chat message" disabled><button type="button" id="csend" disabled>Send</button></div></div>
 <button id="gear">⚙ Controls</button>
 <div class="ov" id="st" hidden><div class="card wide">
   <div class="sh"><h1 style="font-size:1.6rem">Controls</h1><button class="x" id="cl2" aria-label="Close">✕</button></div>
@@ -156,8 +157,8 @@ button{font:700 1rem var(--font);cursor:pointer}
     <p class="hint">This is an online game, so it keeps running while this panel is open. Your browser’s own shortcuts are blocked while you play.</p></div>
   <div class="btns"><button class="kb" id="rs">Reset defaults</button><button class="primary" id="cl">Done</button></div>
 </div></div>
-<script src="servers.js?v=7"></script>
-<script src="net.js?v=7"></script>
-<script src="game.js?v=7"></script>
+<script src="servers.js?v=8"></script>
+<script src="net.js?v=8"></script>
+<script src="game.js?v=8"></script>
 </body>
 </html>

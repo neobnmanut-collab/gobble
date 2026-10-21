@@ -444,34 +444,33 @@ $('pcopy').addEventListener('click', () => {
     .catch(() => { const r = document.createRange(); r.selectNodeContents($('plink')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); });
 });
 
-/* ---------- chat ---------- */
+/* ---------- chat panel: always on screen in the bottom left ---------- */
 function addChat(m) {
   if (!showChat) return;
+  const log = $('clog'), atBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 30;
   const li = document.createElement('div'); li.className = 'cm';
   if (m.channel === 1) { const t = document.createElement('span'); t.className = 'ctag'; t.textContent = 'Party'; li.append(t); }
   const n = document.createElement('b'); n.textContent = m.name + ': '; n.style.color = 'hsl(' + m.hue + ' 75% 65%)'; li.append(n, document.createTextNode(m.text));
-  li.dataset.t = Date.now(); $('clog').append(li);
-  while ($('clog').children.length > 8) $('clog').firstChild.remove();
+  log.append(li); while (log.children.length > 60) log.firstChild.remove();
+  if (atBottom) log.scrollTop = log.scrollHeight;
+  if ($('chat').classList.contains('min')) $('cmin').textContent = '+ new';
 }
-function openChat() {
-  if (!showChat || !playing) return; chatOpen = true; releaseAll(); $('cin').hidden = false; $('cbtn').hidden = true; $('ctx').focus(); renderChatChan();
-}
-function closeChat() { chatOpen = false; $('cin').hidden = true; $('cbtn').hidden = !playing; $('ctx').value = ''; $('ctx').blur(); try { window.focus(); } catch (e) {} }
-$('cbtn').addEventListener('click', e => { e.preventDefault(); openChat(); });
-// click Send to send and keep typing; the chat box stays open until you close it
-function sendChat() { const t = $('ctx').value.trim(); if (t) send(Net.enc.chat(chatChan, t)); $('ctx').value = ''; }
+function openChat() { if (!showChat || !playing) return; $('chat').classList.remove('min'); $('cmin').textContent = '–'; releaseAll(); $('ctx').focus(); }
+function closeChat() { $('ctx').blur(); try { window.focus(); } catch (e) {} }
+function sendChat() { const t = $('ctx').value.trim(); if (t && playing) send(Net.enc.chat(chatChan, t)); $('ctx').value = ''; }
+function chatReady() { const on = playing && connected; $('ctx').disabled = $('csend').disabled = !on; $('ctx').placeholder = on ? 'Type a message…' : 'Press Play to chat'; }
+setInterval(chatReady, 300);
 $('csend').addEventListener('click', e => { e.preventDefault(); sendChat(); $('ctx').focus(); });
-$('cx').addEventListener('click', e => { e.preventDefault(); closeChat(); });
-$('clog').addEventListener('click', () => { if (!chatOpen) openChat(); });
-setInterval(() => { if (!chatOpen) $('cbtn').hidden = !playing || !showChat; }, 300);
+$('cmin').addEventListener('click', () => { const m = $('chat').classList.toggle('min'); $('cmin').textContent = m ? '+' : '–'; });
+$('ctx').addEventListener('focus', () => releaseAll());
 function renderChatChan() { if (chatChan === 1 && !partyCode) chatChan = 0; $('cch').textContent = chatChan ? 'Party' : 'All'; $('cch').disabled = !partyCode; }
+setInterval(renderChatChan, 1000);
 $('cch').addEventListener('click', () => { chatChan = partyCode ? 1 - chatChan : 0; renderChatChan(); $('ctx').focus(); });
 $('ctx').addEventListener('keydown', e => {
   e.stopPropagation();
-  if (e.key === 'Enter') { sendChat(); closeChat(); }
+  if (e.key === 'Enter') { sendChat(); }
   else if (e.key === 'Escape') closeChat();
 });
-setInterval(() => { const now = Date.now(); for (const li of $('clog').children) li.classList.toggle('old', !chatOpen && now - li.dataset.t > 15000); }, 1000);
 $('shc').addEventListener('change', e => { showChat = e.target.checked; $('chat').hidden = !showChat; try { localStorage.setItem('gobblechat', showChat ? '1' : '0'); } catch (x) {} });
 
 /* ---------- start ---------- */
