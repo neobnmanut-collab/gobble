@@ -24,7 +24,7 @@
 //             u16 n sliding blobs (u32 id, u16 x, u16 y, u8 hue/2)
 //             u16 n pellets added (u32 id, u16 x, u16 y, u8 colour 0-11, u8 1=fed blob)
 //             u16 n pellets removed (u32 id)
-//   5 LEADER  u16 your rank (0 = not playing), u16 players, u8 n, n x (u32 owner, u32 mass)
+//   5 LEADER  u16 your rank (0 = not playing), u16 orbs ranked, u8 n, n x (u32 owner, u32 mass), u16 real players online, u16 bots
 //   6 MINIMAP u8 n spikes (u16 x, u16 y), u8 n big orbs (u16 x, u16 y, u16 r*4, u32 owner),
 //             u8 n real players (u16 x, u16 y, u32 owner)  -- one dot per player box
 //   7 DEAD    u32 peak mass, u16 orbs eaten, u32 seconds alive
@@ -69,7 +69,7 @@ const enc = {
     w.u16(removed.length); for (const id of removed) w.u32(id);
     return w.done();
   },
-  leader(rank, total, top) { const w = new Writer(6 + top.length * 8); w.u8(5); w.u16(rank); w.u16(total); w.u8(top.length); for (const t of top) { w.u32(t.id); w.u32(t.m); } return w.done(); },
+  leader(rank, total, top, players, bots) { const w = new Writer(10 + top.length * 8); w.u8(5); w.u16(rank); w.u16(total); w.u8(top.length); for (const t of top) { w.u32(t.id); w.u32(t.m); } w.u16(players); w.u16(bots); return w.done(); },
   minimap(world, spikes, big, people) {
     const w = new Writer(4 + spikes.length * 4 + big.length * 10 + people.length * 8); w.u8(6);
     w.u8(spikes.length); for (const v of spikes) { w.u16(q(v.x, world)); w.u16(q(v.y, world)); }

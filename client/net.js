@@ -34,7 +34,7 @@
         for (let i = 0; i < n; i++) removed.push(u32());
         return { op, vx, vy, cells, spikes, blobs, added, removed };
       }
-      case 5: { const rank = u16(), total = u16(), n = u8(), top = []; for (let i = 0; i < n; i++) top.push({ id: u32(), m: u32() }); return { op, rank, total, top }; }
+      case 5: { const rank = u16(), total = u16(), n = u8(), top = []; for (let i = 0; i < n; i++) top.push({ id: u32(), m: u32() }); let players = -1, bots = -1; if (o + 4 <= ab.byteLength) { players = u16(); bots = u16(); } return { op, rank, total, top, players, bots }; }
       case 6: {
         const spikes = []; let n = u8(); for (let i = 0; i < n; i++) spikes.push({ x: pos(), y: pos() });
         const big = []; n = u8(); for (let i = 0; i < n; i++) big.push({ x: pos(), y: pos(), r: u16() / 4, o: u32() });

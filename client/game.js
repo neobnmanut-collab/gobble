@@ -338,7 +338,8 @@ function hud() {
   const row = (id, m, i) => { const li = document.createElement('li'); li.value = i + 1; const o = owners.get(id); li.textContent = (o ? o.name : '…') + ' · ' + dm(m).toLocaleString(); if (myBoxes.includes(id)) li.className = 'me'; ol.appendChild(li); };
   lb.top.slice(0, 6).forEach((t, i) => row(t.id, t.m, i));
   if (playing && lb.rank > 6) { const li = document.createElement('li'); li.className = 'gap'; li.textContent = '…'; ol.appendChild(li); const li2 = document.createElement('li'); li2.value = lb.rank; li2.className = 'me'; li2.textContent = 'You · ' + dm(tot).toLocaleString(); ol.appendChild(li2); }
-  $('pc').textContent = connected ? lb.total + ' in the arena' : '';
+  const who = lb.players >= 0 ? lb.players + (lb.players === 1 ? ' player' : ' players') + ' online · ' + lb.bots + ' bots' : lb.total + ' in the arena';
+  $('pc').textContent = connected ? who : ''; $('onl').textContent = connected && lb.players >= 0 ? lb.players + (lb.players === 1 ? ' player · ' : ' players · ') + lb.bots + ' bots' : '–';
   $('png').textContent = connected && ping ? ping + ' ms' : '–';
   if (!$('ov').hidden) renderRegions();
 }

@@ -31,7 +31,7 @@ module.exports = {
   MERGE_MAX: 40,         // ...but never longer than this
   GROWTH: 5,             // highest (and default) growth boost a player can pick, 1x to this: pellets give this many times their mass, eaten orbs give 1 + (GROWTH-1)/2 times (3x at 5)
 
-  BOT_FILL: 50,          // bots fill the arena up to this many players
+  BOT_FILL: 40,          // bots fill the arena up to this many players
   MAX_PLAYERS: 120,      // human players allowed at once
   SPAWN_PROTECT: 3,      // seconds a new orb cannot be eaten
 

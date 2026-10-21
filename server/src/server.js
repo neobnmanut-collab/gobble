@@ -132,11 +132,12 @@ function sendLeaderboard() {
   for (const c of game.cells) by.set(c.o, (by.get(c.o) || 0) + c.m);
   const all = [...by.entries()].map(([id, m]) => ({ id, m })).sort((a, b) => b.m - a.m);
   const top = all.slice(0, 10), topOwners = top.map(t => game.owners.get(t.id)).filter(Boolean);
+  let players = 0, bots = 0; for (const cl of game.clients) if (!cl.dead && cl.boxes && cl.boxes.length) players++; for (const o of game.owners.values()) if (o.kind === 'bot' && by.has(o.id)) bots++;
   for (const cl of game.clients) {
     const unknown = topOwners.filter(o => !cl.knownOwners.has(o.id)); for (const o of unknown) cl.knownOwners.add(o.id);
     if (unknown.length) send(cl, enc.owners(unknown));
     let rank = 0; if (!cl.dead && cl.boxes) for (let i = 0; i < all.length; i++) if (cl.boxes.includes(all[i].id)) { rank = i + 1; break; }
-    send(cl, enc.leader(rank, all.length, top));
+    send(cl, enc.leader(rank, all.length, top, players, bots));
   }
 }
 function sendMinimap() {
