@@ -240,7 +240,7 @@ function draw(dt) {
   for (const e of ents.values()) {
     const age = Math.min(0.12, (now - e.lt) / 1000);
     e.r += (e.tr - e.r) * smooth(dt * 14);
-    if (e.o === aid) {
+    if (e.o === aid && false) { // (local prediction switched off: it made orbs look closer or safer than they were)
       // your own orb: move it locally toward the mouse right away, then pull it gently onto where the server has it
       const lat = Math.min(0.3, ping / 2000 + age), sx = e.tx + e.vx * lat, sy = e.ty + e.vy * lat;
       let dx = aim.x - e.x, dy = aim.y - e.y; const d = Math.hypot(dx, dy); let dvx = 0, dvy = 0;
@@ -250,8 +250,8 @@ function draw(dt) {
       const ex = sx - e.x, ey = sy - e.y, err = Math.hypot(ex, ey), c = smooth(dt * (err > e.r * 0.5 ? 14 : 4));
       e.x += ex * c; e.y += ey * c;
     } else {
-      const gx = e.tx + e.vx * age, gy = e.ty + e.vy * age;
-      e.x += (gx - e.x) * k; e.y += (gy - e.y) * k;
+      const gx = e.tx + e.vx * age, gy = e.ty + e.vy * age, q = myBoxes.includes(e.o) ? smooth(dt * 28) : k;
+      e.x += (gx - e.x) * q; e.y += (gy - e.y) * q;
     }
   }
   for (const v of spikes.values()) { v.x += (v.tx - v.x) * k; v.y += (v.ty - v.y) * k; v.rot += dt * 0.3; }

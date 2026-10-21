@@ -26,6 +26,9 @@ module.exports = {
   SPEED: 1685,           // speed = SPEED * mass^-0.25
   SPLIT_SPEED: 806,
   EAT_RATIO: 1.25,
+  MERGE_BASE: 18,        // seconds split pieces must wait before they can join again...
+  MERGE_PER_MASS: 0.004, // ...plus this many seconds per unit of piece mass...
+  MERGE_MAX: 40,         // ...but never longer than this
   GROWTH: 5,             // highest (and default) growth boost a player can pick, 1x to this: pellets give this many times their mass, eaten orbs give 1 + (GROWTH-1)/2 times (3x at 5)
 
   BOT_FILL: 50,          // bots fill the arena up to this many players

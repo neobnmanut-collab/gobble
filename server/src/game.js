@@ -148,7 +148,7 @@ class Game {
     c.m /= 2; c.r = rad(c.m);
     const t = this.mkCell(c.o, c.x, c.y, c.m);
     t.vx = dx * C.SPLIT_SPEED + c.vx * 0.5; t.vy = dy * C.SPLIT_SPEED + c.vy * 0.5; t.ux = c.ux; t.uy = c.uy; t.sc = 7; t.prot = c.prot;
-    t.fr = 0.4; c.mt = t.mt = Math.min(15, 6 + c.m * 0.004); c.sc = 7;
+    t.fr = 0.4; c.mt = t.mt = Math.min(C.MERGE_MAX, C.MERGE_BASE + c.m * C.MERGE_PER_MASS); c.sc = 7;
     this.cells.push(t); return t;
   }
   swap(client, x, y) {
@@ -196,7 +196,7 @@ class Game {
     const owned = this.oc.get(c.o) || 1, total = c.m;
     const n = Math.min(C.SPIKE_PIECES, MAXC - owned + 1, Math.floor(total / MINM)); if (n < 2) return;
     const w = []; let ws = 0; for (let i = 0; i < n; i++) { const v = Math.random() ** 2 * 3 + 0.1; w.push(v); ws += v; }
-    const extra = total - n * MINM, mt = Math.min(16, 7 + total / n * 0.004), a0 = rnd(0, TAU), x = c.x, y = c.y;
+    const extra = total - n * MINM, mt = Math.min(C.MERGE_MAX, C.MERGE_BASE + total / n * C.MERGE_PER_MASS), a0 = rnd(0, TAU), x = c.x, y = c.y;
     for (let i = 0; i < n; i++) {
       const m = MINM + extra * w[i] / ws, a = a0 + i / n * TAU, v = rnd(420, 560);
       const t = i === 0 ? c : this.mkCell(c.o, x, y, m);
