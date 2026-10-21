@@ -8,7 +8,7 @@ const rnd = (a, b) => a + Math.random() * (b - a);
 const rad = m => 4 * Math.sqrt(m);
 const spd = m => C.SPEED * Math.pow(m, -0.25);
 // split launch speed grows with size, so a big orb's split flies clear of it instead of staying buried inside
-const splitV = m => Math.max(C.SPLIT_SPEED, C.SPLIT_SIZE * rad(m / 2));
+const splitV = m => C.SPLIT_SPEED * Math.max(1, Math.pow(rad(m / 2) / 80, C.SPLIT_GROWTH));
 const splitReach = m => splitV(m) / 4; // how far a split piece travels (speed fades at 4 per second)
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const gi = v => clamp(Math.floor(v / G), 0, GN - 1);
