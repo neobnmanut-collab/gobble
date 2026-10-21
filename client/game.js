@@ -99,7 +99,11 @@ function setStatus(t) { $('net').textContent = t; $('net').hidden = !t; $('go').
 function handle(m) {
   if (!m) return;
   switch (m.op) {
-    case 1: WS = m.world; SPEED = m.speed || SPEED; break;
+    case 1:
+      WS = m.world; SPEED = m.speed || SPEED;
+      // the server was updated since this page loaded: reload to get the new game for everyone
+      if (m.build) { if (serverBuild && m.build !== serverBuild) { reloadForUpdate(); return; } serverBuild = m.build; }
+      break;
     case 2: myBoxes = m.ids; active = m.active; break;
     case 3: for (const o of m.list) owners.set(o.id, o); break;
     case 4: {
@@ -141,6 +145,12 @@ function handle(m) {
     case 11: partyCode = m.code; partyIds = new Set(m.ids); renderParty(); break;
     case 9: if (m.token === pingTok) { const p = performance.now() - pingT0; ping = ping ? Math.round(ping * 0.6 + p * 0.4) : Math.round(p); regionPing[region] = ping; } break;
   }
+}
+let serverBuild = '';
+function reloadForUpdate() {
+  showMenu('Updating…', 'A new version of the game is out. Loading it now.'); setStatus('Updating…');
+  const u = new URL(location.href); u.searchParams.set('u', Date.now().toString(36)); // skip any cached copy of the page
+  setTimeout(() => location.replace(u.toString()), 600);
 }
 function fmtT(s) { s = Math.floor(s); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
 function mineCells() { const out = []; for (const e of ents.values()) if (myBoxes.includes(e.o)) out.push(e); return out; }

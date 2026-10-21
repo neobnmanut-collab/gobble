@@ -15,7 +15,7 @@
 //  11 GROWTH  u8 growth speed 1-5 (this player's own boost; sent after JOIN and whenever changed)
 //
 // Server -> browser
-//   1 HELLO   f32 world size, u8 protocol version, f32 speed constant
+//   1 HELLO   f32 world size, u8 protocol version, f32 speed constant, u8 len + build id (changes on every deploy)
 //   2 BOXES   u8 n, n x u32 owner id, u8 active index
 //   3 OWNERS  u16 n, n x (u32 id, u16 hue, u8 kind 0=bot 1=player, u8 len, utf8 name)
 //   4 TICK    f32 viewX, f32 viewY,
@@ -50,7 +50,7 @@ class Writer {
 }
 
 const enc = {
-  hello(world, speed) { const w = new Writer(10); w.u8(1); w.f32(world); w.u8(VERSION); w.f32(speed); return w.done(); },
+  hello(world, speed, build) { const bb = Buffer.from(String(build || ''), 'utf8').subarray(0, 40); const w = new Writer(11 + bb.length); w.u8(1); w.f32(world); w.u8(VERSION); w.f32(speed); w.u8(bb.length); w.bytes(bb); return w.done(); },
   boxes(ids, active) { const w = new Writer(3 + ids.length * 4); w.u8(2); w.u8(ids.length); for (const id of ids) w.u32(id); w.u8(active); return w.done(); },
   owners(list) {
     const names = list.map(o => Buffer.from(String(o.name).slice(0, 16), 'utf8').subarray(0, 48));

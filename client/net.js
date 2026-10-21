@@ -13,7 +13,7 @@
     const pos = () => u16() / Q * world;
     const op = u8();
     switch (op) {
-      case 1: { const world = f32(), version = u8(), speed = o + 4 <= ab.byteLength ? f32() : 1685; return { op, world, version, speed }; }
+      case 1: { const world = f32(), version = u8(), speed = o + 4 <= ab.byteLength ? f32() : 1685; let build = ''; if (o < ab.byteLength) { const n = u8(); build = td.decode(new Uint8Array(ab, o, n)); } return { op, world, version, speed, build }; }
       case 2: { const n = u8(), ids = []; for (let i = 0; i < n; i++) ids.push(u32()); return { op, ids, active: u8() }; }
       case 3: {
         const n = u16(), list = [];

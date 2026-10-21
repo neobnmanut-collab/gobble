@@ -14,6 +14,8 @@ const CLIENT_DIR = path.resolve(process.env.CLIENT_DIR || path.join(__dirname, '
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.png': 'image/png', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.json': 'application/json' };
 
 const game = new Game();
+// changes with every deploy; browsers that see a new one reload themselves to get the latest game page
+const BUILD = (process.env.RENDER_GIT_COMMIT || '').slice(0, 12) || String(Date.now());
 let stats = { tickMs: 0, bytesOut: 0 };
 
 /* ---------- web page ---------- */
@@ -42,7 +44,7 @@ wss.on('connection', (ws, req) => {
   const cl = { ws, dead: true, boxes: [], W: 1280, H: 720, knownPellets: new Set(), knownOwners: new Set(), sentBoxes: '', alive: true, splitBudget: 8, lastJoin: 0 };
   game.clients.add(cl);
   ws.binaryType = 'nodebuffer';
-  send(cl, enc.hello(C.WORLD, C.SPEED));
+  send(cl, enc.hello(C.WORLD, C.SPEED, BUILD));
   if (humans >= C.MAX_PLAYERS) send(cl, enc.full());
   cl.onDeath = d => send(cl, enc.dead(d.peak, d.kills, d.alive));
   ws.on('pong', () => { cl.alive = true; });
