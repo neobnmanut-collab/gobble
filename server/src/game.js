@@ -393,8 +393,8 @@ class Game {
         if (big.m <= sm.m * C.EAT_RATIO || sm.prot > 0) continue;
         const sib = this.siblings(a.o, b.o);
         if (d < big.r - sm.r * 0.35) {
-          big.m += sm.m; sm.dead = true;
           const bo = owners.get(big.o), so = owners.get(sm.o);
+          big.m += sm.m * (bo && bo.kind === 'human' && !sib ? 1 + (C.GROWTH - 1) * 0.5 : 1); sm.dead = true;
           if (bo && bo.client && !sib && so) bo.client.kills = (bo.client.kills || 0) + 1;
           continue;
         }

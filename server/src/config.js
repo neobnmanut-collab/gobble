@@ -26,7 +26,7 @@ module.exports = {
   SPEED: 1685,           // speed = SPEED * mass^-0.25
   SPLIT_SPEED: 806,
   EAT_RATIO: 1.25,
-  GROWTH: 1,             // pellet mass multiplier for players
+  GROWTH: 5,             // growth boost for players: pellets give this many times their mass, eaten orbs give 1 + (GROWTH-1)/2 times (3x at 5)
 
   BOT_FILL: 50,          // bots fill the arena up to this many players
   MAX_PLAYERS: 120,      // human players allowed at once
