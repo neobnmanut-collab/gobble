@@ -1,17 +1,17 @@
 'use strict';
 // Every gameplay number lives here, so balance can be tuned without touching the game code.
 module.exports = {
-  WORLD: 12000,          // arena width and height
+  WORLD: 10800,          // arena width and height
   GRID: 100,             // pellet grid cell size
   TICK_HZ: 25,           // simulation steps per second
   SEND_EVERY: 1,         // send a world update every step (25 updates per second)
 
-  PELLETS: 2750,         // pellets kept on the map: half as many as before, each worth twice as much (same total food, less work)
+  PELLETS: 2230,         // pellets kept on the map (same density as before on the smaller arena), each worth 14
   PELLET_MASS: 14,
-  PELLET_REGROW: 150,    // pellets regrown per second, up to PELLETS
+  PELLET_REGROW: 120,    // pellets regrown per second, up to PELLETS
   SETTLED_EJECT_CAP: 6000, // ejected blobs that have stopped and lie on the map
 
-  SPIKES: 40,
+  SPIKES: 32,
   SPIKE_DRAW_MASS: 100,  // spikes look like an orb of this mass
   SPIKE_POP_MASS: 800,   // orbs at or above this burst on a spike
   SPIKE_GAIN: 400,       // mass a spike adds to the orb that swallows it
@@ -33,7 +33,8 @@ module.exports = {
   GROWTH_DEFAULT: 4,     // growth a player gets until they pick one
   GROWTH: 5,             // highest growth boost a player can pick (1x up to this): pellets give this many times their mass, eaten orbs give 1 + (GROWTH-1)/2 times (3x at 5)
 
-  BOT_FILL: 30,          // bots fill the arena up to this many players
+  BOT_MAX: 23,           // at most this many bots...
+  BOT_FILL: 40,          // ...and fewer once real players fill the arena up to this many
   MAX_PLAYERS: 120,      // human players allowed at once
   SPAWN_PROTECT: 3,      // seconds a new orb cannot be eaten
 

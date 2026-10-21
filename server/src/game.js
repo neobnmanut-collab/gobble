@@ -34,7 +34,7 @@ class Game {
     this.own = new Map(); this.oc = new Map();
     for (let i = 0; i < C.PELLETS; i++) this.addPellet();
     for (let i = 0; i < C.SPIKES; i++) this.spawnSpike();
-    for (let i = 0; i < C.BOT_FILL; i++) this.addBot(); // arena is lively from the first second
+    for (let i = 0; i < Math.min(C.BOT_MAX, C.BOT_FILL); i++) this.addBot(); // arena is lively from the first second
   }
 
   /* ---------- world helpers ---------- */
@@ -221,7 +221,7 @@ class Game {
   }
   manageBots() {
     let humans = 0; for (const cl of this.clients) if (!cl.dead) humans++;
-    const want = Math.max(0, C.BOT_FILL - humans);
+    const want = Math.max(0, Math.min(C.BOT_MAX, C.BOT_FILL - humans));
     const bots = [...this.owners.values()].filter(o => o.kind === 'bot');
     for (const o of bots) if (!this.own.has(o.id)) this.owners.delete(o.id); // bot fully eaten
     const alive = bots.filter(o => this.own.has(o.id));
@@ -414,10 +414,23 @@ class Game {
       }
     }
     // spikes
+    const sr = rad(C.SPIKE_DRAW_MASS);
     for (const v of this.spikes) {
-      v.x += v.vx * dt; v.y += v.vy * dt; const q = Math.exp(-3 * dt); v.vx *= q; v.vy *= q;
-      if (v.x < v.r) { v.x = v.r; v.vx = Math.abs(v.vx); } else if (v.x > WS - v.r) { v.x = WS - v.r; v.vx = -Math.abs(v.vx); }
-      if (v.y < v.r) { v.y = v.r; v.vy = Math.abs(v.vy); } else if (v.y > WS - v.r) { v.y = WS - v.r; v.vy = -Math.abs(v.vy); }
+      // a shot spike slides out and eases to a stop; walls absorb half the bounce
+      v.x += v.vx * dt; v.y += v.vy * dt; const q = Math.exp(-2.6 * dt); v.vx *= q; v.vy *= q;
+      if (Math.abs(v.vx) + Math.abs(v.vy) < 4) v.vx = v.vy = 0;
+      if (v.x < v.r) { v.x = v.r; v.vx = Math.abs(v.vx) * 0.5; } else if (v.x > WS - v.r) { v.x = WS - v.r; v.vx = -Math.abs(v.vx) * 0.5; }
+      if (v.y < v.r) { v.y = v.r; v.vy = Math.abs(v.vy) * 0.5; } else if (v.y > WS - v.r) { v.y = WS - v.r; v.vy = -Math.abs(v.vy) * 0.5; }
+      // a spike swells a little with each blob fed into it, so you can see it filling up
+      v.r += (sr * (1 + v.fed * 0.035) - v.r) * Math.min(1, dt * 8);
+    }
+    // spikes never sit on top of each other: overlapping ones ease apart
+    for (let i = 0; i < this.spikes.length; i++) for (let j = i + 1; j < this.spikes.length; j++) {
+      const a = this.spikes[i], b = this.spikes[j], dx = b.x - a.x, dy = b.y - a.y, rr = a.r + b.r;
+      if (dx > rr || dx < -rr || dy > rr || dy < -rr) continue;
+      const d = Math.hypot(dx, dy) || 0.01, ov = rr - d; if (ov <= 0) continue;
+      const k = Math.min(1, dt * 6) * 0.5, ux = d > 0.01 ? dx / d : 1, uy = d > 0.01 ? dy / d : 0;
+      a.x -= ux * ov * k; a.y -= uy * ov * k; b.x += ux * ov * k; b.y += uy * ov * k;
     }
     const pops = [];
     for (const c of cells) {
@@ -462,7 +475,7 @@ class Game {
         const ea = ejG.get(gy * GN + gx); if (!ea) continue;
         for (const f of ea) {
           if (f.dead) continue; const dx = f.x - v.x, dy = f.y - v.y; if (dx * dx + dy * dy > v.r * v.r) continue;
-          f.dead = true; v.fed++; const sp = Math.hypot(f.vx, f.vy); if (sp > 20) { v.dx = f.vx / sp; v.dy = f.vy / sp; }
+          f.dead = true; v.fed++; const sp = Math.hypot(f.vx, f.vy); if (sp > 20) { v.dx = f.vx / sp; v.dy = f.vy / sp; v.vx += v.dx * 25; v.vy += v.dy * 25; }
           if (v.fed >= 7 && this.spikes.length < C.SPIKES + 20) {
             v.fed = 0; this.spikes.push({ id: this.nextCell++, x: v.x + v.dx * v.r * 2, y: v.y + v.dy * v.r * 2, r: v.r, vx: v.dx * 1100, vy: v.dy * 1100, fed: 0, dx: 1, dy: 0, dead: false });
           }

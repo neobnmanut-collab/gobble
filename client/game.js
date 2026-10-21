@@ -122,12 +122,22 @@ function handle(m) {
       }
       for (const id of ents.keys()) if (!seen.has(id)) ents.delete(id);
       const ss = new Set();
-      for (const v of m.spikes) { ss.add(v.id); const e = spikes.get(v.id); if (e) { e.tx = v.x; e.ty = v.y; e.r = v.r; e.fed = v.fed; } else spikes.set(v.id, { x: v.x, y: v.y, tx: v.x, ty: v.y, r: v.r, fed: v.fed, rot: Math.random() * TAU }); }
+      for (const v of m.spikes) { ss.add(v.id); const e = spikes.get(v.id); if (e) { e.ox = e.x; e.oy = e.y; e.tx = v.x; e.ty = v.y; e.r = v.r; e.fed = v.fed; e.lt = lastTick; } else spikes.set(v.id, { x: v.x, y: v.y, tx: v.x, ty: v.y, r: v.r, fed: v.fed, rot: Math.random() * TAU }); }
       for (const id of spikes.keys()) if (!ss.has(id)) spikes.delete(id);
       const bs = new Set();
-      for (const b of m.blobs) { bs.add(b.id); const e = blobs.get(b.id); if (e) { e.tx = b.x; e.ty = b.y; } else blobs.set(b.id, { x: b.x, y: b.y, tx: b.x, ty: b.y, hue: b.hue }); }
-      for (const id of blobs.keys()) if (!bs.has(id)) blobs.delete(id);
-      for (const f of m.added) pellets.set(f.id, f);
+      for (const b of m.blobs) {
+        bs.add(b.id); const e = blobs.get(b.id);
+        if (e) { const dtt = (lastTick - e.lt) / 1000; if (dtt > 0.008 && dtt < 0.5) { e.vx = (b.x - e.tx) / dtt; e.vy = (b.y - e.ty) / dtt; } e.ox = e.x; e.oy = e.y; e.tx = b.x; e.ty = b.y; e.lt = lastTick; e.ghost = 0; }
+        else {
+          // new blob: place it where it sits on the orb that shot it, as that orb is drawn right now
+          let from = null, bd = 90; for (const o of ents.values()) { const d = Math.hypot(b.x - o.tx, b.y - o.ty) - o.tr; if (d < bd) { bd = d; from = o; } }
+          const sx = from ? from.x + (b.x - from.tx) : b.x, sy = from ? from.y + (b.y - from.ty) : b.y;
+          blobs.set(b.id, { x: sx, y: sy, ox: sx, oy: sy, tx: b.x, ty: b.y, vx: 0, vy: 0, lt: lastTick, hue: Math.round(b.hue / 30) % 12 * 30, ghost: 0 });
+        }
+      }
+      // a blob that stopped becomes a pellet with the same id: keep drawing it until that pellet arrives
+      for (const [id, b] of blobs) if (!bs.has(id) && !b.ghost) { b.ghost = lastTick; b.vx = b.vy = 0; b.ox = b.x; b.oy = b.y; b.tx = b.x; b.ty = b.y; }
+      for (const f of m.added) { pellets.set(f.id, f); blobs.delete(f.id); }
       for (const id of m.removed) pellets.delete(id);
       const mine = mineCells(); let tot = 0; for (const c of mine) tot += c.m;
       if (playing && tot > peak) peak = tot;
@@ -259,8 +269,12 @@ function draw(dt) {
       e.x += ex * c; e.y += ey * c;
     }
   }
-  for (const v of spikes.values()) { v.x += (v.tx - v.x) * k; v.y += (v.ty - v.y) * k; v.rot += dt * 0.3; }
-  for (const b of blobs.values()) { b.x += (b.tx - b.x) * k; b.y += (b.ty - b.y) * k; }
+  for (const v of spikes.values()) { const p = dd <= 0 || v.ox === undefined ? 1 : Math.min(1, (now - v.lt) / dd); if (v.ox !== undefined) { v.x = v.ox + (v.tx - v.ox) * p; v.y = v.oy + (v.ty - v.oy) * p; } v.rot += dt * 0.3; }
+  for (const [id, b] of blobs) {
+    if (b.ghost && now - b.ghost > 250) { blobs.delete(id); continue; }
+    const since = now - b.lt, p = dd <= 0 ? 1 : Math.min(1, since / dd), over = Math.min(0.1, Math.max(0, since - Math.max(dd, 34)) / 1000);
+    b.x = b.ox + (b.tx - b.ox) * p + b.vx * over; b.y = b.oy + (b.ty - b.oy) * p + b.vy * over;
+  }
   g.setTransform(dpr, 0, 0, dpr, 0, 0); g.fillStyle = '#000'; g.fillRect(0, 0, W, H);
   g.save(); g.translate(W / 2, H / 2); g.scale(cam.s, cam.s); g.translate(-cam.x, -cam.y);
   const hw = W / 2 / cam.s, hh = H / 2 / cam.s;
@@ -277,7 +291,7 @@ function draw(dt) {
       g.fill();
     }
   }
-  for (const b of blobs.values()) { if (b.x < x0 || b.x > x1 || b.y < y0 || b.y > y1) continue; g.fillStyle = 'hsl(' + b.hue + ' 65% 60%)'; g.beginPath(); g.arc(b.x, b.y, 16, 0, TAU); g.fill(); }
+  for (const [id, b] of blobs) { if (b.x < x0 || b.x > x1 || b.y < y0 || b.y > y1) continue; if (pellets.has(id)) continue; g.fillStyle = 'hsl(' + b.hue + ' 70% 60%)'; g.beginPath(); g.arc(b.x, b.y, 16, 0, TAU); g.fill(); }
   // orbs, small first
   const list = []; for (const e of ents.values()) if (!(e.x < x0 - e.r || e.x > x1 + e.r || e.y < y0 - e.r || e.y > y1 + e.r)) list.push(e);
   list.sort((a, b) => a.m - b.m);
