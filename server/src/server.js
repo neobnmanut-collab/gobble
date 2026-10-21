@@ -21,7 +21,7 @@ const server = http.createServer((req, res) => {
   const url = new URL(req.url, 'http://x');
   if (url.pathname === '/health') {
     let humans = 0; for (const c of game.clients) if (!c.dead) humans++;
-    res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });
+    res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store', 'access-control-allow-origin': '*' });
     return res.end(JSON.stringify({ ok: true, players: humans, connections: game.clients.size, orbs: game.cells.length, tickMs: +stats.tickMs.toFixed(2) }));
   }
   let rel = decodeURIComponent(url.pathname); if (rel.endsWith('/')) rel += 'index.html';

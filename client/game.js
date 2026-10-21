@@ -67,16 +67,29 @@ function probeRegions() {
   }
 }
 function switchServer() { if (ws) { ws.onclose = null; try { ws.close(); } catch (e) {} } playing = false; connected = false; ents.clear(); spikes.clear(); blobs.clear(); pellets.clear(); owners.clear(); myBoxes = []; connect(); }
+// a sleeping free server wakes on any web request, so knock on it while the game page shows its own waiting message
+let everConnected = false, firstTry = 0;
+function wake() { try { fetch(serverUrl() + '/health', { mode: 'no-cors', cache: 'no-store' }).catch(() => {}); } catch (e) {} }
 function connect() {
-  setStatus('Connecting…');
+  if (!firstTry) firstTry = performance.now();
+  setStatus(everConnected ? 'Reconnecting…' : 'Connecting to the server…');
+  wake();
   try { ws = new WebSocket(wsUrl()); } catch (e) { return reconnect(); }
   ws.binaryType = 'arraybuffer';
-  ws.onopen = () => { connected = true; retry = 0; full = false; setStatus(''); ws.send(Net.enc.size(innerWidth, innerHeight)); sendPing(); };
+  ws.onopen = () => { connected = true; everConnected = true; retry = 0; full = false; $('wake').hidden = true; setStatus(''); ws.send(Net.enc.size(innerWidth, innerHeight)); sendPing(); };
   ws.onmessage = e => { if (typeof e.data !== 'string') handle(Net.decode(e.data, WS)); };
   ws.onclose = () => { connected = false; if (playing) { playing = false; showMenu('Connection lost', 'Reconnecting to the server…'); } ents.clear(); spikes.clear(); blobs.clear(); pellets.clear(); owners.clear(); reconnect(); };
   ws.onerror = () => {};
 }
-function reconnect() { const wait = Math.min(10000, 800 * 2 ** retry++); setStatus('Can’t reach the server. Trying again in ' + Math.ceil(wait / 1000) + ' s…'); setTimeout(connect, wait); }
+function reconnect() {
+  const waited = (performance.now() - firstTry) / 1000;
+  if (!everConnected && waited < 120) {
+    // first visit while the server is asleep: retry every 3 s and say what's happening
+    $('wake').hidden = false; setStatus('Starting the server… ' + Math.round(waited) + ' s');
+    return setTimeout(connect, 3000);
+  }
+  const wait = Math.min(10000, 800 * 2 ** retry++); setStatus('Can’t reach the server. Trying again in ' + Math.ceil(wait / 1000) + ' s…'); setTimeout(connect, wait);
+}
 function send(ab) { if (ws && ws.readyState === 1) ws.send(ab); }
 let pingT0 = 0, pingTok = 0, ping = 0;
 function sendPing() { pingT0 = performance.now(); send(Net.enc.ping(++pingTok)); }
