@@ -339,11 +339,14 @@ class Game {
     if (isBig) for (const v of spikes) { const dx = v.x - cx, dy = v.y - cy; if (Math.abs(dx) < lead.r + 320 && Math.abs(dy) < lead.r + 320 && Math.hypot(dx, dy) < lead.r + v.r + 200) { vNear = true; break; } }
     let gx, gy;
     if (tgt) { const dd = Math.hypot(px - cx, py - cy) || 1; gx = px + (px - cx) / dd * lead.r * 0.4; gy = py + (py - cy) / dd * lead.r * 0.4; }
+    else if (this.ejected.length && (() => { // flying feed nearby: go and grab it
+      let bd = 700 + lead.r, bx = 0, by = 0; for (const f of this.ejected) { if (f.own === o) continue; const d = Math.hypot(f.x - cx, f.y - cy); if (d < bd) { bd = d; bx = f.x; by = f.y; } }
+      if (bd < 700 + lead.r) { gx = bx; gy = by; return true; } return false; })()) {}
     else {
       let best = -1e9, ba = b.wa;
       for (let k = 0; k < 8; k++) {
         const a = b.wa + (k - 3.5) * 0.45; let n = 0;
-        for (const dist of [260, 520, 820]) { const x = cx + Math.cos(a) * dist, y = cy + Math.sin(a) * dist; if (x < 0 || y < 0 || x > WS || y > WS) { n -= 25; continue; } n += grid[gi(y) * GN + gi(x)].length; }
+        for (const dist of [260, 520, 820]) { const x = cx + Math.cos(a) * dist, y = cy + Math.sin(a) * dist; if (x < 0 || y < 0 || x > WS || y > WS) { n -= 25; continue; } { const bk = grid[gi(y) * GN + gi(x)]; n += bk.length; for (const f of bk) if (f.ej) n += 3; } /* fed blobs are a feast */ }
         n -= Math.abs(k - 3.5) * 0.8; n += Math.random() * 2; if (n > best) { best = n; ba = a; }
       }
       b.wa += (ba - b.wa) * 0.5; gx = cx + Math.cos(b.wa) * (250 + lead.r); gy = cy + Math.sin(b.wa) * (250 + lead.r);
@@ -538,7 +541,7 @@ class Game {
         const ea = ejG.get(gy * GN + gx); if (!ea) continue;
         for (const f of ea) {
           if (f.dead) continue; const dx = f.x - v.x, dy = f.y - v.y; if (dx * dx + dy * dy > v.r * v.r) continue;
-          f.dead = true; v.fed++; const sp = Math.hypot(f.vx, f.vy); if (sp > 20) { v.dx = f.vx / sp; v.dy = f.vy / sp; v.vx += v.dx * 25; v.vy += v.dy * 25; }
+          f.dead = true; v.fed++; const sp = Math.hypot(f.vx, f.vy); if (sp > 20) { v.dx = f.vx / sp; v.dy = f.vy / sp; } /* feeding never moves the needle itself: it only aims where the new one will fly */
           if (v.fed >= C.SPIKE_FEED && this.spikes.length < C.SPIKES + 20) {
             v.fed = 0; this.spikes.push({ id: this.nextCell++, x: v.x + v.dx * v.r * 2, y: v.y + v.dy * v.r * 2, r: v.r, vx: v.dx * 1100, vy: v.dy * 1100, fed: 0, dx: 1, dy: 0, dead: false, life: this.spikeLife() });
           }
