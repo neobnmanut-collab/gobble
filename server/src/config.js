@@ -11,7 +11,7 @@ module.exports = {
   PELLET_REGROW: 150,    // pellets regrown per second, up to PELLETS
   SETTLED_EJECT_CAP: 6000, // ejected blobs that have stopped and lie on the map
 
-  SPIKES: 26,
+  SPIKES: 18,
   SPIKE_LIFE: 19,        // seconds a needle lasts before it vanishes and a new one appears somewhere else...
   SPIKE_LIFE_JITTER: 4,  // ...give or take this many seconds, so they don't all change at once
   SPIKE_FEED: 9,         // blobs a needle must be fed before it shoots out a new needle
@@ -20,7 +20,7 @@ module.exports = {
   SPIKE_GAIN: 400,       // mass a spike adds to the orb that swallows it
   SPIKE_PIECES: 5,
 
-  START_MASS: 60000,     // every orb a player starts with (shown as 30,000)
+  START_MASS: 40000,     // every orb a player starts with (shown as 20,000)
   REVIVE_MASS: 800,      // a multibox orb brought back after being eaten starts this small (shown as 400)
   RESPAWN_BLOCK: 40000,  // full respawn is refused while any of your orbs is bigger than this (shown as 20,000)
   MIN_PIECE: 320,        // no orb is ever smaller than this (shown as 160); orbs can split from twice this
