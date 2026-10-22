@@ -361,7 +361,7 @@ class Game {
       if (ow) { if (ow.kind === 'bot') { dx = ow.b.wx - c.x; dy = ow.b.wy - c.y; } else { dx = ow.tx - c.x; dy = ow.ty - c.y; } }
       const d = Math.hypot(dx, dy); let dvx = 0, dvy = 0;
       if (d > 2) { const s = spd(c.m) * Math.min(1, d / (c.r + 20)); dvx = dx / d * s; dvy = dy / d * s; }
-      c.ux = dvx; c.uy = dvy; // turn toward the mouse instantly c.x += c.ux * dt; c.y += c.uy * dt;
+      c.ux = dvx; c.uy = dvy; c.x += c.ux * dt; c.y += c.uy * dt; // turns toward the mouse instantly
       c.x += c.vx * dt; c.y += c.vy * dt; const k = Math.exp(-4 * dt); c.vx *= k; c.vy *= k;
       const lo = c.r * 0.5, hi = WS - c.r * 0.5;
       if (c.x < lo) { c.x = lo; c.vx = Math.abs(c.vx) * 0.5; } else if (c.x > hi) { c.x = hi; c.vx = -Math.abs(c.vx) * 0.5; }
