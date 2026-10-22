@@ -375,7 +375,7 @@ class Game {
           const t = this.doSplit(c, ex / dd, ey / dd); t.vx *= 0.45; t.vy *= 0.45; oc.set(c.o, (oc.get(c.o) || 0) + 1);
         } else c.m = C.MAX_MASS;
       }
-      if (c.m > 1500 && !this.owners.get(c.o)?.client?.test) c.m -= c.m * Math.min(0.0049, 0.00147 * Math.sqrt(c.m / 1000)) * press * dt;
+      if (c.m > 1500 && !this.owners.get(c.o)?.client?.test) c.m -= c.m * Math.min(0.00294, 0.000882 * Math.sqrt(c.m / 1000)) * press * dt; // 40% slower than before
     }
     // orb vs orb: merging, eating, a short-range pull
     for (let i = 0; i < cells.length; i++) {
