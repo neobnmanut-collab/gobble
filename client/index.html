@@ -123,6 +123,31 @@ button{font:700 1rem var(--font);cursor:pointer}
 @media (pointer:coarse){#gear kbd{display:none}}
 @media (max-width:560px){#live{top:auto;bottom:calc(env(safe-area-inset-bottom,0px) + 14px);font-size:.75rem}}
 #go:disabled{opacity:.5;cursor:not-allowed}
+/* settings: one colour per group, taken from the logo, used only as a thin accent */
+#st .card{padding:0;gap:0}
+#st .top{position:sticky;top:0;z-index:2;background:var(--surface);padding:18px 20px 12px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:12px}
+#st .body{padding:16px 20px 20px;display:flex;flex-direction:column;gap:12px}
+.nav{display:flex;gap:6px;flex-wrap:wrap}
+.nav button{display:flex;align-items:center;gap:6px;padding:6px 11px;border-radius:999px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-size:.82rem}
+.nav button::before,#st .sec h2::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--c);flex:none}
+.nav button:hover{border-color:var(--c)}
+.c-gen{--c:#7cc6ff}.c-col{--c:#ff5d73}.c-key{--c:#ffd166}.c-play{--c:#2aa58b}.c-dis{--c:#c792ff}
+#st .sec{border-color:color-mix(in srgb,var(--c) 32%,var(--line));background:linear-gradient(160deg,color-mix(in srgb,var(--c) 8%,transparent),transparent 55%)}
+#st .sec h2{display:flex;align-items:center;gap:8px}
+.grp{font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;color:var(--c);font-weight:800;margin:6px 0 -4px;scroll-margin-top:130px}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cpick{display:flex!important;align-items:center!important;justify-content:space-between;gap:8px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
+.cpick input{width:34px;height:34px;padding:0;border:0;background:none;cursor:pointer}
+.cpick input::-webkit-color-swatch-wrapper{padding:0}.cpick input::-webkit-color-swatch{border:2px solid var(--line);border-radius:50%}
+.cpick input::-moz-color-swatch{border:2px solid var(--line);border-radius:50%}
+.pres{display:flex;gap:6px;flex-wrap:wrap}
+.pres button{display:flex;padding:6px 9px;border-radius:999px;border:1px solid var(--line);background:var(--bg)}
+.pres button[aria-pressed="true"]{border-color:var(--ink)}
+.pres i{width:16px;height:16px;border-radius:50%;display:block}.pres i+i{margin-left:-4px;box-shadow:0 0 0 2px var(--bg)}
+.mbtns{display:grid;grid-template-columns:auto 1fr;gap:10px}
+.ghost{padding:12px 16px;border-radius:10px;border:1px solid color-mix(in srgb,#c792ff 40%,var(--line));background:var(--bg);color:var(--ink);display:flex;align-items:center;gap:8px}
+.ghost::before{content:"";width:8px;height:8px;border-radius:50%;background:#c792ff}
+@media (max-width:400px){.cols{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -143,7 +168,7 @@ button{font:700 1rem var(--font);cursor:pointer}
   <div class="grow"><span data-t="growth">Growth speed</span><div class="seg" id="grow" role="group" aria-label="Growth speed"></div></div>
   <div class="party"><input type="text" id="pty" maxlength="8" placeholder="Party code (optional)" data-tp="party_ph" autocomplete="off" aria-label="Party code"><button type="button" id="pnew" data-t="new_party">New party</button></div>
   <div id="pinv" hidden><span id="plink"></span><button type="button" id="pcopy" data-t="copy_link">Copy link</button><p id="pnote"></p></div>
-  <button class="primary" id="go" data-t="play">Play</button>
+  <div class="mbtns"><button type="button" class="ghost" id="mset" data-t="controls">Settings</button><button class="primary" id="go" data-t="play">Play</button></div>
   <p id="net" hidden></p>
   <p id="wake" hidden data-t="wake">The server was resting while nobody played. It wakes up in under a minute; the game connects by itself.</p>
   <p id="pc"></p>
@@ -151,42 +176,53 @@ button{font:700 1rem var(--font);cursor:pointer}
 </div></div>
 <div id="chat"><div id="chead"><span data-t="chat">Chat</span><button type="button" id="cmin" aria-label="Hide chat">–</button></div><div id="clog" aria-live="polite"></div><div id="cin"><button type="button" id="cch">All</button><input type="text" id="ctx" maxlength="120" placeholder="Press Play to chat" autocomplete="off" aria-label="Chat message" disabled><button type="button" id="csend" disabled data-t="send">Send</button></div></div>
 <div id="live" hidden><i></i><span id="livet"></span></div>
-<button id="gear">⚙ <span data-t="controls">Controls</span> <kbd>Esc</kbd></button>
+<button id="gear">⚙ <span id="gearT" data-t="controls">Settings</span> <kbd id="gearK" hidden>Esc</kbd></button>
 <div class="ov" id="st" hidden><div class="card wide">
-  <div class="sh"><h1 style="font-size:1.6rem" data-t="controls">Controls</h1><button class="x" id="cl2" aria-label="Close" data-ta="close">✕</button></div>
-  <div class="sec"><div class="row"><h2 data-t="language" style="margin:0">Language</h2><select id="lng" aria-label="Language"></select></div></div>
-  <div class="sec"><h2 data-t="keys">Keys</h2><p class="hint" data-t="keys_hint">Click a key, then press the new key or mouse button. Backspace clears it, Esc cancels.</p><div class="kg" id="kl"></div></div>
-  <div class="sec"><h2 data-t="mouse_buttons">Mouse buttons</h2>
+  <div class="top"><div class="sh"><h1 style="font-size:1.6rem" data-t="controls">Settings</h1><button class="x" id="cl2" aria-label="Close" data-ta="close">✕</button></div>
+  <nav class="nav" aria-label="Sections"><button type="button" class="c-gen" data-go="g-gen" data-t="nav_general">General</button><button type="button" class="c-key" data-go="g-key" data-t="keys">Keys</button><button type="button" class="c-play" data-go="g-play" data-t="nav_gameplay">Gameplay</button><button type="button" class="c-dis" data-go="g-dis" data-t="display">Display</button></nav></div>
+  <div class="body">
+  <div class="grp c-gen" id="g-gen" data-t="nav_general">General</div>
+  <div class="sec c-gen"><div class="row"><h2 data-t="language" style="margin:0">Language</h2><select id="lng" aria-label="Language"></select></div></div>
+  <div class="sec c-col"><h2 data-t="colors">Multibox colours</h2>
+    <div class="cols"><label class="cpick"><span data-t="col_active">Active orb</span><input type="color" id="cA"></label><label class="cpick"><span data-t="col_inactive">Other orb</span><input type="color" id="cI"></label></div>
+    <div class="pres" id="cpres"></div>
+    <p class="hint" data-t="col_hint">Pick a pair or choose your own. The minimap uses them too.</p></div>
+  <div class="grp c-key" id="g-key" data-t="keys">Keys</div>
+  <div class="sec c-key"><h2 data-t="keys">Keys</h2><p class="hint" data-t="keys_hint">Click a key, then press the new key or mouse button. Backspace clears it, Esc cancels.</p><div class="kg" id="kl"></div></div>
+  <div class="sec c-key"><h2 data-t="mouse_buttons">Mouse buttons</h2>
     <div class="row"><span data-t="left_btn">Left button</span><select id="mm0"></select></div>
     <div class="row"><span data-t="right_btn">Right button</span><select id="mm2"></select></div>
     <p class="hint" data-t="mouse_hint">An action picked here takes over that button from the key list.</p></div>
-  <div class="sec"><h2 data-t="growth">Growth speed</h2><div class="seg" id="growc" role="group" aria-label="Growth speed"></div><p class="hint" data-t="growth_hint">How fast you grow from pellets and from orbs you eat. Changes right away, even mid-game.</p></div>
-  <div class="sec"><h2 data-t="display">Display</h2>
+  <div class="grp c-play" id="g-play" data-t="nav_gameplay">Gameplay</div>
+  <div class="sec c-play"><h2 data-t="growth">Growth speed</h2><div class="seg" id="growc" role="group" aria-label="Growth speed"></div><p class="hint" data-t="growth_hint">How fast you grow from pellets and from orbs you eat. Changes right away, even mid-game.</p></div>
+  <div class="sec c-play"><h2 data-t="rapid_feed">Rapid feed</h2>
+    <div class="row"><span data-t="time_shots">Time between shots</span><input type="range" id="rf" min="40" max="200" step="5"><b id="rfv"></b></div></div>
+  <div class="sec c-play"><h2 data-t="line_splits">Line splits</h2>
+    <label class="row"><span data-t="ls_instant">Split as soon as a line key is pressed</span><input type="checkbox" id="lsi"></label>
+    <div class="row"><span data-t="ls_count">Splits per line split</span><input type="number" id="lsn" min="1" max="4" step="1"></div>
+    <label class="row"><span data-t="ls_move">Move again right after a line split</span><input type="checkbox" id="mal"></label>
+    <p class="hint" data-t="ls_hint">Horizontal and vertical line keys lock your orb onto a straight line through it. Fixed line locks it onto the spot under your mouse.</p></div>
+  <div class="sec c-play"><h2 data-t="push_splits">Push splits</h2>
+    <div class="row"><span data-t="push_delay">Delay between splits</span><input type="range" id="pd" min="0" max="200" step="5"><b id="pdv"></b></div>
+    <p class="hint" data-t="push_hint">Used by double, triple, quad and line splits. At 0 ms every split happens at once.</p></div>
+  <div class="sec c-play"><h2 data-t="toggles">Toggles</h2>
+    <label class="row"><span data-t="tg_line">Line keys toggle on and off instead of holding</span><input type="checkbox" id="ltg"></label>
+    <label class="row"><span data-t="tg_feed">Rapid feed toggles on and off instead of holding</span><input type="checkbox" id="ftg"></label>
+    <label class="row"><span data-t="tg_chat">Show chat (Enter to type)</span><input type="checkbox" id="shc"></label>
+    <p class="hint" data-t="toggles_hint">This is an online game, so it keeps running while this panel is open. Your browser’s own shortcuts are blocked while you play.</p></div>
+  <div class="grp c-dis" id="g-dis" data-t="display">Display</div>
+  <div class="sec c-dis"><h2 data-t="display">Display</h2>
     <div class="row"><span data-t="draw_delay">Draw delay</span><input type="range" id="dd" min="0" max="300" step="10"><b id="ddv"></b></div>
     <div class="row"><span data-t="max_fps">Max FPS</span><select id="fcap"></select></div>
     <div class="row"><span data-t="fps_now">Right now</span><b id="fpsnow">–</b></div>
     <p class="hint" data-t="fps_hint">Your game draws one frame for every refresh of your monitor, so the most it can show is your monitor's refresh rate. If it stays near 30, turn off Energy Saver in Chrome and make sure hardware acceleration is on.</p>
     <p class="hint" data-t="draw_hint">How long orbs take to glide to each new position. Lower feels faster and snappier, higher looks smoother.</p></div>
-  <div class="sec"><h2 data-t="rapid_feed">Rapid feed</h2>
-    <div class="row"><span data-t="time_shots">Time between shots</span><input type="range" id="rf" min="40" max="200" step="5"><b id="rfv"></b></div></div>
-  <div class="sec"><h2 data-t="line_splits">Line splits</h2>
-    <label class="row"><span data-t="ls_instant">Split as soon as a line key is pressed</span><input type="checkbox" id="lsi"></label>
-    <div class="row"><span data-t="ls_count">Splits per line split</span><input type="number" id="lsn" min="1" max="4" step="1"></div>
-    <label class="row"><span data-t="ls_move">Move again right after a line split</span><input type="checkbox" id="mal"></label>
-    <p class="hint" data-t="ls_hint">Horizontal and vertical line keys lock your orb onto a straight line through it. Fixed line locks it onto the spot under your mouse.</p></div>
-  <div class="sec"><h2 data-t="push_splits">Push splits</h2>
-    <div class="row"><span data-t="push_delay">Delay between splits</span><input type="range" id="pd" min="0" max="200" step="5"><b id="pdv"></b></div>
-    <p class="hint" data-t="push_hint">Used by double, triple, quad and line splits. At 0 ms every split happens at once.</p></div>
-  <div class="sec"><h2 data-t="toggles">Toggles</h2>
-    <label class="row"><span data-t="tg_line">Line keys toggle on and off instead of holding</span><input type="checkbox" id="ltg"></label>
-    <label class="row"><span data-t="tg_feed">Rapid feed toggles on and off instead of holding</span><input type="checkbox" id="ftg"></label>
-    <label class="row"><span data-t="tg_chat">Show chat (Enter to type)</span><input type="checkbox" id="shc"></label>
-    <p class="hint" data-t="toggles_hint">This is an online game, so it keeps running while this panel is open. Your browser’s own shortcuts are blocked while you play.</p></div>
   <div class="btns"><button class="kb" id="rs" data-t="reset">Reset defaults</button><button class="primary" id="cl" data-t="done">Done</button></div>
+  </div>
 </div></div>
-<script src="i18n.js?v=28"></script>
-<script src="servers.js?v=28"></script>
-<script src="net.js?v=28"></script>
-<script src="game.js?v=28"></script>
+<script src="i18n.js?v=29"></script>
+<script src="servers.js?v=29"></script>
+<script src="net.js?v=29"></script>
+<script src="game.js?v=29"></script>
 </body>
 </html>

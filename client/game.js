@@ -15,6 +15,14 @@ const ACT = ['split', 'dsplit', 'tsplit', 'qsplit', 'eject', 'hline', 'vline', '
 const MACROS = [['none', 'm_none'], ['split', 'a_split'], ['dsplit', 'a_dsplit'], ['tsplit', 'a_tsplit'], ['qsplit', 'a_qsplit'], ['eject', 'a_eject'], ['swap', 'm_swap']];
 let binds = Object.assign({}, DEF), dd = 60, rf = 40, pd = 50, lsi = false, lsn = 2, mal = true, ltg = false, ftg = false, mbtn = { 0: 'none', 2: 'none' };
 let fcap = 0; // highest frames per second to draw; 0 = as many as the monitor shows
+// multibox colours: the orb you control and your other one. Text colours are worked out once, not per frame.
+const COL_DEF = ['#f4f4f4', '#e0443e'];
+const COL_PRESETS = [['#f4f4f4', '#e0443e'], ['#ffd23f', '#6b6b6b'], ['#3ee07a', '#5c5c5c'], ['#4fc3ff', '#b45cff'], ['#ff5d73', '#3a7bff'], ['#ffffff', '#4a4a4a']];
+let colA = COL_DEF[0], colI = COL_DEF[1], txtA = null, txtI = null;
+function light(hex) { const n = parseInt(hex.slice(1), 16), r = n >> 16, g2 = n >> 8 & 255, b = n & 255; return 0.299 * r + 0.587 * g2 + 0.114 * b > 165; }
+function textFor(hex) { return light(hex) ? { name: '#1a1a1a', mass: 'rgba(0,0,0,.4)', stroke: false } : { name: '#fff', mass: 'rgba(255,255,255,.45)', stroke: true }; }
+function setCols(a, i) { const ok = v => typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v); colA = ok(a) ? a.toLowerCase() : COL_DEF[0]; colI = ok(i) ? i.toLowerCase() : COL_DEF[1]; txtA = textFor(colA); txtI = textFor(colI); }
+setCols();
 let best = 0;
 try { best = +localStorage.getItem('gobblebest_mp') || 0; } catch (e) {}
 try {
@@ -22,13 +30,13 @@ try {
   if (c) {
     if (c.binds) for (const k in DEF) if (typeof c.binds[k] === 'string') binds[k] = c.binds[k];
     const num = (k, a, b) => (typeof c[k] === 'number' ? clamp(c[k], a, b) : undefined), bool = k => (typeof c[k] === 'boolean' ? c[k] : undefined);
-    rf = num('rf', 40, 200) ?? rf; dd = num('dd2', 0, 300) ?? dd; pd = num('pd', 0, 200) ?? pd; lsn = num('lsn', 1, 4) ?? lsn; fcap = num('fcap', 0, 1000) ?? fcap;
+    rf = num('rf', 40, 200) ?? rf; dd = num('dd2', 0, 300) ?? dd; pd = num('pd', 0, 200) ?? pd; lsn = num('lsn', 1, 4) ?? lsn; fcap = num('fcap', 0, 1000) ?? fcap; setCols(c.cA, c.cI);
     lsi = bool('lsi') ?? lsi; mal = bool('mal') ?? mal; ltg = bool('ltg') ?? ltg; ftg = bool('ftg') ?? ftg;
     if (c.mbtn) for (const b of [0, 2]) if (MACROS.some(m => m[0] === c.mbtn[b])) mbtn[b] = c.mbtn[b];
   }
 } catch (e) {}
 { const seen = new Set(); for (const [k] of ACT) { const v = binds[k]; if (!v) continue; if (seen.has(v)) binds[k] = Object.values(binds).includes(DEF[k]) ? '' : DEF[k]; seen.add(binds[k]); } }
-function saveCfg() { try { const old = JSON.parse(localStorage.getItem('gobblecfg') || '{}') || {}; localStorage.setItem('gobblecfg', JSON.stringify(Object.assign(old, { binds, fcap, dd2: dd, rf, pd, lsi, lsn, mal, ltg, ftg, mbtn }))); } catch (e) {} }
+function saveCfg() { try { const old = JSON.parse(localStorage.getItem('gobblecfg') || '{}') || {}; localStorage.setItem('gobblecfg', JSON.stringify(Object.assign(old, { binds, fcap, cA: colA, cI: colI, dd2: dd, rf, pd, lsi, lsn, mal, ltg, ftg, mbtn }))); } catch (e) {} }
 function label(b) { if (!b) return tr('unbound'); if (b.startsWith('Mouse')) { const n = +b.slice(5); return n <= 2 ? tr(['mouse_left', 'mouse_middle', 'mouse_right'][n]) : tr('mouse_n', { n: n + 1 }); } return b.startsWith('Key') ? b.slice(3) : b.startsWith('Digit') ? b.slice(5) : b; }
 
 /* ---------- world as last seen from the server ---------- */
@@ -171,15 +179,27 @@ function mineCells() { const out = []; for (const e of ents.values()) if (myBoxe
 function activeId() { return myBoxes[active]; }
 
 /* ---------- menu ---------- */
-function showMenu(t, s) { $('ot').textContent = t; $('ot').hidden = false; $('os').textContent = s; $('ov').hidden = false; }
+function showMenu(t, s) { $('ot').textContent = t; $('ot').hidden = false; delete $('os').dataset.t; $('os').textContent = s; $('ov').hidden = false; menuMode(false); }
+// The main menu doubles as the pause menu: Esc during a game brings it up (server, name, party, growth, Settings)
+// while the game keeps running, and Continue or Esc goes straight back.
+function menuMode(inGame) {
+  const go = $('go'); go.dataset.t = inGame ? 'continue' : (go.dataset.t === 'continue' ? 'play' : go.dataset.t); go.textContent = tr(go.dataset.t);
+  $('gearT').dataset.t = playing ? 'menu' : 'controls'; $('gearT').textContent = tr($('gearT').dataset.t); $('gearK').hidden = !playing;
+}
+function openMenu() {
+  if (!playing) return; releaseAll(); paused = true;
+  $('ot').hidden = true; $('sts').hidden = true; $('os').dataset.t = 'menu_ingame'; $('os').textContent = tr('menu_ingame');
+  $('ov').hidden = false; menuMode(true); probeRegions(); renderRegions();
+}
+function resumeGame() { $('ov').hidden = true; paused = !$('st').hidden; menuMode(false); }
 function startGame() {
   if (!connected || full) return;
   const nm = ($('nm').value.trim() || tr('player')).slice(0, 12);
   try { localStorage.setItem('gobblename', nm); } catch (e) {}
   const pc = cleanCode($('pty').value); $('pty').value = pc; try { localStorage.setItem('gobbleparty', pc); } catch (e) {}
   send(Net.enc.join(multiChosen, innerWidth, innerHeight, nm, pc)); send(Net.enc.growth(growth));
-  playing = true; peak = 0; lock = null; sq.length = 0; feedOn = false; held.clear();
-  $('ov').hidden = true; $('sts').hidden = true; showMultiBtns(multiChosen);
+  playing = true; paused = false; peak = 0; lock = null; sq.length = 0; feedOn = false; held.clear();
+  $('ov').hidden = true; menuMode(false); $('sts').hidden = true; showMultiBtns(multiChosen);
 }
 function showMultiBtns(on) { $('bsw').hidden = $('bfd').hidden = !on; }
 function setMode(m) {
@@ -264,17 +284,17 @@ function drawSpikeBody(v, R) {
 }
 function drawOrb(c, multi) {
   const mineC = myBoxes.includes(c.o), ow = owners.get(c.o), R = c.r;
-  const white = multi && mineC && c.o === activeId(), red = multi && mineC && c.o !== activeId();
+  const box = multi && mineC, act = box && c.o === activeId(), tx = box ? (act ? txtA : txtI) : null;
   const mate = !mineC && partyIds.has(c.o);
-  g.fillStyle = white ? '#f4f4f4' : red ? '#e0443e' : mate ? 'hsl(' + partyHue() + ' 80% 58%)' : 'hsl(' + (ow ? ow.hue : 0) + ' 72% 52%)';
+  g.fillStyle = box ? (act ? colA : colI) : mate ? 'hsl(' + partyHue() + ' 80% 58%)' : 'hsl(' + (ow ? ow.hue : 0) + ' 72% 52%)';
   g.beginPath(); g.arc(c.x, c.y, R, 0, TAU); g.fill();
   if (R * cam.s > 18) {
     const fs = Math.max(12, R * 0.34), name = ow ? ow.name : '';
     g.font = '800 ' + fs + "px 'Bricolage Grotesque',system-ui,sans-serif"; g.textAlign = 'center'; g.textBaseline = 'middle';
-    g.fillStyle = white ? '#1a1a1a' : '#fff';
-    if (fs * cam.s >= 16 && !white) { g.lineWidth = fs * 0.14; g.strokeStyle = 'rgba(0,0,0,.45)'; g.strokeText(name, c.x, c.y); }
+    g.fillStyle = tx ? tx.name : '#fff';
+    if (fs * cam.s >= 16 && (!tx || tx.stroke)) { g.lineWidth = fs * 0.14; g.strokeStyle = 'rgba(0,0,0,.45)'; g.strokeText(name, c.x, c.y); }
     g.fillText(name, c.x, c.y);
-    const ms = fs * 0.45; g.font = '700 ' + ms + "px 'Bricolage Grotesque',system-ui,sans-serif"; g.fillStyle = white ? 'rgba(0,0,0,.4)' : 'rgba(255,255,255,.38)';
+    const ms = fs * 0.45; g.font = '700 ' + ms + "px 'Bricolage Grotesque',system-ui,sans-serif"; g.fillStyle = tx ? tx.mass : 'rgba(255,255,255,.38)';
     g.fillText(String(dm(c.m)), c.x, c.y + fs * 0.72);
   }
 }
@@ -369,7 +389,7 @@ function drawMM() {
     if (ow && (s >= 140 || mate)) { mg.fillStyle = mate ? 'hsl(' + partyHue() + ' 85% 70%)' : 'rgba(255,210,90,.85)'; mg.fillText(ow.name.slice(0, 10), x, y - 5); }
   }
   const multi = myBoxes.length > 1;
-  for (const c of mineCells()) { mg.fillStyle = !multi ? '#2a9a83' : c.o === activeId() ? '#f4f4f4' : '#e0443e'; mg.beginPath(); mg.arc(c.x * k, c.y * k, Math.max(2.5, c.r * k), 0, TAU); mg.fill(); }
+  for (const c of mineCells()) { mg.fillStyle = !multi ? '#2a9a83' : c.o === activeId() ? colA : colI; mg.beginPath(); mg.arc(c.x * k, c.y * k, Math.max(2.5, c.r * k), 0, TAU); mg.fill(); }
   for (const p of pings) { mg.fillStyle = '#ffd25a'; mg.beginPath(); mg.arc(p.x * k, p.y * k, 4, 0, TAU); mg.fill(); }
 }
 function hud() {
@@ -447,11 +467,14 @@ function renderSettings() {
     const key = opts.join() + '|' + tr('fps_monitor', { n: hz });
     if (el.dataset.k !== key) { el.dataset.k = key; el.textContent = ''; for (const r of opts) { const o = document.createElement('option'); o.value = r; o.textContent = r ? r + ' FPS' : tr('fps_monitor', { n: hz }); el.append(o); } }
     el.value = opts.includes(fcap) ? fcap : 0; $('fpsnow').textContent = fps + ' FPS · ' + tr('fps_screen', { n: hz }); }
+  $('cA').value = colA; $('cI').value = colI;
+  { const box = $('cpres'); if (!box.childElementCount) for (const [a, i] of COL_PRESETS) { const b = document.createElement('button'); b.type = 'button'; b.dataset.a = a; b.dataset.i = i; b.setAttribute('aria-label', a + ' / ' + i); const x = document.createElement('i'), y = document.createElement('i'); x.style.background = a; y.style.background = i; b.append(x, y); b.onclick = () => { setCols(a, i); saveCfg(); renderSettings(); }; box.append(b); }
+    for (const b of box.children) b.setAttribute('aria-pressed', b.dataset.a === colA && b.dataset.i === colI); }
   $('dd').value = dd; $('ddv').textContent = dd + ' ms'; $('rf').value = rf; $('rfv').textContent = rf + ' ms'; $('pd').value = pd; $('pdv').textContent = pd + ' ms';
   $('lsi').checked = lsi; $('lsn').value = lsn; $('mal').checked = mal; $('ltg').checked = ltg; $('ftg').checked = ftg;
 }
 function openSettings() { $('st').hidden = false; paused = true; listening = null; releaseAll(); renderSettings(); }
-function closeSettings() { $('st').hidden = true; paused = false; listening = null; }
+function closeSettings() { $('st').hidden = true; paused = playing && !$('ov').hidden; listening = null; }
 function releaseAll() { for (const c of [...held]) release(c); held.clear(); for (const b in mheld) { act(mheld[b], false); delete mheld[b]; } if (feedOn) { feedOn = false; setEject(false); } if (!ltg) lock = null; }
 
 /* ---------- input ---------- */
@@ -462,8 +485,10 @@ addEventListener('pointerup', e => { if (e.pointerId === steer) steer = null; })
 addEventListener('keydown', e => {
   if (listening) { e.preventDefault(); e.stopPropagation(); const k = listening; listening = null; if (e.code === 'Backspace' || e.code === 'Delete') { binds[k] = ''; saveCfg(); updateHelp(); } else if (e.code !== 'Escape') assign(k, e.code); renderSettings(); return; }
   if (!$('st').hidden) { if (e.code === 'Escape') closeSettings(); return; }
+  if (e.code === 'Escape' && !isBound('Escape') && e.target.id !== 'ctx') { // Esc: game → menu → game; on the start screen it opens Settings
+    e.preventDefault(); if (playing) { if ($('ov').hidden) openMenu(); else resumeGame(); } else openSettings(); return;
+  }
   const tag = e.target.tagName; if (tag === 'INPUT' || tag === 'SELECT') return;
-  if (e.code === 'Escape' && !isBound('Escape')) { e.preventDefault(); openSettings(); return; } // Esc opens Controls (Esc again closes)
   if (e.code === 'Enter' && !isBound('Enter') && connected) { e.preventDefault(); openChat(); return; }
   if (!playing) return;
   if ((e.ctrlKey || e.metaKey) && e.code === 'KeyC' && String(getSelection()).length) return; // copy selected chat text
@@ -494,15 +519,16 @@ function tbtn(id, fn, hold) {
   for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) b.addEventListener(ev, () => hold && fn(false));
 }
 tbtn('bsp', d => d && multiSplit(1)); tbtn('bds', d => d && multiSplit(2)); tbtn('bej', d => act('eject', d), true); tbtn('bsw', d => d && act('swap', true)); tbtn('bfd', d => act('feed', d), true);
-$('gear').addEventListener('click', openSettings); $('cl').addEventListener('click', closeSettings); $('cl2').addEventListener('click', closeSettings);
-$('rs').addEventListener('click', () => { binds = Object.assign({}, DEF); dd = 60; fcap = 0; rf = 40; pd = 50; lsi = false; lsn = 2; mal = true; ltg = false; ftg = false; mbtn = { 0: 'none', 2: 'none' }; saveCfg(); updateHelp(); renderSettings(); });
+$('gear').addEventListener('click', () => { if (playing) { if ($('ov').hidden) openMenu(); else resumeGame(); } else openSettings(); }); $('mset').addEventListener('click', openSettings);
+for (const b of document.querySelectorAll('.nav button')) b.addEventListener('click', () => $(b.dataset.go).scrollIntoView({ behavior: 'smooth', block: 'start' })); $('cl').addEventListener('click', closeSettings); $('cl2').addEventListener('click', closeSettings);
+$('rs').addEventListener('click', () => { binds = Object.assign({}, DEF); dd = 60; fcap = 0; setCols(); rf = 40; pd = 50; lsi = false; lsn = 2; mal = true; ltg = false; ftg = false; mbtn = { 0: 'none', 2: 'none' }; saveCfg(); updateHelp(); renderSettings(); });
 const setting = (id, ev, fn) => $(id).addEventListener(ev, e => { fn(e.target); saveCfg(); renderSettings(); });
-setting('dd', 'input', t => dd = +t.value); setting('fcap', 'change', t => { fcap = +t.value || 0; nextDraw = 0; }); setting('rf', 'input', t => rf = +t.value); setting('pd', 'input', t => pd = +t.value);
+setting('dd', 'input', t => dd = +t.value); setting('cA', 'input', t => setCols(t.value, colI)); setting('cI', 'input', t => setCols(colA, t.value)); setting('fcap', 'change', t => { fcap = +t.value || 0; nextDraw = 0; }); setting('rf', 'input', t => rf = +t.value); setting('pd', 'input', t => pd = +t.value);
 setting('lsi', 'change', t => lsi = t.checked); setting('lsn', 'change', t => lsn = clamp(Math.round(+t.value) || 1, 1, 4)); setting('mal', 'change', t => mal = t.checked);
 setting('ltg', 'change', t => { ltg = t.checked; lock = null; }); setting('ftg', 'change', t => { ftg = t.checked; feedOn = false; });
 setting('mm0', 'change', t => mbtn[0] = t.value); setting('mm2', 'change', t => mbtn[2] = t.value);
 $('mSolo').addEventListener('click', () => setMode(false)); $('mMulti').addEventListener('click', () => setMode(true));
-$('go').addEventListener('click', startGame);
+$('go').addEventListener('click', () => (playing ? resumeGame() : startGame()));
 $('nm').addEventListener('keydown', e => { if (e.key === 'Enter') startGame(); });
 
 /* ---------- growth speed, 1x to 5x, each player's own choice ---------- */
