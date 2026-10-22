@@ -14,6 +14,7 @@ const cam = { x: 6000, y: 6000, s: 0.5 }; let zm = 1;
 const DEF = { split: 'Space', dsplit: 'KeyD', tsplit: 'KeyT', qsplit: 'KeyA', psplit: 'KeyQ', eject: 'KeyW', feed: 'KeyE', swap: 'Tab', respawn: 'KeyR', hline: 'KeyS', vline: 'KeyX', fline: 'KeyZ', ping: 'KeyF', zin: 'Equal', zout: 'Minus', ptt: 'KeyV', fx_quake: 'KeyK', fx_warn: 'KeyJ', fx_disco: 'KeyL', fx_chat: 'KeyH', fx_confetti: 'KeyU', fx_snow: 'KeyI', fx_flash: 'KeyO', fx_hearts: 'KeyP', fx_fireworks: 'KeyY' };
 const ACT = ['split', 'dsplit', 'psplit', 'tsplit', 'qsplit', 'eject', 'hline', 'vline', 'fline', 'respawn', 'ping', 'swap', 'feed', 'zin', 'zout', 'ptt', 'fx_quake', 'fx_warn', 'fx_disco', 'fx_chat', 'fx_confetti', 'fx_snow', 'fx_flash', 'fx_hearts', 'fx_fireworks'].map(k => [k, 'a_' + k]);
 const MACROS = [['none', 'm_none'], ['split', 'a_split'], ['dsplit', 'a_dsplit'], ['psplit', 'a_psplit'], ['tsplit', 'a_tsplit'], ['qsplit', 'a_qsplit'], ['eject', 'a_eject'], ['swap', 'm_swap']];
+let binds2 = {}; // an optional second key for any action (either key works)
 let binds = Object.assign({}, DEF), dd = 60, rf = 25, pd = 50, ppd = 120, lsi = false, lsn = 2, mal = true, ltg = false, ftg = false, mbtn = { 0: 'none', 2: 'swap' }; // right click (or two-finger click on a trackpad) also switches boxes
 // test mode: open the page with ?test=1 to start one orb at 35,000 that never loses mass
 const TEST = /(^|[?&])test=1(&|$)/.test(location.search.slice(1));
@@ -50,6 +51,7 @@ try { best = +localStorage.getItem('gobblebest_mp') || 0; } catch (e) {}
 try {
   const c = JSON.parse(localStorage.getItem('gobblecfg') || 'null');
   if (c) {
+    if (c.binds2 && c.kv === 2) for (const k in DEF) if (typeof c.binds2[k] === 'string' && c.binds2[k]) binds2[k] = c.binds2[k];
     if (c.binds && c.kv === 2) for (const k in DEF) if (typeof c.binds[k] === 'string') binds[k] = c.binds[k]; // keys saved before the new standard layout are replaced once
     const num = (k, a, b) => (typeof c[k] === 'number' ? clamp(c[k], a, b) : undefined), bool = k => (typeof c[k] === 'boolean' ? c[k] : undefined);
     rf = num('rf2', 20, 200) ?? rf; dd = num('dd2', 0, 300) ?? dd; pd = num('pd', 0, 200) ?? pd; ppd = num('ppd', 40, 300) ?? ppd; lsn = num('lsn', 1, 4) ?? lsn; fcap = num('fcap', 0, 1000) ?? fcap; lines = bool('lines') ?? lines; ring = bool('ring') ?? ring; faces = bool('faces') ?? faces; setCols(c.cA, c.cI);
@@ -58,7 +60,7 @@ try {
   }
 } catch (e) {}
 { const seen = new Set(); for (const [k] of ACT) { const v = binds[k]; if (!v) continue; if (seen.has(v)) binds[k] = Object.values(binds).includes(DEF[k]) ? '' : DEF[k]; seen.add(binds[k]); } }
-function saveCfg() { try { const old = JSON.parse(localStorage.getItem('gobblecfg') || '{}') || {}; localStorage.setItem('gobblecfg', JSON.stringify(Object.assign(old, { kv: 2, ppd, rf2: rf, binds, fcap, lines, ring, faces, cA: colA, cI: colI, dd2: dd, rf, pd, lsi, lsn, mal, ltg, ftg, mbtn }))); } catch (e) {} }
+function saveCfg() { try { const old = JSON.parse(localStorage.getItem('gobblecfg') || '{}') || {}; localStorage.setItem('gobblecfg', JSON.stringify(Object.assign(old, { kv: 2, binds2, ppd, rf2: rf, binds, fcap, lines, ring, faces, cA: colA, cI: colI, dd2: dd, rf, pd, lsi, lsn, mal, ltg, ftg, mbtn }))); } catch (e) {} }
 const KEYNAME = { Equal: '=', Minus: '−', Tab: 'Tab', Backquote: '`', BracketLeft: '[', BracketRight: ']', Semicolon: ';', Quote: "'", Comma: ',', Period: '.', Slash: '/', Backslash: '\\', ShiftLeft: 'Shift', ShiftRight: 'Shift R', ControlLeft: 'Ctrl', AltLeft: 'Alt / ⌥', MetaLeft: '⌘', CapsLock: 'Caps' };
 function label(b) { if (!b) return tr('unbound'); if (KEYNAME[b]) return KEYNAME[b]; if (b.startsWith('Mouse')) { const n = +b.slice(5); return n <= 2 ? tr(['mouse_left', 'mouse_middle', 'mouse_right'][n]) : tr('mouse_n', { n: n + 1 }); } return b.startsWith('Key') ? b.slice(3) : b.startsWith('Digit') ? b.slice(5) : b; }
 
@@ -603,13 +605,20 @@ function frame(t) {
 }
 
 /* ---------- settings panel ---------- */
-const isBound = c => !!c && Object.values(binds).includes(c);
-function press(c) { if (!playing || paused) return; held.add(c); for (const k in binds) if (binds[k] === c) act(k, true); }
-function release(c) { held.delete(c); for (const k in binds) if (binds[k] === c) act(k, false); }
-function assign(a, code) { for (const k in binds) if (k !== a && binds[k] === code) binds[k] = binds[a]; binds[a] = code; saveCfg(); updateHelp(); }
+const isBound = c => !!c && (Object.values(binds).includes(c) || Object.values(binds2).includes(c));
+function press(c) { if (!playing || paused) return; held.add(c); for (const k in binds) if (binds[k] === c || binds2[k] === c) act(k, true); }
+function release(c) { held.delete(c); for (const k in binds) if (binds[k] === c || binds2[k] === c) act(k, false); }
+// slot 1 = main key, slot 2 = extra key. A key can only do one thing: taking it from another action frees it there
+function assign(a, code, slot) {
+  for (const k in binds2) if (binds2[k] === code && !(k === a && slot === 2)) delete binds2[k];
+  if (slot === 2) { for (const k in binds) if (binds[k] === code) binds[k] = k === a ? binds[k] : ''; if (binds[a] === code) return; binds2[a] = code; }
+  else { for (const k in binds) if (k !== a && binds[k] === code) binds[k] = binds[a]; binds[a] = code; if (binds2[a] === code) delete binds2[a]; }
+  saveCfg(); updateHelp();
+}
+function keysOf(k) { return label(binds[k]) + (binds2[k] ? ' / ' + label(binds2[k]) : ''); }
 function updateHelp() {
   const kb = $('keys'); kb.textContent = '';
-  for (const [k, v] of [[tr('k_move'), tr('k_mouse')], [tr('a_split'), label(binds.split)], [tr('a_dsplit'), label(binds.dsplit)], [tr('a_psplit'), label(binds.psplit)], [tr('effects'), FX_IDS.filter(fxUnlocked).map(k => label(binds[k])).join(' ')], [tr('a_eject'), label(binds.eject)], [tr('k_line'), label(binds.hline) + ' / ' + label(binds.vline)]]) { const s = document.createElement('span'); s.append(k + ' '); const b = document.createElement('kbd'); b.textContent = v; s.append(b); kb.append(s); }
+  for (const [k, v] of [[tr('k_move'), tr('k_mouse')], [tr('a_split'), keysOf('split')], [tr('a_dsplit'), keysOf('dsplit')], [tr('a_psplit'), keysOf('psplit')], [tr('effects'), FX_IDS.filter(fxUnlocked).map(k => label(binds[k])).join(' ')], [tr('a_eject'), keysOf('eject')], [tr('k_line'), label(binds.hline) + ' / ' + label(binds.vline)]]) { const s = document.createElement('span'); s.append(k + ' '); const b = document.createElement('kbd'); b.textContent = v; s.append(b); kb.append(s); }
   setMode(watchChosen ? 'watch' : multiChosen);
 }
 function renderSettings() {
@@ -619,7 +628,10 @@ function renderSettings() {
     const s = document.createElement('span'); s.textContent = tr(n) + (k.startsWith('fx_') && !fxUnlocked(k) ? '  🔒 ' + tr('bp_level', { n: fxLevel(k) }) : '');
     const b = document.createElement('button'); b.className = 'kb' + (listening === k ? ' wait' : ''); b.id = 'kb_' + k; b.textContent = listening === k ? tr('press_key') : label(binds[k]);
     b.onclick = e => { e.stopPropagation(); listening = k; renderSettings(); };
-    row.append(s, b); (k.startsWith('fx_') ? $('fxl') : kl).appendChild(row);
+    const b2 = document.createElement('button'), l2 = k + '#2'; b2.className = 'kb kb2' + (listening === l2 ? ' wait' : '') + (binds2[k] ? '' : ' empty'); b2.id = 'kb2_' + k; b2.title = tr('second_key');
+    b2.textContent = listening === l2 ? tr('press_key') : binds2[k] ? label(binds2[k]) : '+';
+    b2.onclick = e => { e.stopPropagation(); listening = l2; renderSettings(); };
+    const bx = document.createElement('div'); bx.className = 'kbs'; bx.append(b, b2); row.append(s, bx); (k.startsWith('fx_') ? $('fxl') : kl).appendChild(row);
   }
   for (const b of [0, 2]) { const el = $('mm' + b); if (!el.options.length) for (const [v, t] of MACROS) { const o = document.createElement('option'); o.value = v; o.textContent = tr(t); o.dataset.t = t; el.append(o); } el.value = mbtn[b]; }
   { const el = $('fcap'), opts = [0, ...[30, 60, 75, 90, 120, 144, 165, 240, 360].filter(r => r < hz)];
@@ -642,7 +654,7 @@ cv.addEventListener('pointerdown', e => { const ae = document.activeElement; if 
 addEventListener('pointermove', e => { if (e.pointerType === 'mouse' || e.pointerId === steer) { mx = e.clientX; my = e.clientY; } });
 addEventListener('pointerup', e => { if (e.pointerId === steer) steer = null; });
 addEventListener('keydown', e => {
-  if (listening) { e.preventDefault(); e.stopPropagation(); const k = listening; listening = null; if (e.code === 'Backspace' || e.code === 'Delete') { binds[k] = ''; saveCfg(); updateHelp(); } else if (e.code !== 'Escape') assign(k, e.code); renderSettings(); return; }
+  if (listening) { e.preventDefault(); e.stopPropagation(); const two = listening.endsWith('#2'), k = listening.replace('#2', ''); listening = null; if (e.code === 'Backspace' || e.code === 'Delete') { if (two) delete binds2[k]; else binds[k] = ''; saveCfg(); updateHelp(); } else if (e.code !== 'Escape') assign(k, e.code, two ? 2 : 1); renderSettings(); return; }
   if (!$('st').hidden) { if (e.code === 'Escape') closeSettings(); return; }
   if (!$('bp').hidden) { if (e.code === 'Escape') closePass(); return; }
   if (e.code === 'Escape' && !isBound('Escape') && e.target.id !== 'ctx') { // Esc: game → menu → game; on the start screen it opens Settings
@@ -664,8 +676,8 @@ cv.addEventListener('mousedown', e => {
   if (isBound('Mouse' + e.button)) press('Mouse' + e.button);
 });
 addEventListener('mousedown', e => {
-  if (!listening) return; e.preventDefault(); e.stopPropagation(); const k = listening; listening = null;
-  if (e.button !== 0 || (e.target.closest && e.target.closest('#kb_' + k))) assign(k, 'Mouse' + e.button);
+  if (!listening) return; e.preventDefault(); e.stopPropagation(); const two = listening.endsWith('#2'), k = listening.replace('#2', ''); listening = null;
+  if (e.button !== 0 || (e.target.closest && e.target.closest((two ? '#kb2_' : '#kb_') + k))) assign(k, 'Mouse' + e.button, two ? 2 : 1);
   renderSettings();
 }, true);
 addEventListener('mouseup', e => { if (e.button > 2 && playing) e.preventDefault(); const mac = mheld[e.button]; if (mac) { delete mheld[e.button]; act(mac, false); } release('Mouse' + e.button); });
@@ -684,7 +696,7 @@ function tbtn(id, fn, hold) {
 tbtn('bsp', d => d && multiSplit(1)); tbtn('bds', d => d && multiSplit(2)); tbtn('bej', d => act('eject', d), true); tbtn('bsw', d => d && act('swap', true)); tbtn('bfd', d => act('feed', d), true);
 $('gear').addEventListener('click', () => { if (playing || watching) { if ($('ov').hidden) openMenu(); else resumeGame(); } else openSettings(); }); $('mset').addEventListener('click', openSettings);
 for (const b of document.querySelectorAll('.nav button')) b.addEventListener('click', () => $(b.dataset.go).scrollIntoView({ behavior: 'smooth', block: 'start' })); $('cl').addEventListener('click', closeSettings); $('cl2').addEventListener('click', closeSettings);
-$('rs').addEventListener('click', () => { binds = Object.assign({}, DEF); dd = 60; fcap = 0; lines = true; ring = false; faces = true; setCols(); rf = 25; pd = 50; ppd = 120; lsi = false; lsn = 2; mal = true; ltg = false; ftg = false; mbtn = { 0: 'none', 2: 'swap' }; saveCfg(); updateHelp(); renderSettings(); });
+$('rs').addEventListener('click', () => { binds = Object.assign({}, DEF); binds2 = {}; dd = 60; fcap = 0; lines = true; ring = false; faces = true; setCols(); rf = 25; pd = 50; ppd = 120; lsi = false; lsn = 2; mal = true; ltg = false; ftg = false; mbtn = { 0: 'none', 2: 'swap' }; saveCfg(); updateHelp(); renderSettings(); });
 const setting = (id, ev, fn) => $(id).addEventListener(ev, e => { fn(e.target); saveCfg(); renderSettings(); });
 setting('dd', 'input', t => dd = +t.value); setting('lines', 'change', t => lines = t.checked); setting('omic', 'change', t => { openMic = t.checked; try { localStorage.setItem('gobbleopenmic', openMic ? '1' : '0'); } catch (e) {} applyMic(); }); setting('ring', 'change', t => ring = t.checked); setting('faces', 'change', t => faces = t.checked); setting('cA', 'input', t => setCols(t.value, colI)); setting('cI', 'input', t => setCols(colA, t.value)); setting('fcap', 'change', t => { fcap = +t.value || 0; nextDraw = 0; }); setting('rf', 'input', t => rf = +t.value); setting('pd', 'input', t => pd = +t.value); setting('ppd', 'input', t => ppd = +t.value);
 setting('lsi', 'change', t => lsi = t.checked); setting('lsn', 'change', t => lsn = clamp(Math.round(+t.value) || 1, 1, 4)); setting('mal', 'change', t => mal = t.checked);
