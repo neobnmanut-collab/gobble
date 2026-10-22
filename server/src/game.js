@@ -177,12 +177,16 @@ class Game {
     for (const c of this.cells) if (client.boxes.includes(c.o) && c.m > C.RESPAWN_BLOCK) return;
     this.join(client, client.name, client.multi, client.party);
   }
-  shoot(c, dx, dy, v, j = 0.3) {
+  // stream = rapid feed: one tight, straight jet (like water from a straw) that fans out gently as it slows down
+  shoot(c, dx, dy, v, j = 0.3, stream = false) {
+    if (stream) j = 0.05;
     const a = (Math.random() - 0.5) * j, co = Math.cos(a), si = Math.sin(a), ex = dx * co - dy * si, ey = dx * si + dy * co;
-    const sv = v * (1 + (Math.random() - 0.5) * j * 0.6), ih = j > 0.1 ? 1 : 0;
+    const sv = v * (1 + (Math.random() - 0.5) * (stream ? 0.08 : j * 0.6)), ih = j > 0.1 || stream ? 1 : 0;
+    const side = stream ? (Math.random() - 0.5) * 2 * v * 0.075 : 0; // sideways drift that outlasts the forward push, so the end spreads
     this.ejected.push({
       id: this.nextPellet++, x: c.x + ex * (c.r + 4), y: c.y + ey * (c.r + 4), m: C.EJECT_MASS, own: c.o, imm: 0.6, hb: this.owners.get(c.o)?.hue ?? 0,
-      vx: ex * sv + ih * (c.ux * 0.4 + c.vx * 0.3), vy: ey * sv + ih * (c.uy * 0.4 + c.vy * 0.3), sp: (Math.random() - 0.5) * j * 4,
+      vx: ex * sv + ih * (c.ux * 0.4 + c.vx * 0.3), vy: ey * sv + ih * (c.uy * 0.4 + c.vy * 0.3), sp: stream ? 0 : (Math.random() - 0.5) * j * 4,
+      lx: -ey * side, ly: ex * side,
     });
     c.m -= C.EJECT_MASS; c.r = rad(c.m);
   }
@@ -190,7 +194,7 @@ class Game {
     const o = this.activeOwner(client), ow = this.owners.get(o); if (!ow) return;
     for (const c of this.cells) {
       if (c.o !== o || c.m < MINM + C.EJECT_MASS) continue;
-      const dx = ow.tx - c.x, dy = ow.ty - c.y, d = Math.hypot(dx, dy) || 1; this.shoot(c, dx / d, dy / d, 1400);
+      const dx = ow.tx - c.x, dy = ow.ty - c.y, d = Math.hypot(dx, dy) || 1; this.shoot(c, dx / d, dy / d, 1400, 0.3, true);
     }
   }
   feedOther(client) {
@@ -457,9 +461,10 @@ class Game {
       if (f.imm > 0) f.imm -= dt;
       if (f.sp) { const a = f.sp * dt, co = Math.cos(a), si = Math.sin(a), nx = f.vx * co - f.vy * si; f.vy = f.vx * si + f.vy * co; f.vx = nx; }
       f.x += f.vx * dt; f.y += f.vy * dt; const q = Math.exp(-5 * dt); f.vx *= q; f.vy *= q;
+      if (f.lx) { f.x += f.lx * dt; f.y += f.ly * dt; const ql = Math.exp(-2.2 * dt); f.lx *= ql; f.ly *= ql; if (Math.abs(f.lx) + Math.abs(f.ly) < 3) f.lx = f.ly = 0; }
       if (f.x < 0) { f.x = 0; f.vx = Math.abs(f.vx) * 0.6; } else if (f.x > WS) { f.x = WS; f.vx = -Math.abs(f.vx) * 0.6; }
       if (f.y < 0) { f.y = 0; f.vy = Math.abs(f.vy) * 0.6; } else if (f.y > WS) { f.y = WS; f.vy = -Math.abs(f.vy) * 0.6; }
-      if (Math.abs(f.vx) + Math.abs(f.vy) < 8 && f.imm <= 0) {
+      if (Math.abs(f.vx) + Math.abs(f.vy) + Math.abs(f.lx || 0) + Math.abs(f.ly || 0) < 8 && f.imm <= 0) {
         f.dead = true;
         if (this.nSettled < C.SETTLED_EJECT_CAP) { this.grid[gi(f.y) * GN + gi(f.x)].push({ id: f.id, x: f.x, y: f.y, m: f.m, hb: (Math.round(f.hb / 30) % 12 + 12) % 12, ej: 1 }); this.nSettled++; }
         continue;
