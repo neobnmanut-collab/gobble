@@ -1,7 +1,7 @@
 // Multiplayer client: draws what the server sends, sends the player's mouse and keys.
 (function () {
 'use strict';
-const GAME_NAME = 'Gobble';
+const GAME_NAME = 'Blobbit';
 const tr = (k, v) => I18N.t(k, v); // every bit of game text goes through here, in the player's language // change here (and in index.html <title>) when the game gets its final name
 const $ = id => document.getElementById(id), cv = $('c'), g = cv.getContext('2d', { alpha: false }), mm = $('mm'), mg = mm.getContext('2d');
 const TAU = Math.PI * 2, clamp = (v, a, b) => (v < a ? a : v > b ? b : v), rad = m => 4 * Math.sqrt(m), dm = m => Math.floor(m / 2);
@@ -10,10 +10,11 @@ let WS = 12000, SPEED = 1685, W = 0, H = 0, dpr = 1, T = 0;
 const cam = { x: 6000, y: 6000, s: 0.5 }; let zm = 1;
 
 /* ---------- settings (same controls as the offline game) ---------- */
-const DEF = { ptt: 'KeyV', fx_quake: 'KeyK', fx_warn: 'KeyJ', fx_disco: 'KeyL', fx_chat: 'KeyH', fx_confetti: 'KeyU', fx_snow: 'KeyI', fx_flash: 'KeyO', fx_hearts: 'KeyP', fx_fireworks: 'KeyY', split: 'Space', dsplit: 'KeyD', psplit: 'KeyQ', tsplit: 'KeyF', qsplit: 'KeyG', eject: 'KeyW', hline: 'KeyS', vline: 'KeyT', fline: '', respawn: 'KeyB', ping: 'KeyR', swap: 'Mouse2', feed: 'KeyE' };
-const ACT = ['split', 'dsplit', 'psplit', 'tsplit', 'qsplit', 'eject', 'hline', 'vline', 'fline', 'respawn', 'ping', 'swap', 'feed', 'ptt', 'fx_quake', 'fx_warn', 'fx_disco', 'fx_chat', 'fx_confetti', 'fx_snow', 'fx_flash', 'fx_hearts', 'fx_fireworks'].map(k => [k, 'a_' + k]);
+// default keys follow what most players of this kind of game already use (Space split, W feed, D double, T triple, A 16-split, R respawn, Tab switch)
+const DEF = { split: 'Space', dsplit: 'KeyD', tsplit: 'KeyT', qsplit: 'KeyA', psplit: 'KeyQ', eject: 'KeyW', feed: 'KeyE', swap: 'Tab', respawn: 'KeyR', hline: 'KeyS', vline: 'KeyX', fline: 'KeyZ', ping: 'KeyF', zin: 'Equal', zout: 'Minus', ptt: 'KeyV', fx_quake: 'KeyK', fx_warn: 'KeyJ', fx_disco: 'KeyL', fx_chat: 'KeyH', fx_confetti: 'KeyU', fx_snow: 'KeyI', fx_flash: 'KeyO', fx_hearts: 'KeyP', fx_fireworks: 'KeyY' };
+const ACT = ['split', 'dsplit', 'psplit', 'tsplit', 'qsplit', 'eject', 'hline', 'vline', 'fline', 'respawn', 'ping', 'swap', 'feed', 'zin', 'zout', 'ptt', 'fx_quake', 'fx_warn', 'fx_disco', 'fx_chat', 'fx_confetti', 'fx_snow', 'fx_flash', 'fx_hearts', 'fx_fireworks'].map(k => [k, 'a_' + k]);
 const MACROS = [['none', 'm_none'], ['split', 'a_split'], ['dsplit', 'a_dsplit'], ['psplit', 'a_psplit'], ['tsplit', 'a_tsplit'], ['qsplit', 'a_qsplit'], ['eject', 'a_eject'], ['swap', 'm_swap']];
-let binds = Object.assign({}, DEF), dd = 60, rf = 25, pd = 50, ppd = 120, lsi = false, lsn = 2, mal = true, ltg = false, ftg = false, mbtn = { 0: 'none', 2: 'none' };
+let binds = Object.assign({}, DEF), dd = 60, rf = 25, pd = 50, ppd = 120, lsi = false, lsn = 2, mal = true, ltg = false, ftg = false, mbtn = { 0: 'none', 2: 'swap' }; // right click (or two-finger click on a trackpad) also switches boxes
 // test mode: open the page with ?test=1 to start one orb at 35,000 that never loses mass
 const TEST = /(^|[?&])test=1(&|$)/.test(location.search.slice(1));
 let lines = true; // lines from your orbs to the mouse
@@ -49,16 +50,17 @@ try { best = +localStorage.getItem('gobblebest_mp') || 0; } catch (e) {}
 try {
   const c = JSON.parse(localStorage.getItem('gobblecfg') || 'null');
   if (c) {
-    if (c.binds) for (const k in DEF) if (typeof c.binds[k] === 'string') binds[k] = c.binds[k];
+    if (c.binds && c.kv === 2) for (const k in DEF) if (typeof c.binds[k] === 'string') binds[k] = c.binds[k]; // keys saved before the new standard layout are replaced once
     const num = (k, a, b) => (typeof c[k] === 'number' ? clamp(c[k], a, b) : undefined), bool = k => (typeof c[k] === 'boolean' ? c[k] : undefined);
     rf = num('rf2', 20, 200) ?? rf; dd = num('dd2', 0, 300) ?? dd; pd = num('pd', 0, 200) ?? pd; ppd = num('ppd', 40, 300) ?? ppd; lsn = num('lsn', 1, 4) ?? lsn; fcap = num('fcap', 0, 1000) ?? fcap; lines = bool('lines') ?? lines; ring = bool('ring') ?? ring; faces = bool('faces') ?? faces; setCols(c.cA, c.cI);
     lsi = bool('lsi') ?? lsi; mal = bool('mal') ?? mal; ltg = bool('ltg') ?? ltg; ftg = bool('ftg') ?? ftg;
-    if (c.mbtn) for (const b of [0, 2]) if (MACROS.some(m => m[0] === c.mbtn[b])) mbtn[b] = c.mbtn[b];
+    if (c.mbtn && c.kv === 2) for (const b of [0, 2]) if (MACROS.some(m => m[0] === c.mbtn[b])) mbtn[b] = c.mbtn[b];
   }
 } catch (e) {}
 { const seen = new Set(); for (const [k] of ACT) { const v = binds[k]; if (!v) continue; if (seen.has(v)) binds[k] = Object.values(binds).includes(DEF[k]) ? '' : DEF[k]; seen.add(binds[k]); } }
-function saveCfg() { try { const old = JSON.parse(localStorage.getItem('gobblecfg') || '{}') || {}; localStorage.setItem('gobblecfg', JSON.stringify(Object.assign(old, { ppd, rf2: rf, binds, fcap, lines, ring, faces, cA: colA, cI: colI, dd2: dd, rf, pd, lsi, lsn, mal, ltg, ftg, mbtn }))); } catch (e) {} }
-function label(b) { if (!b) return tr('unbound'); if (b.startsWith('Mouse')) { const n = +b.slice(5); return n <= 2 ? tr(['mouse_left', 'mouse_middle', 'mouse_right'][n]) : tr('mouse_n', { n: n + 1 }); } return b.startsWith('Key') ? b.slice(3) : b.startsWith('Digit') ? b.slice(5) : b; }
+function saveCfg() { try { const old = JSON.parse(localStorage.getItem('gobblecfg') || '{}') || {}; localStorage.setItem('gobblecfg', JSON.stringify(Object.assign(old, { kv: 2, ppd, rf2: rf, binds, fcap, lines, ring, faces, cA: colA, cI: colI, dd2: dd, rf, pd, lsi, lsn, mal, ltg, ftg, mbtn }))); } catch (e) {} }
+const KEYNAME = { Equal: '=', Minus: '−', Tab: 'Tab', Backquote: '`', BracketLeft: '[', BracketRight: ']', Semicolon: ';', Quote: "'", Comma: ',', Period: '.', Slash: '/', Backslash: '\\', ShiftLeft: 'Shift', ShiftRight: 'Shift R', ControlLeft: 'Ctrl', AltLeft: 'Alt / ⌥', MetaLeft: '⌘', CapsLock: 'Caps' };
+function label(b) { if (!b) return tr('unbound'); if (KEYNAME[b]) return KEYNAME[b]; if (b.startsWith('Mouse')) { const n = +b.slice(5); return n <= 2 ? tr(['mouse_left', 'mouse_middle', 'mouse_right'][n]) : tr('mouse_n', { n: n + 1 }); } return b.startsWith('Key') ? b.slice(3) : b.startsWith('Digit') ? b.slice(5) : b; }
 
 /* ---------- world as last seen from the server ---------- */
 const ents = new Map(), spikes = new Map(), blobs = new Map(), pellets = new Map(), owners = new Map();
@@ -296,6 +298,8 @@ function act(k, down) {
     case 'respawn': if (down) send(Net.enc.respawn()); break;
     case 'ping': if (down) { const w = s2w(mx, my); pings.push({ x: w.x, y: w.y, t: 3 }); if (pings.length > 5) pings.shift(); } break;
     case 'ptt': pttDown = down; applyMic(); break;
+    case 'zin': if (down) setZoom(zm * 1.3); break;
+    case 'zout': if (down) setZoom(zm / 1.3); break;
     case 'fx_quake': case 'fx_warn': case 'fx_disco': case 'fx_chat': case 'fx_confetti': case 'fx_snow': case 'fx_flash': case 'fx_hearts': case 'fx_fireworks':
       if (down) { if (fxUnlocked(k)) send(Net.enc.effect(FX_IDS.indexOf(k))); else toast('🔒 ' + tr('bp_locked', { n: fxLevel(k) })); } break;
     case 'swap': if (down && multiChosen) { const w = aimPoint(); send(Net.enc.swap(clamp(w.x, 0, WS), clamp(w.y, 0, WS))); } break;
@@ -669,7 +673,9 @@ addEventListener('auxclick', e => { if (playing) e.preventDefault(); });
 addEventListener('contextmenu', e => { if (e.target.closest && e.target.closest('#clog')) return; if (listening || playing || e.target === cv) e.preventDefault(); });
 addEventListener('blur', releaseAll);
 document.addEventListener('visibilitychange', () => { if (document.hidden) releaseAll(); else try { window.focus(); } catch (x) {} });
-cv.addEventListener('wheel', e => { e.preventDefault(); zm = clamp(zm * Math.exp(-e.deltaY * 0.0015), 0.01, 3); clearTimeout(resize.z); resize.z = setTimeout(() => { if (connected) send(Net.enc.size(W, H, zm)); }, 120); }, { passive: false });
+// zoom: mouse wheel, two-finger scroll or pinch on a Mac trackpad (pinch arrives as wheel + Ctrl), or the = and − keys
+function setZoom(z) { zm = clamp(z, 0.01, 3); clearTimeout(resize.z); resize.z = setTimeout(() => { if (connected) send(Net.enc.size(W, H, zm)); }, 120); }
+cv.addEventListener('wheel', e => { e.preventDefault(); setZoom(zm * Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0015))); }, { passive: false });
 function tbtn(id, fn, hold) {
   const b = $(id);
   b.addEventListener('pointerdown', e => { e.preventDefault(); if (!playing) return; fn(true); });
@@ -678,7 +684,7 @@ function tbtn(id, fn, hold) {
 tbtn('bsp', d => d && multiSplit(1)); tbtn('bds', d => d && multiSplit(2)); tbtn('bej', d => act('eject', d), true); tbtn('bsw', d => d && act('swap', true)); tbtn('bfd', d => act('feed', d), true);
 $('gear').addEventListener('click', () => { if (playing || watching) { if ($('ov').hidden) openMenu(); else resumeGame(); } else openSettings(); }); $('mset').addEventListener('click', openSettings);
 for (const b of document.querySelectorAll('.nav button')) b.addEventListener('click', () => $(b.dataset.go).scrollIntoView({ behavior: 'smooth', block: 'start' })); $('cl').addEventListener('click', closeSettings); $('cl2').addEventListener('click', closeSettings);
-$('rs').addEventListener('click', () => { binds = Object.assign({}, DEF); dd = 60; fcap = 0; lines = true; ring = false; faces = true; setCols(); rf = 25; pd = 50; ppd = 120; lsi = false; lsn = 2; mal = true; ltg = false; ftg = false; mbtn = { 0: 'none', 2: 'none' }; saveCfg(); updateHelp(); renderSettings(); });
+$('rs').addEventListener('click', () => { binds = Object.assign({}, DEF); dd = 60; fcap = 0; lines = true; ring = false; faces = true; setCols(); rf = 25; pd = 50; ppd = 120; lsi = false; lsn = 2; mal = true; ltg = false; ftg = false; mbtn = { 0: 'none', 2: 'swap' }; saveCfg(); updateHelp(); renderSettings(); });
 const setting = (id, ev, fn) => $(id).addEventListener(ev, e => { fn(e.target); saveCfg(); renderSettings(); });
 setting('dd', 'input', t => dd = +t.value); setting('lines', 'change', t => lines = t.checked); setting('omic', 'change', t => { openMic = t.checked; try { localStorage.setItem('gobbleopenmic', openMic ? '1' : '0'); } catch (e) {} applyMic(); }); setting('ring', 'change', t => ring = t.checked); setting('faces', 'change', t => faces = t.checked); setting('cA', 'input', t => setCols(t.value, colI)); setting('cI', 'input', t => setCols(colA, t.value)); setting('fcap', 'change', t => { fcap = +t.value || 0; nextDraw = 0; }); setting('rf', 'input', t => rf = +t.value); setting('pd', 'input', t => pd = +t.value); setting('ppd', 'input', t => ppd = +t.value);
 setting('lsi', 'change', t => lsi = t.checked); setting('lsn', 'change', t => lsn = clamp(Math.round(+t.value) || 1, 1, 4)); setting('mal', 'change', t => mal = t.checked);

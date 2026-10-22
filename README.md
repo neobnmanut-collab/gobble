@@ -1,4 +1,4 @@
-# Gobble — multiplayer
+# Blobbit — multiplayer
 
 A shared online arena: real players and bots in one world, run by one server.
 The server decides everything (movement, eating, splitting, spikes), so players can't cheat by editing the page.
