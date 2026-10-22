@@ -322,10 +322,7 @@ class Game {
         }
       }
     }
-    if (bigThreat && nearGap < -20 && lead.m >= 2 * MINM && ps.length < 3 && lead.sc <= 0 && Math.random() < b.skill * 0.25) {
-      const ax = lead.x - bigThreat.x, ay = lead.y - bigThreat.y, ad = Math.hypot(ax, ay) || 1;
-      this.botSplit(ps, lead.x + ax / ad * 400, lead.y + ay / ad * 400);
-    }
+    // (bots never split to run away: splitting is only for eating)
     // needle trick (skilled bots): if a big orb that would burst on a needle is lined up behind a needle,
     // feed that needle until it fires a new one straight into them
     if (!b.feedT && bigThreat && bigThreat.m >= VPOP * 1.6 && Math.hypot(bigThreat.x - lead.x, bigThreat.y - lead.y) - bigThreat.r - lead.r > 220 && lead.m >= 1400 && b.skill > 0.55 && Math.random() < b.skill) {
