@@ -295,23 +295,31 @@ class Game {
         if (this.owners.get(q.o)?.kind === 'human') sc *= 1.4;
         if ((oc.get(q.o) || 1) > 1 && q.mt > 2) sc *= 1.25; // split-up prey can't rejoin yet: easy pickings
         if (wall < q.r + 300) sc *= 1.2; // cornered prey can't run far
+        if (q.m * 6 < lead.m) { let feast = 0; for (const z of ps === null ? [] : cells) { if (z === q || z.o === o || z.m * C.EAT_RATIO >= lead.m) continue; const zx = z.x - q.x, zy = z.y - q.y; if (zx * zx + zy * zy < 160000) feast += z.m; } sc *= 1 + Math.min(2, feast / (q.m + 1) * 0.15); } // a cluster of small pieces: dinner
         if (sc > bs) { bs = sc; tgt = q; td = d; }
       }
     }
-    if (tgt) for (const q of cells) if (q.o !== o && q.o !== tgt.o && q.m > lead.m * C.EAT_RATIO && Math.hypot(q.x - tgt.x, q.y - tgt.y) < q.r + 280 * b.caut) { tgt = null; break; }
+    if (tgt) for (const q of cells) if (q.o !== o && q.o !== tgt.o && q.m > lead.m * C.EAT_RATIO && Math.hypot(q.x - tgt.x, q.y - tgt.y) < q.r * 0.75) { tgt = null; break; } // greedy: only gives up if the prey is deep inside a bigger orb
     if (tgt) {
       if (b.chase === tgt) { b.chT += b.react; if (b.chT > b.gu) { if (td > b.chD * 0.9) { b.ign = tgt; b.ignT = rnd(2, 4); tgt = null; } b.chase = null; } }
       else { b.chase = tgt; b.chT = 0; b.chD = td; b.gu = rnd(6, 11); } // hungry: chases for longer and gives up only briefly
     } else b.chase = null;
     let px = 0, py = 0;
     if (tgt) { const t = Math.min(1, td / Math.max(60, mySp)); px = tgt.x + (tgt.ux + tgt.vx) * t; py = tgt.y + (tgt.uy + tgt.vy) * t; }
-    if (tgt && !threats.length && lead.sc <= 0 && lead.m >= 2 * MINM && lead.m / 2 > tgt.m * 1.3 && ps.length < 6 && Math.random() < 0.6 + b.skill * 0.4) {
-      const dd = Math.hypot(px - lead.x, py - lead.y) || 1;
-      if (dd < splitReach(lead.m) + lead.r * 0.3 && dd > lead.r * 0.6) {
-        let safe = true;
-        for (const q of cells) if (q.o !== o && q.o !== tgt.o && q.m > lead.m / 2 * C.EAT_RATIO && Math.hypot(q.x - lead.x, q.y - lead.y) < q.r + 700) { safe = false; break; }
-        if (safe && lead.m / 2 > VPOP) for (const v of spikes) if (Math.hypot(v.x - (lead.x + px) / 2, v.y - (lead.y + py) / 2) < v.r + lead.r * 0.6) { safe = false; break; }
-        if (safe) { const e = (1 - b.skill) * 25; this.botSplit(ps, px + rnd(-e, e), py + rnd(-e, e)); }
+    // split to eat: one split if a half can swallow the prey and reach it, a double split if a quarter can and it's further away
+    if (tgt && lead.sc <= 0 && lead.m >= 2 * MINM && ps.length < 8 && Math.random() < 0.75 + b.skill * 0.25) {
+      const dd = Math.hypot(px - lead.x, py - lead.y) || 1, r1 = splitReach(lead.m) + rad(lead.m / 2) * 0.9, r2 = r1 + splitReach(lead.m / 2) * 0.35; // how far the pieces really get
+      const one = lead.m / 2 > tgt.m * C.EAT_RATIO && dd < r1 && dd > lead.r * 0.5;
+      const two = !one && lead.m >= 4 * MINM && ps.length < 5 && lead.m / 4 > tgt.m * C.EAT_RATIO && dd < r2 && dd > lead.r * 0.5 && b.skill > 0.5;
+      if (one || two) {
+        let safe = true; const piece = lead.m / (two ? 4 : 2);
+        for (const q of cells) if (q.o !== o && q.o !== tgt.o && q.m > piece * C.EAT_RATIO && Math.hypot(q.x - px, q.y - py) < q.r * 0.8) { safe = false; break; } // greedy: only holds back if the landing spot is right inside a bigger orb
+        if (safe && piece > VPOP) for (const v of spikes) if (Math.hypot(v.x - (lead.x + px) / 2, v.y - (lead.y + py) / 2) < v.r + lead.r * 0.6) { safe = false; break; }
+        if (safe) {
+          const e = (1 - b.skill) * 25, ax = px + rnd(-e, e), ay = py + rnd(-e, e);
+          this.botSplit(ps, ax, ay);
+          if (two) this.botSplit(this.cells.filter(c => c.o === o), ax, ay);
+        }
       }
     }
     if (bigThreat && nearGap < -20 && lead.m >= 2 * MINM && ps.length < 3 && lead.sc <= 0 && Math.random() < b.skill * 0.25) {
@@ -346,7 +354,7 @@ class Game {
       for (let k = 0; k < ND; k++) {
         const ux = DX[k], uy = DY[k]; let sc = 0;
         for (const t of threats) {
-          const tx = t.x - t.px, ty = t.y - t.py, tdist = Math.hypot(tx, ty) || 1, dot = (ux * tx + uy * ty) / tdist, w = Math.max(0, (t.zone * 1.7 - tdist) / t.zone);
+          const tx = t.x - t.px, ty = t.y - t.py, tdist = Math.hypot(tx, ty) || 1, dot = (ux * tx + uy * ty) / tdist, w = Math.max(0, (t.zone * (tgt ? 1.05 : 1.7) - tdist) / t.zone); /* hunting: only backs off when really close */
           sc -= w * t.w * (dot + 1) * (dot + 1) * 3;
         }
         const la = lead.r + 240, lx = cx + ux * la, ly = cy + uy * la, out = Math.max(0, -lx, lx - WS, -ly, ly - WS) / la;
@@ -360,7 +368,7 @@ class Game {
           const vx = v.x - cx, vy = v.y - cy; if (Math.abs(vx) > 600 || Math.abs(vy) > 600) continue;
           const vd = Math.hypot(vx, vy) || 1, dot = (ux * vx + uy * vy) / vd; if (dot > 0) sc += dot * 2.2 * (1 - vd / 850) * b.skill;
         }
-        sc += (ux * gux + uy * guy) * (threats.length ? (tgt ? 1 : 0.4) : 2);
+        sc += (ux * gux + uy * guy) * (threats.length ? (tgt ? 1.4 + b.agg * 0.5 : 0.4) : 2); // greedy: keeps going for the prey even with danger around
         if (sc > best) { best = sc; bx = ux; by = uy; }
       }
       gx = cx + bx * (320 + lead.r); gy = cy + by * (320 + lead.r);
