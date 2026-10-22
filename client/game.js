@@ -17,6 +17,8 @@ let binds = Object.assign({}, DEF), dd = 60, rf = 40, pd = 50, lsi = false, lsn 
 // test mode: open the page with ?test=1 to start one orb at 35,000 that never loses mass
 const TEST = /(^|[?&])test=1(&|$)/.test(location.search.slice(1));
 let lines = true; // lines from your orbs to the mouse
+let ring = false; // multibox: mark the active orb with a white ring instead of recolouring both
+let faces = true; // funny faces on bots
 let fcap = 0; // highest frames per second to draw; 0 = as many as the monitor shows
 // multibox colours: the orb you control and your other one. Text colours are worked out once, not per frame.
 const COL_DEF = ['#f4f4f4', '#e0443e'];
@@ -33,13 +35,13 @@ try {
   if (c) {
     if (c.binds) for (const k in DEF) if (typeof c.binds[k] === 'string') binds[k] = c.binds[k];
     const num = (k, a, b) => (typeof c[k] === 'number' ? clamp(c[k], a, b) : undefined), bool = k => (typeof c[k] === 'boolean' ? c[k] : undefined);
-    rf = num('rf', 40, 200) ?? rf; dd = num('dd2', 0, 300) ?? dd; pd = num('pd', 0, 200) ?? pd; lsn = num('lsn', 1, 4) ?? lsn; fcap = num('fcap', 0, 1000) ?? fcap; lines = bool('lines') ?? lines; setCols(c.cA, c.cI);
+    rf = num('rf', 40, 200) ?? rf; dd = num('dd2', 0, 300) ?? dd; pd = num('pd', 0, 200) ?? pd; lsn = num('lsn', 1, 4) ?? lsn; fcap = num('fcap', 0, 1000) ?? fcap; lines = bool('lines') ?? lines; ring = bool('ring') ?? ring; faces = bool('faces') ?? faces; setCols(c.cA, c.cI);
     lsi = bool('lsi') ?? lsi; mal = bool('mal') ?? mal; ltg = bool('ltg') ?? ltg; ftg = bool('ftg') ?? ftg;
     if (c.mbtn) for (const b of [0, 2]) if (MACROS.some(m => m[0] === c.mbtn[b])) mbtn[b] = c.mbtn[b];
   }
 } catch (e) {}
 { const seen = new Set(); for (const [k] of ACT) { const v = binds[k]; if (!v) continue; if (seen.has(v)) binds[k] = Object.values(binds).includes(DEF[k]) ? '' : DEF[k]; seen.add(binds[k]); } }
-function saveCfg() { try { const old = JSON.parse(localStorage.getItem('gobblecfg') || '{}') || {}; localStorage.setItem('gobblecfg', JSON.stringify(Object.assign(old, { binds, fcap, lines, cA: colA, cI: colI, dd2: dd, rf, pd, lsi, lsn, mal, ltg, ftg, mbtn }))); } catch (e) {} }
+function saveCfg() { try { const old = JSON.parse(localStorage.getItem('gobblecfg') || '{}') || {}; localStorage.setItem('gobblecfg', JSON.stringify(Object.assign(old, { binds, fcap, lines, ring, faces, cA: colA, cI: colI, dd2: dd, rf, pd, lsi, lsn, mal, ltg, ftg, mbtn }))); } catch (e) {} }
 function label(b) { if (!b) return tr('unbound'); if (b.startsWith('Mouse')) { const n = +b.slice(5); return n <= 2 ? tr(['mouse_left', 'mouse_middle', 'mouse_right'][n]) : tr('mouse_n', { n: n + 1 }); } return b.startsWith('Key') ? b.slice(3) : b.startsWith('Digit') ? b.slice(5) : b; }
 
 /* ---------- world as last seen from the server ---------- */
@@ -302,12 +304,42 @@ function drawSpikeBody(v, R) {
   g.beginPath(); for (let i = 0; i <= 32; i++) { const a = i / 32 * TAU + v.rot, r = i % 2 ? R * 0.9 : R * 1.04; i ? g.lineTo(v.x + Math.cos(a) * r, v.y + Math.sin(a) * r) : g.moveTo(v.x + Math.cos(a) * r, v.y + Math.sin(a) * r); }
   g.closePath(); g.fillStyle = 'rgba(255,210,63,.94)'; g.fill(); g.strokeStyle = '#a8790f'; g.lineWidth = Math.max(3, R * 0.06); g.stroke();
 }
+if (!CanvasRenderingContext2D.prototype.roundRect) CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h) { this.rect(x, y, w, h); }; // older browsers
+/* ---------- bot faces: 12 original cartoon faces, drawn once into small images and reused every frame ---------- */
+const FACES = (() => {
+  const out = [], K = '#1b1b1b', P = '#ff7a9a';
+  const dot = (f, x, y, r, c) => { f.fillStyle = c || K; f.beginPath(); f.arc(x, y, r, 0, TAU); f.fill(); };
+  const eye = (f, x, y, r, px, py) => { dot(f, x, y, r, '#fff'); f.lineWidth = 0.035; f.strokeStyle = K; f.stroke(); dot(f, x + px * r, y + py * r, r * 0.48); dot(f, x + px * r - r * 0.15, y + py * r - r * 0.18, r * 0.13, '#fff'); };
+  const arc = (f, x, y, r, a, b, w) => { f.lineWidth = w || 0.075; f.strokeStyle = K; f.beginPath(); f.arc(x, y, r, a * Math.PI, b * Math.PI); f.stroke(); };
+  const line = (f, pts, w) => { f.lineWidth = w || 0.07; f.strokeStyle = K; f.beginPath(); f.moveTo(pts[0], pts[1]); for (let i = 2; i < pts.length; i += 2) f.lineTo(pts[i], pts[i + 1]); f.stroke(); };
+  const designs = [
+    f => { dot(f, -0.33, -0.22, 0.1); dot(f, 0.33, -0.22, 0.1); arc(f, 0, 0.02, 0.45, 0.15, 0.85); },                                     // happy
+    f => { eye(f, -0.3, -0.25, 0.23, 0.35, 0.3); eye(f, 0.33, -0.2, 0.18, -0.4, 0.35); dot(f, 0, 0.38, 0.1); },                              // googly
+    f => { arc(f, -0.33, -0.25, 0.14, 0, 1); arc(f, 0.33, -0.25, 0.14, 0, 1); arc(f, 0, 0.25, 0.16, 0.1, 0.9, 0.06); f.fillStyle = K; f.font = '800 0.32px sans-serif'; f.fillText('z', 0.5, -0.5); f.font = '800 0.22px sans-serif'; f.fillText('z', 0.68, -0.72); }, // sleepy
+    f => { line(f, [-0.58, -0.48, -0.14, -0.3]); line(f, [0.58, -0.48, 0.14, -0.3]); dot(f, -0.33, -0.15, 0.09); dot(f, 0.33, -0.15, 0.09); arc(f, 0, 0.65, 0.35, 1.2, 1.8); }, // grumpy
+    f => { f.fillStyle = K; f.beginPath(); f.roundRect(-0.68, -0.42, 0.58, 0.32, 0.12); f.roundRect(0.1, -0.42, 0.58, 0.32, 0.12); f.fill(); line(f, [-0.12, -0.32, 0.12, -0.32], 0.06); line(f, [-0.55, -0.34, -0.38, -0.34], 0.04); f.strokeStyle = 'rgba(255,255,255,.6)'; f.stroke(); arc(f, 0.12, 0.12, 0.3, 0.15, 0.65); }, // cool shades
+    f => { dot(f, -0.33, -0.22, 0.1); dot(f, 0.33, -0.22, 0.1); f.fillStyle = K; f.beginPath(); f.arc(0, 0.12, 0.38, 0, Math.PI); f.closePath(); f.fill(); dot(f, 0.08, 0.38, 0.14, P); }, // tongue out
+    f => { eye(f, 0, -0.22, 0.32, 0, 0.35); f.fillStyle = K; f.beginPath(); f.roundRect(-0.38, 0.26, 0.76, 0.24, 0.1); f.fill(); f.fillStyle = '#fff'; for (let i = 0; i < 4; i++) f.fillRect(-0.3 + i * 0.16, 0.28, 0.11, 0.1); }, // cyclops
+    f => { eye(f, -0.3, -0.22, 0.17, 0, 0); eye(f, 0.3, -0.22, 0.17, 0, 0); f.fillStyle = K; f.beginPath(); f.ellipse(0, 0.36, 0.14, 0.19, 0, 0, TAU); f.fill(); }, // surprised
+    f => { dot(f, -0.32, -0.2, 0.09); dot(f, 0.32, -0.2, 0.09); f.fillStyle = P; f.beginPath(); f.moveTo(-0.07, 0.04); f.lineTo(0.07, 0.04); f.lineTo(0, 0.12); f.fill(); arc(f, -0.1, 0.16, 0.1, 0, 1, 0.055); arc(f, 0.1, 0.16, 0.1, 0, 1, 0.055); for (const s of [-1, 1]) { line(f, [s * 0.3, 0.1, s * 0.75, 0.02], 0.035); line(f, [s * 0.3, 0.18, s * 0.75, 0.22], 0.035); } }, // cat
+    f => { line(f, [-0.5, -0.42, -0.18, -0.36], 0.06); line(f, [0.5, -0.42, 0.18, -0.36], 0.06); dot(f, -0.33, -0.2, 0.09); dot(f, 0.33, -0.2, 0.09); arc(f, 0, -0.05, 0.45, 0.2, 0.8); f.fillStyle = '#fff'; f.strokeStyle = K; f.lineWidth = 0.03; for (const s of [-1, 1]) { f.beginPath(); f.moveTo(s * 0.12, 0.38); f.lineTo(s * 0.26, 0.36); f.lineTo(s * 0.2, 0.55); f.closePath(); f.fill(); f.stroke(); } }, // fangs
+    f => { arc(f, -0.33, -0.12, 0.13, 1, 2); arc(f, 0.33, -0.12, 0.13, 1, 2); f.fillStyle = 'rgba(255,110,140,.55)'; f.beginPath(); f.ellipse(-0.52, 0.12, 0.16, 0.09, 0, 0, TAU); f.ellipse(0.52, 0.12, 0.16, 0.09, 0, 0, TAU); f.fill(); arc(f, 0, 0.18, 0.12, 0.15, 0.85, 0.055); }, // shy
+    f => { for (const x of [-0.33, 0.33]) { line(f, [x - 0.11, -0.33, x + 0.11, -0.11], 0.065); line(f, [x + 0.11, -0.33, x - 0.11, -0.11], 0.065); } f.lineWidth = 0.065; f.strokeStyle = K; f.beginPath(); f.moveTo(-0.32, 0.3); f.quadraticCurveTo(-0.16, 0.16, 0, 0.3); f.quadraticCurveTo(0.16, 0.44, 0.32, 0.3); f.stroke(); }, // dizzy
+  ];
+  for (const d of designs) {
+    const cv2 = document.createElement('canvas'); cv2.width = cv2.height = 192; const f = cv2.getContext('2d');
+    f.translate(96, 96); f.scale(92, 92); f.lineCap = f.lineJoin = 'round'; f.textAlign = 'center'; f.textBaseline = 'middle'; d(f); out.push(cv2);
+  }
+  return out;
+})();
 function drawOrb(c, multi) {
   const mineC = myBoxes.includes(c.o), ow = owners.get(c.o), R = c.r;
-  const box = multi && mineC, act = box && c.o === activeId(), tx = box ? (act ? txtA : txtI) : null;
+  const box = multi && mineC, act = box && c.o === activeId(), tx = box && !ring ? (act ? txtA : txtI) : null;
   const mate = !mineC && partyIds.has(c.o);
-  g.fillStyle = box ? (act ? colA : colI) : mate ? 'hsl(' + partyHue() + ' 80% 58%)' : 'hsl(' + (ow ? ow.hue : 0) + ' 72% 52%)';
+  g.fillStyle = box && !ring ? (act ? colA : colI) : box ? 'hsl(' + (ow ? ow.hue : 0) + ' 72% 52%)' : mate ? 'hsl(' + partyHue() + ' 80% 58%)' : 'hsl(' + (ow ? ow.hue : 0) + ' 72% 52%)';
   g.beginPath(); g.arc(c.x, c.y, R, 0, TAU); g.fill();
+  if (ring && act) { g.lineWidth = Math.max(2.5 / cam.s, R * 0.07); g.strokeStyle = '#fff'; g.stroke(); } // white ring on the orb you control
+  if (faces && ow && !ow.human && R * cam.s > 9) { const fc = FACES[ow.id % FACES.length]; g.drawImage(fc, c.x - R, c.y - R, R * 2, R * 2); }
   if (R * cam.s > 18) {
     const fs = Math.max(12, R * 0.34), name = ow ? ow.name : '';
     g.font = '800 ' + fs + "px 'Bricolage Grotesque',system-ui,sans-serif"; g.textAlign = 'center'; g.textBaseline = 'middle';
@@ -346,7 +378,7 @@ function draw(dt) {
     const since = now - b.lt, p = dd <= 0 ? 1 : Math.min(1, since / dd), over = Math.min(0.1, Math.max(0, since - Math.max(dd, 34)) / 1000);
     b.x = b.ox + (b.tx - b.ox) * p + b.vx * over; b.y = b.oy + (b.ty - b.oy) * p + b.vy * over;
   }
-  g.setTransform(dpr, 0, 0, dpr, 0, 0); g.fillStyle = '#000'; g.fillRect(0, 0, W, H);
+  g.setTransform(dpr, 0, 0, dpr, 0, 0); g.fillStyle = '#111'; g.fillRect(0, 0, W, H);
   g.save(); g.translate(W / 2, H / 2); g.scale(cam.s, cam.s); g.translate(-cam.x, -cam.y);
   const hw = W / 2 / cam.s, hh = H / 2 / cam.s;
   let x0 = Math.max(cam.x - hw, cam.v[0]), x1 = Math.min(cam.x + hw, cam.v[1]), y0 = Math.max(cam.y - hh, cam.v[2]), y1 = Math.min(cam.y + hh, cam.v[3]);
@@ -370,7 +402,7 @@ function draw(dt) {
   if (lines && playing && aim) { // a thin line from each orb you control to the mouse
     const a = activeId(); g.beginPath();
     for (const c of list) if (c.o === a) { g.moveTo(c.x, c.y); g.lineTo(aim.x, aim.y); }
-    g.strokeStyle = 'rgba(255,255,255,.22)'; g.lineWidth = 1.6 / cam.s; g.stroke();
+    g.strokeStyle = 'rgba(190,190,205,.5)'; g.lineWidth = 1.5 / cam.s; g.stroke();
   }
   for (const c of list) drawOrb(c, multi);
   // spikes: an orb smaller than a spike can't burst on it and simply passes through. While one is
@@ -492,7 +524,7 @@ function renderSettings() {
     const key = opts.join() + '|' + tr('fps_monitor', { n: hz });
     if (el.dataset.k !== key) { el.dataset.k = key; el.textContent = ''; for (const r of opts) { const o = document.createElement('option'); o.value = r; o.textContent = r ? r + ' FPS' : tr('fps_monitor', { n: hz }); el.append(o); } }
     el.value = opts.includes(fcap) ? fcap : 0; $('fpsnow').textContent = fps + ' FPS · ' + tr('fps_screen', { n: hz }); }
-  $('cA').value = colA; $('cI').value = colI; $('lines').checked = lines;
+  $('cA').value = colA; $('cI').value = colI; $('lines').checked = lines; $('ring').checked = ring; $('faces').checked = faces;
   { const box = $('cpres'); if (!box.childElementCount) for (const [a, i] of COL_PRESETS) { const b = document.createElement('button'); b.type = 'button'; b.dataset.a = a; b.dataset.i = i; b.setAttribute('aria-label', a + ' / ' + i); const x = document.createElement('i'), y = document.createElement('i'); x.style.background = a; y.style.background = i; b.append(x, y); b.onclick = () => { setCols(a, i); saveCfg(); renderSettings(); }; box.append(b); }
     for (const b of box.children) b.setAttribute('aria-pressed', b.dataset.a === colA && b.dataset.i === colI); }
   $('dd').value = dd; $('ddv').textContent = dd + ' ms'; $('rf').value = rf; $('rfv').textContent = rf + ' ms'; $('pd').value = pd; $('pdv').textContent = pd + ' ms';
@@ -547,9 +579,9 @@ function tbtn(id, fn, hold) {
 tbtn('bsp', d => d && multiSplit(1)); tbtn('bds', d => d && multiSplit(2)); tbtn('bej', d => act('eject', d), true); tbtn('bsw', d => d && act('swap', true)); tbtn('bfd', d => act('feed', d), true);
 $('gear').addEventListener('click', () => { if (playing || watching) { if ($('ov').hidden) openMenu(); else resumeGame(); } else openSettings(); }); $('mset').addEventListener('click', openSettings);
 for (const b of document.querySelectorAll('.nav button')) b.addEventListener('click', () => $(b.dataset.go).scrollIntoView({ behavior: 'smooth', block: 'start' })); $('cl').addEventListener('click', closeSettings); $('cl2').addEventListener('click', closeSettings);
-$('rs').addEventListener('click', () => { binds = Object.assign({}, DEF); dd = 60; fcap = 0; lines = true; setCols(); rf = 40; pd = 50; lsi = false; lsn = 2; mal = true; ltg = false; ftg = false; mbtn = { 0: 'none', 2: 'none' }; saveCfg(); updateHelp(); renderSettings(); });
+$('rs').addEventListener('click', () => { binds = Object.assign({}, DEF); dd = 60; fcap = 0; lines = true; ring = false; faces = true; setCols(); rf = 40; pd = 50; lsi = false; lsn = 2; mal = true; ltg = false; ftg = false; mbtn = { 0: 'none', 2: 'none' }; saveCfg(); updateHelp(); renderSettings(); });
 const setting = (id, ev, fn) => $(id).addEventListener(ev, e => { fn(e.target); saveCfg(); renderSettings(); });
-setting('dd', 'input', t => dd = +t.value); setting('lines', 'change', t => lines = t.checked); setting('cA', 'input', t => setCols(t.value, colI)); setting('cI', 'input', t => setCols(colA, t.value)); setting('fcap', 'change', t => { fcap = +t.value || 0; nextDraw = 0; }); setting('rf', 'input', t => rf = +t.value); setting('pd', 'input', t => pd = +t.value);
+setting('dd', 'input', t => dd = +t.value); setting('lines', 'change', t => lines = t.checked); setting('ring', 'change', t => ring = t.checked); setting('faces', 'change', t => faces = t.checked); setting('cA', 'input', t => setCols(t.value, colI)); setting('cI', 'input', t => setCols(colA, t.value)); setting('fcap', 'change', t => { fcap = +t.value || 0; nextDraw = 0; }); setting('rf', 'input', t => rf = +t.value); setting('pd', 'input', t => pd = +t.value);
 setting('lsi', 'change', t => lsi = t.checked); setting('lsn', 'change', t => lsn = clamp(Math.round(+t.value) || 1, 1, 4)); setting('mal', 'change', t => mal = t.checked);
 setting('ltg', 'change', t => { ltg = t.checked; lock = null; }); setting('ftg', 'change', t => { ftg = t.checked; feedOn = false; });
 setting('mm0', 'change', t => mbtn[0] = t.value); setting('mm2', 'change', t => mbtn[2] = t.value);

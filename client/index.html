@@ -186,6 +186,7 @@ button{font:700 1rem var(--font);cursor:pointer}
   <div class="sec c-col"><h2 data-t="colors">Multibox colours</h2>
     <div class="cols"><label class="cpick"><span data-t="col_active">Active orb</span><input type="color" id="cA"></label><label class="cpick"><span data-t="col_inactive">Other orb</span><input type="color" id="cI"></label></div>
     <div class="pres" id="cpres"></div>
+    <label class="row"><span data-t="ring_mode">White ring on the active orb instead of colours</span><input type="checkbox" id="ring"></label>
     <p class="hint" data-t="col_hint">Pick a pair or choose your own. The minimap uses them too.</p></div>
   <div class="grp c-key" id="g-key" data-t="keys">Keys</div>
   <div class="sec c-key"><h2 data-t="keys">Keys</h2><p class="hint" data-t="keys_hint">Click a key, then press the new key or mouse button. Backspace clears it, Esc cancels.</p><div class="kg" id="kl"></div></div>
@@ -212,6 +213,7 @@ button{font:700 1rem var(--font);cursor:pointer}
   <div class="grp c-dis" id="g-dis" data-t="display">Display</div>
   <div class="sec c-dis"><h2 data-t="display">Display</h2>
     <div class="row"><span data-t="draw_delay">Draw delay</span><input type="range" id="dd" min="0" max="300" step="10"><b id="ddv"></b></div>
+    <label class="row"><span data-t="bot_faces">Funny faces on bots</span><input type="checkbox" id="faces"></label>
     <label class="row"><span data-t="lines_mouse">Lines from your orbs to the mouse</span><input type="checkbox" id="lines"></label>
     <div class="row"><span data-t="max_fps">Max FPS</span><select id="fcap"></select></div>
     <div class="row"><span data-t="fps_now">Right now</span><b id="fpsnow">–</b></div>
@@ -220,9 +222,9 @@ button{font:700 1rem var(--font);cursor:pointer}
   <div class="btns"><button class="kb" id="rs" data-t="reset">Reset defaults</button><button class="primary" id="cl" data-t="done">Done</button></div>
   </div>
 </div></div>
-<script src="i18n.js?v=33"></script>
-<script src="servers.js?v=33"></script>
-<script src="net.js?v=33"></script>
-<script src="game.js?v=33"></script>
+<script src="i18n.js?v=34"></script>
+<script src="servers.js?v=34"></script>
+<script src="net.js?v=34"></script>
+<script src="game.js?v=34"></script>
 </body>
 </html>
