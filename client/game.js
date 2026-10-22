@@ -296,7 +296,11 @@ function draw(dt) {
       e.x += ex * c; e.y += ey * c;
     }
   }
-  for (const v of spikes.values()) { const p = dd <= 0 || v.ox === undefined ? 1 : Math.min(1, (now - v.lt) / dd); if (v.ox !== undefined) { v.x = v.ox + (v.tx - v.ox) * p; v.y = v.oy + (v.ty - v.oy) * p; } v.rot += dt * 0.3; }
+  for (const v of spikes.values()) { const p = dd <= 0 || v.ox === undefined ? 1 : Math.min(1, (now - v.lt) / dd); if (v.ox !== undefined) { v.x = v.ox + (v.tx - v.ox) * p; v.y = v.oy + (v.ty - v.oy) * p; }
+    // needles stay perfectly still; they only turn while sliding after being shot or while something passes through
+    const moving = v.ox !== undefined && Math.abs(v.tx - v.ox) + Math.abs(v.ty - v.oy) > 0.5;
+    if (moving || (v.ph || 0) > 0.02) v.rot += dt * (moving ? 1.2 : 0.4);
+  }
   for (const [id, b] of blobs) {
     if (b.ghost && now - b.ghost > 250) { blobs.delete(id); continue; }
     const since = now - b.lt, p = dd <= 0 ? 1 : Math.min(1, since / dd), over = Math.min(0.1, Math.max(0, since - Math.max(dd, 34)) / 1000);
