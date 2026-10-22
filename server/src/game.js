@@ -33,7 +33,7 @@ class Game {
     this.t = 0; this.regrow = 0; this.spikeT = 0; this.botT = 0;
     this.own = new Map(); this.oc = new Map();
     for (let i = 0; i < C.PELLETS; i++) this.addPellet();
-    for (let i = 0; i < C.SPIKES; i++) this.spawnSpike();
+    for (let i = 0; i < C.SPIKES; i++) this.spawnSpike(rnd(1, C.SPIKE_LIFE + C.SPIKE_LIFE_JITTER)); // staggered, so they don't all vanish together
     for (let i = 0; i < Math.min(C.BOT_MAX, C.BOT_FILL); i++) this.addBot(); // arena is lively from the first second
   }
 
@@ -96,11 +96,12 @@ class Game {
     }
     return null;
   }
-  spawnSpike() {
+  spawnSpike(life) {
     const p = this.safeSpot(500, 2000);
     const r = rad(C.SPIKE_DRAW_MASS);
-    this.spikes.push({ id: this.nextCell++, x: p.x, y: p.y, r, vx: 0, vy: 0, fed: 0, dx: 1, dy: 0, dead: false });
+    this.spikes.push({ id: this.nextCell++, x: p.x, y: p.y, r, vx: 0, vy: 0, fed: 0, dx: 1, dy: 0, dead: false, life: life ?? this.spikeLife() });
   }
+  spikeLife() { return C.SPIKE_LIFE + rnd(-C.SPIKE_LIFE_JITTER, C.SPIKE_LIFE_JITTER); }
   siblings(a, b) { // the two boxes of one multibox player, or players in the same party: they can't eat or pull each other
     if (a === b) return false;
     const A = this.owners.get(a), B = this.owners.get(b);
@@ -426,7 +427,8 @@ class Game {
       if (v.x < v.r) { v.x = v.r; v.vx = Math.abs(v.vx) * 0.5; } else if (v.x > WS - v.r) { v.x = WS - v.r; v.vx = -Math.abs(v.vx) * 0.5; }
       if (v.y < v.r) { v.y = v.r; v.vy = Math.abs(v.vy) * 0.5; } else if (v.y > WS - v.r) { v.y = WS - v.r; v.vy = -Math.abs(v.vy) * 0.5; }
       // a spike swells a little with each blob fed into it, so you can see it filling up
-      v.r += (sr * (1 + v.fed * 0.035) - v.r) * Math.min(1, dt * 8);
+      v.r += (sr - v.r) * Math.min(1, dt * 8); // (no swelling: how close a needle is to splitting stays hidden)
+      v.life -= dt; if (v.life <= 0) v.dead = true; // needles come and go around the map
     }
     // spikes never sit on top of each other: overlapping ones ease apart
     for (let i = 0; i < this.spikes.length; i++) for (let j = i + 1; j < this.spikes.length; j++) {
@@ -480,8 +482,8 @@ class Game {
         for (const f of ea) {
           if (f.dead) continue; const dx = f.x - v.x, dy = f.y - v.y; if (dx * dx + dy * dy > v.r * v.r) continue;
           f.dead = true; v.fed++; const sp = Math.hypot(f.vx, f.vy); if (sp > 20) { v.dx = f.vx / sp; v.dy = f.vy / sp; v.vx += v.dx * 25; v.vy += v.dy * 25; }
-          if (v.fed >= 7 && this.spikes.length < C.SPIKES + 20) {
-            v.fed = 0; this.spikes.push({ id: this.nextCell++, x: v.x + v.dx * v.r * 2, y: v.y + v.dy * v.r * 2, r: v.r, vx: v.dx * 1100, vy: v.dy * 1100, fed: 0, dx: 1, dy: 0, dead: false });
+          if (v.fed >= C.SPIKE_FEED && this.spikes.length < C.SPIKES + 20) {
+            v.fed = 0; this.spikes.push({ id: this.nextCell++, x: v.x + v.dx * v.r * 2, y: v.y + v.dy * v.r * 2, r: v.r, vx: v.dx * 1100, vy: v.dy * 1100, fed: 0, dx: 1, dy: 0, dead: false, life: this.spikeLife() });
           }
         }
       }
@@ -492,7 +494,7 @@ class Game {
     for (const c of pops) this.popCell(c);
     this.cells = this.cells.filter(c => !c.dead);
     this.spikes = this.spikes.filter(v => !v.dead);
-    this.spikeT -= dt; if (this.spikes.length < C.SPIKES && this.spikeT <= 0) { this.spawnSpike(); this.spikeT = 3; }
+    this.spikeT -= dt; if (this.spikes.length < C.SPIKES && this.spikeT <= 0) { this.spawnSpike(); this.spikeT = rnd(0.2, 1.2); }
     this.botT -= dt; if (this.botT <= 0) { this.botT = 0.5; this.own.clear(); for (const c of this.cells) { let a = this.own.get(c.o); if (!a) this.own.set(c.o, a = []); a.push(c); } this.manageBots(); }
     // players: peaks and deaths
     for (const cl of this.clients) {

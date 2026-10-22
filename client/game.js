@@ -136,8 +136,8 @@ function handle(m) {
       }
       for (const id of ents.keys()) if (!seen.has(id)) ents.delete(id);
       const ss = new Set();
-      for (const v of m.spikes) { ss.add(v.id); const e = spikes.get(v.id); if (e) { e.ox = e.x; e.oy = e.y; e.tx = v.x; e.ty = v.y; e.r = v.r; e.fed = v.fed; e.lt = lastTick; } else spikes.set(v.id, { x: v.x, y: v.y, tx: v.x, ty: v.y, r: v.r, fed: v.fed, rot: Math.random() * TAU }); }
-      for (const id of spikes.keys()) if (!ss.has(id)) spikes.delete(id);
+      for (const v of m.spikes) { ss.add(v.id); const e = spikes.get(v.id); if (e) { e.ox = e.x; e.oy = e.y; e.tx = v.x; e.ty = v.y; e.r = v.r; e.fed = v.fed; e.lt = lastTick; } else spikes.set(v.id, { x: v.x, y: v.y, tx: v.x, ty: v.y, r: v.r, fed: v.fed, rot: Math.random() * TAU, born: performance.now() }); }
+      for (const [id, v] of spikes) if (!ss.has(id)) { if (!v.gone) v.gone = performance.now(); else if (performance.now() - v.gone > 300) spikes.delete(id); } else v.gone = 0;
       const bs = new Set();
       for (const b of m.blobs) {
         bs.add(b.id); const e = blobs.get(b.id);
@@ -292,6 +292,8 @@ function drawSpike(v) {
     for (const off of [0, 0.5]) { const q = (v.rp + off) % 1; g.strokeStyle = 'rgba(255,226,120,' + (ph * (1 - q) * 0.95).toFixed(3) + ')'; g.beginPath(); g.arc(v.x, v.y, R * (1 + q * 0.7), 0, TAU); g.stroke(); }
     g.globalAlpha = 1 - ph * 0.6;
   }
+  const now = performance.now(), fade = Math.min(1, (now - (v.born || 0)) / 350) * (v.gone ? Math.max(0, 1 - (now - v.gone) / 300) : 1);
+  if (fade < 1) g.globalAlpha *= fade;
   drawSpikeBody(v, R);
   g.globalAlpha = 1;
 }
@@ -299,7 +301,6 @@ function drawSpikeBody(v, R) {
   if (R * cam.s < 6) { const q = Math.max(R, 4 / cam.s); g.fillStyle = '#ffd23f'; g.beginPath(); for (let i = 0; i <= 16; i++) { const a = i / 16 * TAU + v.rot, r = i % 2 ? q * 0.75 : q * 1.15; i ? g.lineTo(v.x + Math.cos(a) * r, v.y + Math.sin(a) * r) : g.moveTo(v.x + Math.cos(a) * r, v.y + Math.sin(a) * r); } g.closePath(); g.fill(); return; }
   g.beginPath(); for (let i = 0; i <= 32; i++) { const a = i / 32 * TAU + v.rot, r = i % 2 ? R * 0.9 : R * 1.04; i ? g.lineTo(v.x + Math.cos(a) * r, v.y + Math.sin(a) * r) : g.moveTo(v.x + Math.cos(a) * r, v.y + Math.sin(a) * r); }
   g.closePath(); g.fillStyle = 'rgba(255,210,63,.94)'; g.fill(); g.strokeStyle = '#a8790f'; g.lineWidth = Math.max(3, R * 0.06); g.stroke();
-  if (v.fed) { g.fillStyle = 'rgba(255,255,255,.8)'; for (let i = 0; i < v.fed; i++) { const a = i / 7 * TAU - Math.PI / 2; g.beginPath(); g.arc(v.x + Math.cos(a) * R * 0.45, v.y + Math.sin(a) * R * 0.45, R * 0.07, 0, TAU); g.fill(); } }
 }
 function drawOrb(c, multi) {
   const mineC = myBoxes.includes(c.o), ow = owners.get(c.o), R = c.r;

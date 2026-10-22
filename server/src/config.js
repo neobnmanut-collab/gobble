@@ -1,7 +1,7 @@
 'use strict';
 // Every gameplay number lives here, so balance can be tuned without touching the game code.
 module.exports = {
-  WORLD: 12000,          // arena width and height
+  WORLD: 16200,          // arena width and height
   GRID: 100,             // pellet grid cell size
   TICK_HZ: 25,           // simulation steps per second
   SEND_EVERY: 1,         // send a world update every step (25 updates per second)
@@ -11,13 +11,16 @@ module.exports = {
   PELLET_REGROW: 150,    // pellets regrown per second, up to PELLETS
   SETTLED_EJECT_CAP: 6000, // ejected blobs that have stopped and lie on the map
 
-  SPIKES: 32,
+  SPIKES: 26,
+  SPIKE_LIFE: 19,        // seconds a needle lasts before it vanishes and a new one appears somewhere else...
+  SPIKE_LIFE_JITTER: 4,  // ...give or take this many seconds, so they don't all change at once
+  SPIKE_FEED: 9,         // blobs a needle must be fed before it shoots out a new needle
   SPIKE_DRAW_MASS: 640,  // spikes are exactly the size of the smallest orb that can burst on them (shown as 320)
   SPIKE_POP_MASS: 640,   // orbs at or above this burst on a spike (shown as 320); smaller orbs pass through
   SPIKE_GAIN: 400,       // mass a spike adds to the orb that swallows it
   SPIKE_PIECES: 5,
 
-  START_MASS: 800,
+  START_MASS: 60000,     // every orb a player starts with (shown as 30,000)
   MIN_PIECE: 320,        // no orb is ever smaller than this (shown as 160); orbs can split from twice this
   MAX_PIECES: 16,
   MAX_MASS: 120000,      // an orb above this splits in two (shown as 60,000)
