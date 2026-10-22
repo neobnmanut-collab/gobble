@@ -358,12 +358,14 @@ function drawOrb(c, multi) {
   if (ring && act) { g.beginPath(); g.arc(c.x, c.y, R, 0, TAU); g.lineWidth = Math.max(2.5 / cam.s, R * 0.07); g.strokeStyle = '#fff'; g.stroke(); } // white ring on the orb you control
   if (R * cam.s > 18) {
     const fs = Math.max(12, R * 0.34), name = ow ? ow.name : '';
+    g.globalAlpha = 0.55; // names and mass are see-through so faces and colours show through
     g.font = '800 ' + fs + "px 'Bricolage Grotesque',system-ui,sans-serif"; g.textAlign = 'center'; g.textBaseline = 'middle';
     g.fillStyle = tx ? tx.name : '#fff';
     if (fs * cam.s >= 16 && (!tx || tx.stroke)) { g.lineWidth = fs * 0.14; g.strokeStyle = 'rgba(0,0,0,.45)'; g.strokeText(name, c.x, c.y); }
     g.fillText(name, c.x, c.y);
     const ms = fs * 0.45; g.font = '700 ' + ms + "px 'Bricolage Grotesque',system-ui,sans-serif"; g.fillStyle = tx ? tx.mass : 'rgba(255,255,255,.38)';
     g.fillText(String(dm(c.m)), c.x, c.y + fs * 0.72);
+    g.globalAlpha = 1;
   }
 }
 const fb = Array.from({ length: 12 }, () => []);
