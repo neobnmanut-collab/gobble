@@ -727,7 +727,17 @@ $('pcopy').addEventListener('click', () => {
 // chat is also kept in this browser (last 20), so it's still there after a reload or a server update
 let chatStore = []; try { chatStore = JSON.parse(localStorage.getItem('gobblechatlog') || '[]').slice(-20); } catch (e) {}
 const chatSeen = new Map(); for (const c of chatStore) { const k = c.channel + '|' + c.name + '|' + c.text; chatSeen.set(k, (chatSeen.get(k) || 0) + 1); }
+// mute: click a name in the chat (or in the voice list) to hide that player's messages and silence their voice
+let muted = new Set(); try { muted = new Set(JSON.parse(localStorage.getItem('gobblemuted') || '[]')); } catch (e) {}
+function baseName(n) { const t = String(n || ''); const sp = t.indexOf(' '); return sp > 0 && BADGES.includes(t.slice(0, sp)) ? t.slice(sp + 1) : t; }
+function toggleMute(n) {
+  n = baseName(n); if (!n) return;
+  if (muted.has(n)) { muted.delete(n); toast('🔈 ' + tr('unmuted', { name: n })); } else { muted.add(n); toast('🔇 ' + tr('muted', { name: n })); for (const el of [...$('clog').children]) if (el.dataset.n === n) el.remove(); }
+  try { localStorage.setItem('gobblemuted', JSON.stringify([...muted])); } catch (e) {}
+  for (const p of peers.values()) if (p.audio) p.audio.muted = muted.has(baseName(p.name)); renderVoice();
+}
 function addChat(m, restoring) {
+  if (muted.has(baseName(m.name))) return;
   if (!restoring) { // a message the server repeats after a reconnect that we already show from our own copy: skip it
     const k = m.channel + '|' + m.name + '|' + m.text, n = chatSeen.get(k) || 0;
     if (n > 0 && !connectedFresh()) { chatSeen.set(k, n - 1); return; }
@@ -738,7 +748,7 @@ function addChat(m, restoring) {
   const log = $('clog'), atBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 30;
   const li = document.createElement('div'); li.className = 'cm'; li.style.setProperty('--pc', 'hsl(' + m.hue + ' 75% 60%)'); setTimeout(() => li.classList.add('old'), 30000);
   if (m.channel === 1) { const t = document.createElement('span'); t.className = 'ctag'; t.textContent = tr('party'); li.append(t); }
-  const n = document.createElement('b'); n.textContent = m.name + ': '; n.style.color = 'hsl(' + m.hue + ' 75% 65%)'; li.append(n, document.createTextNode(m.text));
+  const n = document.createElement('b'); n.textContent = m.name + ': '; n.style.color = 'hsl(' + m.hue + ' 75% 65%)'; n.style.cursor = 'pointer'; n.title = tr('mute_tip'); n.onclick = () => toggleMute(m.name); li.dataset.n = baseName(m.name); li.append(n, document.createTextNode(m.text));
   log.append(li); while (log.children.length > 20) log.firstChild.remove(); // keep the last 20
   if (atBottom) log.scrollTop = log.scrollHeight;
   if ($('chat').classList.contains('min')) $('cmin').textContent = tr('new_msg');
@@ -923,7 +933,7 @@ function makePeer(id, name) {
   pc.onicecandidate = e => { if (e.candidate) signal(id, { t: 'ice', d: e.candidate }); };
   pc.ontrack = e => {
     const st = e.streams[0]; if (!st || p.audio) return;
-    const a = document.createElement('audio'); a.autoplay = true; a.srcObject = st; a.style.display = 'none'; document.body.append(a); a.play().catch(() => {}); p.audio = a;
+    const a = document.createElement('audio'); a.autoplay = true; a.srcObject = st; a.style.display = 'none'; a.muted = muted.has(baseName(p.name)); document.body.append(a); a.play().catch(() => {}); p.audio = a;
     try { const src = vctx.createMediaStreamSource(st), an = vctx.createAnalyser(); an.fftSize = 256; src.connect(an); p.an = an; } catch (e) {}
   };
   pc.onconnectionstatechange = () => { renderVoice(); if (pc.connectionState === 'failed') { dropPeer(id); if (voiceOn && roster.some(m => m.vid === id) && voiceSelf < id) setTimeout(() => callPeer(id, name), 1500); } };
@@ -962,7 +972,7 @@ function renderVoice() {
   const l = $('vlist'); l.textContent = ''; l.hidden = !voiceOn;
   if (!voiceOn) return;
   for (const r of roster) { const s = document.createElement('span'); const me = r.vid === voiceSelf, pr = peers.get(r.vid), st = me ? 'connected' : pr ? pr.pc.connectionState : 'new', talk = me ? micLive() : pr && pr.talk;
-    const ic = talk ? '🔊 ' : st === 'connected' ? '🔈 ' : st === 'failed' ? '⚠️ ' : '⏳ '; s.className = 'vm' + (talk ? ' talk' : '') + (st === 'failed' ? ' bad' : ''); s.textContent = ic + r.name; s.title = st; l.append(s); }
+    const ic = talk ? '🔊 ' : st === 'connected' ? '🔈 ' : st === 'failed' ? '⚠️ ' : '⏳ '; const mu = !me && muted.has(baseName(r.name)); s.className = 'vm' + (talk && !mu ? ' talk' : '') + (st === 'failed' ? ' bad' : ''); s.textContent = (mu ? '🔇 ' : ic) + r.name; s.title = mu ? tr('mute_tip') : st; if (!me) { s.style.cursor = 'pointer'; s.onclick = () => toggleMute(r.name); } l.append(s); }
 }
 $('vbtn').addEventListener('click', e => { e.currentTarget.blur(); if (voiceOn) leaveVoice(); else joinVoice(); });
 

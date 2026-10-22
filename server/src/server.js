@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const { WebSocketServer } = require('ws');
 const C = require('./config');
+const { clean, cleanName } = require('./filter');
 const { Game, gi, GN } = require('./game');
 const { enc, decode } = require('./protocol');
 
@@ -92,12 +93,12 @@ wss.on('connection', (ws, req) => {
         if (m.spec === 0) cl.spec = false;
         else { if (!cl.dead) game.leave(cl, true); cl.spec = true; cl.specO = m.spec === 2 ? game.watchNext(cl.specO) : game.watchNext(null); }
         break;
-      case 12: cl.chatName = String(m.name).replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 14); break;
+      case 12: cl.chatName = cleanName(String(m.name).replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 14)); break;
       case 11: cl.growth = Math.max(1, Math.min(C.GROWTH, m.growth | 0)) || C.GROWTH_DEFAULT; break;
       case 10: { // chat: everyone in this arena, or just your party
         const now = Date.now(); if (now - (cl.chatT || 0) < 700) return; cl.chatT = now;
         const who = (cl.badge !== undefined && cl.badge !== 255 ? BADGES[cl.badge] + ' ' : '') + ((!cl.dead && cl.name) || cl.chatName || cl.name || 'Guest');
-        const text = m.text.replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120); if (!text) return;
+        const text = clean(m.text.replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120)); if (!text) return;
         if (m.channel === 1 && !cl.party) return;
         let hue = 0; for (const ch of who) hue = (hue * 31 + ch.charCodeAt(0)) % 360; // each name gets its own chat colour
         const buf = enc.chat(m.channel, hue, who, text);

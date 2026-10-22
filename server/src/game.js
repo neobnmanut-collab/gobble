@@ -115,7 +115,7 @@ class Game {
   join(client, name, multi, party) {
     this.leave(client, true);
     client.party = String(party || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
-    name = String(name || '').replace(/[\u0000-\u001f]/g, '').trim().slice(0, 14) || 'Player';
+    name = cleanName(String(name || '').replace(/[\u0000-\u001f]/g, '').trim().slice(0, 14) || 'Player');
     client.name = name; client.multi = !!multi; client.active = 0; client.boxes = [];
     client.dead = false; client.kills = 0; client.peak = 0; client.born = this.t;
     client.ejectOn = false; client.feedOn = false; client.ejectMs = 60; client.ejT = 0; client.fdT = 0;
@@ -559,3 +559,4 @@ class Game {
 }
 
 module.exports = { Game, rad, gi, GN };
+const { cleanName } = require('./filter');
