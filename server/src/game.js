@@ -165,13 +165,18 @@ class Game {
     if (leaving) { leaving.tx = clamp(+x || 0, 0, WS); leaving.ty = clamp(+y || 0, 0, WS); }
     const o = 1 - client.active, id = client.boxes[o];
     if (!this.cells.some(c => c.o === id)) { // that box was eaten: bring it back next to the other one
-      const q = this.spotNear(client.boxes[client.active], rad(C.START_MASS));
-      const c = this.mkCell(id, q.x, q.y, C.START_MASS); c.prot = C.SPAWN_PROTECT; this.cells.push(c);
+      const q = this.spotNear(client.boxes[client.active], rad(C.REVIVE_MASS));
+      const c = this.mkCell(id, q.x, q.y, C.REVIVE_MASS); c.prot = C.SPAWN_PROTECT; this.cells.push(c);
       const ow = this.owners.get(id); ow.tx = q.x; ow.ty = q.y;
     }
     client.active = o;
   }
-  respawn(client) { if (!client.boxes || !client.boxes.length) return; this.join(client, client.name, client.multi, client.party); }
+  respawn(client) {
+    if (!client.boxes || !client.boxes.length) return;
+    // no starting over while you have a big orb
+    for (const c of this.cells) if (client.boxes.includes(c.o) && c.m > C.RESPAWN_BLOCK) return;
+    this.join(client, client.name, client.multi, client.party);
+  }
   shoot(c, dx, dy, v, j = 0.3) {
     const a = (Math.random() - 0.5) * j, co = Math.cos(a), si = Math.sin(a), ex = dx * co - dy * si, ey = dx * si + dy * co;
     const sv = v * (1 + (Math.random() - 0.5) * j * 0.6), ih = j > 0.1 ? 1 : 0;

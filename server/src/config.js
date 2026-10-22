@@ -21,12 +21,14 @@ module.exports = {
   SPIKE_PIECES: 5,
 
   START_MASS: 60000,     // every orb a player starts with (shown as 30,000)
+  REVIVE_MASS: 800,      // a multibox orb brought back after being eaten starts this small (shown as 400)
+  RESPAWN_BLOCK: 40000,  // full respawn is refused while any of your orbs is bigger than this (shown as 20,000)
   MIN_PIECE: 320,        // no orb is ever smaller than this (shown as 160); orbs can split from twice this
   MAX_PIECES: 16,
   MAX_MASS: 120000,      // an orb above this splits in two (shown as 60,000)
   EJECT_MASS: 16,
   EJECT_MIN_MS: 40,      // fastest allowed rapid feed
-  SPEED: 1685,           // speed = SPEED * mass^-0.25
+  SPEED: 1938,           // speed = SPEED * mass^-0.25 (15% faster than 1685)
   SPLIT_SPEED: 806,      // launch speed of a split piece for small orbs...
   SPLIT_GROWTH: 0.5,     // ...bigger orbs launch a bit faster: 0 = same for all sizes, 1 = in proportion to size
   EAT_RATIO: 1.25,
