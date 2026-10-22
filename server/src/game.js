@@ -291,6 +291,8 @@ class Game {
         let sc = q.m / (d + 80) * b.agg;
         if (spd(q.m) > mySp * 1.05 && d > lead.r + 140 && closing < 20 && wall > 260) sc *= 0.2;
         if (this.owners.get(q.o)?.kind === 'human') sc *= 1.15;
+        if ((oc.get(q.o) || 1) > 1 && q.mt > 2) sc *= 1.25; // split-up prey can't rejoin yet: easy pickings
+        if (wall < q.r + 300) sc *= 1.2; // cornered prey can't run far
         if (sc > bs) { bs = sc; tgt = q; td = d; }
       }
     }
@@ -313,6 +315,15 @@ class Game {
     if (bigThreat && nearGap < -20 && lead.m >= 2 * MINM && ps.length < 3 && lead.sc <= 0 && Math.random() < b.skill * 0.25) {
       const ax = lead.x - bigThreat.x, ay = lead.y - bigThreat.y, ad = Math.hypot(ax, ay) || 1;
       this.botSplit(ps, lead.x + ax / ad * 400, lead.y + ay / ad * 400);
+    }
+    // needle trick (skilled bots): if a big orb that would burst on a needle is lined up behind a needle,
+    // feed that needle until it fires a new one straight into them
+    if (!b.feedT && bigThreat && bigThreat.m >= VPOP * 1.6 && Math.hypot(bigThreat.x - lead.x, bigThreat.y - lead.y) - bigThreat.r - lead.r > 220 && lead.m >= 1400 && b.skill > 0.55 && Math.random() < b.skill) {
+      for (const v of spikes) {
+        const bx = v.x - lead.x, by = v.y - lead.y, bd = Math.hypot(bx, by) || 1; if (bd > 650 || bd < lead.r + v.r + 60) continue;
+        const tx = bigThreat.x - v.x, ty = bigThreat.y - v.y, tdd = Math.hypot(tx, ty) || 1; if (tdd > 1300) continue;
+        if ((bx * tx + by * ty) / (bd * tdd) > 0.93) { b.feedT = 0.9; b.feedV = v; break; }
+      }
     }
     const isBig = lead.m >= VPOP; let vNear = false;
     if (isBig) for (const v of spikes) { const dx = v.x - cx, dy = v.y - cy; if (Math.abs(dx) < lead.r + 320 && Math.abs(dy) < lead.r + 320 && Math.hypot(dx, dy) < lead.r + v.r + 200) { vNear = true; break; } }
@@ -343,6 +354,10 @@ class Game {
           const vd = Math.hypot(vx, vy) || 1, gap = vd - lead.r - v.r; if (gap > 200) continue;
           const dot = (ux * vx + uy * vy) / vd; if (dot > 0) sc -= dot * dot * 3 * (1 - Math.max(0, gap) / 200);
         }
+        if (!isBig && threats.length) for (const v of spikes) { // small enough to slip through needles: hide among them
+          const vx = v.x - cx, vy = v.y - cy; if (Math.abs(vx) > 600 || Math.abs(vy) > 600) continue;
+          const vd = Math.hypot(vx, vy) || 1, dot = (ux * vx + uy * vy) / vd; if (dot > 0) sc += dot * 2.2 * (1 - vd / 850) * b.skill;
+        }
         sc += (ux * gux + uy * guy) * (threats.length ? (tgt ? 1 : 0.4) : 2);
         if (sc > best) { best = sc; bx = ux; by = uy; }
       }
@@ -357,6 +372,16 @@ class Game {
       const b = ow.b; let lead = ps[0], tm = 0, cx = 0, cy = 0;
       for (const p of ps) { if (p.m > lead.m) lead = p; tm += p.m; cx += p.x * p.m; cy += p.y * p.m; } cx /= tm; cy /= tm;
       b.tt -= dt; if (b.tt <= 0) this.think(o, ps, lead, b);
+      if (b.feedT > 0) { // shooting feed into a needle
+        const v = b.feedV; b.feedT -= dt; b.fdA = (b.fdA || 0) + dt;
+        if (!v || v.dead || lead.m < MINM + C.EJECT_MASS * 4) b.feedT = 0;
+        else {
+          const dx = v.x - lead.x, dy = v.y - lead.y, d = Math.hypot(dx, dy) || 1;
+          b.tox = dx / d * Math.max(0, d - lead.r - v.r - 120); b.toy = dy / d * Math.max(0, d - lead.r - v.r - 120); // hold position in front of it
+          while (b.fdA >= 0.05) { b.fdA -= 0.05; this.shoot(lead, dx / d, dy / d, C.EJECT_SPEED, 0.3, true); }
+        }
+        if (b.feedT <= 0) { b.feedT = 0; b.feedV = null; }
+      }
       const dx = b.tox - b.ox, dy = b.toy - b.oy, d = Math.hypot(dx, dy), ms = (900 + b.skill * 1500) * (1 + Math.sqrt(lead.m) / 25) * dt;
       if (d > ms) { b.ox += dx / d * ms; b.oy += dy / d * ms; } else { b.ox = b.tox; b.oy = b.toy; }
       b.wx = cx + b.ox; b.wy = cy + b.oy;
