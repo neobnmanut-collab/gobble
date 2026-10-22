@@ -19,7 +19,7 @@ module.exports = {
 
   START_MASS: 800,
   MIN_PIECE: 320,        // no orb is ever smaller than this (shown as 160); orbs can split from twice this
-  MAX_PIECES: 12,
+  MAX_PIECES: 16,
   MAX_MASS: 120000,      // an orb above this splits in two (shown as 60,000)
   EJECT_MASS: 16,
   EJECT_MIN_MS: 40,      // fastest allowed rapid feed
