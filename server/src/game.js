@@ -184,7 +184,7 @@ class Game {
     const sv = v * (1 + (Math.random() - 0.5) * (stream ? 0.08 : j * 0.6)), ih = j > 0.1 || stream ? 1 : 0;
     const side = stream ? (Math.random() - 0.5) * 2 * v * 0.075 : 0; // sideways drift that outlasts the forward push, so the end spreads
     this.ejected.push({
-      id: this.nextPellet++, x: c.x + ex * (c.r + 4), y: c.y + ey * (c.r + 4), m: C.EJECT_MASS, own: c.o, imm: 0.6, hb: this.owners.get(c.o)?.hue ?? 0,
+      id: this.nextPellet++, x: c.x + ex * (c.r + 4), y: c.y + ey * (c.r + 4), m: C.EJECT_MASS, own: c.o, src: c, imm: 0.35, hb: this.owners.get(c.o)?.hue ?? 0,
       vx: ex * sv + ih * (c.ux * 0.4 + c.vx * 0.3), vy: ey * sv + ih * (c.uy * 0.4 + c.vy * 0.3), sp: stream ? 0 : (Math.random() - 0.5) * j * 4,
       lx: -ey * side, ly: ex * side,
     });
@@ -192,9 +192,13 @@ class Game {
   }
   eject(client) {
     const o = this.activeOwner(client), ow = this.owners.get(o); if (!ow) return;
+    let pieces = 0; for (const c of this.cells) if (c.o === o) pieces++;
     for (const c of this.cells) {
       if (c.o !== o || c.m < MINM + C.EJECT_MASS) continue;
-      const dx = ow.tx - c.x, dy = ow.ty - c.y, d = Math.hypot(dx, dy) || 1; this.shoot(c, dx / d, dy / d, C.EJECT_SPEED, 0.3, true);
+      const dx = ow.tx - c.x, dy = ow.ty - c.y, d = Math.hypot(dx, dy) || 1;
+      // feeding yourself: with the mouse on one of your pieces, that piece holds its mass and the others pour into it
+      if (pieces > 1 && d < c.r) continue;
+      this.shoot(c, dx / d, dy / d, C.EJECT_SPEED, 0.3, true);
     }
   }
   feedOther(client) {
@@ -482,7 +486,7 @@ class Game {
           if (dx * dx + dy * dy < r2) { c.m += human && !f.ej ? f.m * (ow.client.growth || C.GROWTH_DEFAULT) : f.m; bk[q] = bk[bk.length - 1]; bk.pop(); if (f.ej) this.nSettled--; else this.nfood--; }
         }
         const ea = ejG.size ? ejG.get(gy * GN + gx) : null;
-        if (ea) for (const f of ea) { if (f.dead || (f.imm > 0 && f.own === c.o)) continue; const dx = f.x - c.x, dy = f.y - c.y; if (dx * dx + dy * dy < r2) { c.m += f.m; f.dead = true; } }
+        if (ea) for (const f of ea) { if (f.dead || (f.imm > 0 && f.src === c)) continue; /* only the orb that shot it waits; your other pieces can take it straight away */ const dx = f.x - c.x, dy = f.y - c.y; if (dx * dx + dy * dy < r2) { c.m += f.m; f.dead = true; } }
       }
     }
     if (ejG.size) for (const v of this.spikes) {
