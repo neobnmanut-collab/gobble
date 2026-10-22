@@ -10,8 +10,8 @@ let WS = 12000, SPEED = 1685, W = 0, H = 0, dpr = 1, T = 0;
 const cam = { x: 6000, y: 6000, s: 0.5 }; let zm = 1;
 
 /* ---------- settings (same controls as the offline game) ---------- */
-const DEF = { split: 'Space', dsplit: 'KeyD', psplit: 'KeyQ', tsplit: 'KeyF', qsplit: 'KeyG', eject: 'KeyW', hline: 'KeyS', vline: 'KeyT', fline: '', respawn: 'KeyB', ping: 'KeyR', swap: 'Mouse2', feed: 'KeyE' };
-const ACT = ['split', 'dsplit', 'psplit', 'tsplit', 'qsplit', 'eject', 'hline', 'vline', 'fline', 'respawn', 'ping', 'swap', 'feed'].map(k => [k, 'a_' + k]);
+const DEF = { fx_quake: 'KeyK', fx_warn: 'KeyJ', fx_disco: 'KeyL', split: 'Space', dsplit: 'KeyD', psplit: 'KeyQ', tsplit: 'KeyF', qsplit: 'KeyG', eject: 'KeyW', hline: 'KeyS', vline: 'KeyT', fline: '', respawn: 'KeyB', ping: 'KeyR', swap: 'Mouse2', feed: 'KeyE' };
+const ACT = ['split', 'dsplit', 'psplit', 'tsplit', 'qsplit', 'eject', 'hline', 'vline', 'fline', 'respawn', 'ping', 'swap', 'feed', 'fx_quake', 'fx_warn', 'fx_disco'].map(k => [k, 'a_' + k]);
 const MACROS = [['none', 'm_none'], ['split', 'a_split'], ['dsplit', 'a_dsplit'], ['psplit', 'a_psplit'], ['tsplit', 'a_tsplit'], ['qsplit', 'a_qsplit'], ['eject', 'a_eject'], ['swap', 'm_swap']];
 let binds = Object.assign({}, DEF), dd = 60, rf = 25, pd = 50, ppd = 120, lsi = false, lsn = 2, mal = true, ltg = false, ftg = false, mbtn = { 0: 'none', 2: 'none' };
 // test mode: open the page with ?test=1 to start one orb at 35,000 that never loses mass
@@ -19,7 +19,7 @@ const TEST = /(^|[?&])test=1(&|$)/.test(location.search.slice(1));
 let lines = true; // lines from your orbs to the mouse
 let ring = false; // multibox: mark the active orb with a white ring instead of recolouring both
 let faces = true; // funny faces on bots
-let quakeT = 0; // seconds of screen shake left
+let quakeT = 0, discoT = 0, confettiT = 0, rec = null, confetti = []; // seconds left of each effect
 let fcap = 0; // highest frames per second to draw; 0 = as many as the monitor shows
 // multibox colours: the orb you control and your other one. Text colours are worked out once, not per frame.
 const COL_DEF = ['#f4f4f4', '#e0443e'];
@@ -36,6 +36,7 @@ function near(a, b) { const x = rgbOf(a), y = rgbOf(b); return Math.hypot(x[0] -
 function markClashes() { for (const v of ownerCol.values()) v.clash = near(v.hex, colA) || near(v.hex, colI); }
 function sendCols() { if (connected) send(Net.enc.cols(colA, colI)); }
 function ownerFill(o) { // the colour an owner's orbs and fed blobs are drawn in
+  if (discoT > 0) return 'hsl(' + ((T * 400 + o * 67) % 360 | 0) + ' 90% 58%)';
   const mineC = myBoxes.includes(o), ow = owners.get(o);
   if (mineC && myBoxes.length > 1 && !ring) return o === activeId() ? colA : colI;
   const oc = !mineC && ownerCol.get(o); if (oc && !oc.clash) return oc.hex;
@@ -139,7 +140,8 @@ function handle(m) {
       break;
     case 2: myBoxes = m.ids; active = m.active; break;
     case 3: for (const o of m.list) owners.set(o.id, o); break;
-    case 16: quakeT = 2; break;
+    case 16: if (m.fx === 0) quakeT = 2; else if (m.fx === 1) showBanner('warn'); else discoT = 8; break;
+    case 17: rec = m; renderRecord(); if (m.announce) { showBanner('record', m); confettiT = 3.5; } break;
     case 15: ownerCol.clear(); for (const [id, hex] of m.list) ownerCol.set(id, { hex, txt: textFor(hex), clash: false }); markClashes(); break;
     case 4: {
       lastTick = performance.now(); view.x = m.vx; view.y = m.vy;
@@ -288,6 +290,7 @@ function act(k, down) {
     case 'fline': lineKey('f', down); break;
     case 'respawn': if (down) send(Net.enc.respawn()); break;
     case 'ping': if (down) { const w = s2w(mx, my); pings.push({ x: w.x, y: w.y, t: 3 }); if (pings.length > 5) pings.shift(); } break;
+    case 'fx_quake': case 'fx_warn': case 'fx_disco': if (down) send(Net.enc.effect(['fx_quake', 'fx_warn', 'fx_disco'].indexOf(k))); break;
     case 'swap': if (down && multiChosen) { const w = aimPoint(); send(Net.enc.swap(clamp(w.x, 0, WS), clamp(w.y, 0, WS))); } break;
   }
 }
@@ -374,7 +377,7 @@ function drawOrb(c, multi) {
   const tx = box && !ring ? (act ? txtA : txtI) : oc && !oc.clash ? oc.txt : null;
   g.fillStyle = ownerFill(c.o);
   const st = faces && ow && !ow.human ? FACES[ow.id % FACES.length] : null;
-  if (st && R * cam.s > 7) g.drawImage(st.img, c.x - R * STICK, c.y - R * STICK, R * 2 * STICK, R * 2 * STICK); // bots are stickers
+  if (st && R * cam.s > 7 && discoT <= 0) g.drawImage(st.img, c.x - R * STICK, c.y - R * STICK, R * 2 * STICK, R * 2 * STICK); // bots are stickers
   else { if (st) g.fillStyle = st.col; g.beginPath(); g.arc(c.x, c.y, R, 0, TAU); g.fill(); }
   if (ring && act) { g.beginPath(); g.arc(c.x, c.y, R, 0, TAU); g.lineWidth = Math.max(2.5 / cam.s, R * 0.07); g.strokeStyle = '#fff'; g.stroke(); } // white ring on the orb you control
   if (R * cam.s > 18) {
@@ -431,7 +434,8 @@ function draw(dt) {
     const since = now - b.lt, p = dd <= 0 ? 1 : Math.min(1, since / dd), over = Math.min(0.1, Math.max(0, since - Math.max(dd, 34)) / 1000);
     b.x = b.ox + (b.tx - b.ox) * p + b.vx * over; b.y = b.oy + (b.ty - b.oy) * p + b.vy * over;
   }
-  g.setTransform(dpr, 0, 0, dpr, 0, 0); g.fillStyle = '#111'; g.fillRect(0, 0, W, H);
+  g.setTransform(dpr, 0, 0, dpr, 0, 0); g.fillStyle = discoT > 0 ? 'hsl(' + ((T * 200) % 360 | 0) + ' 45% ' + (8 + 5 * Math.abs(Math.sin(T * 9))).toFixed(1) + '%)' : '#111'; g.fillRect(0, 0, W, H);
+  if (discoT > 0) discoT -= dt;
   g.save(); g.translate(W / 2, H / 2);
   if (quakeT > 0) { quakeT -= dt; const a = 22 * Math.min(1, quakeT); g.translate((Math.random() - 0.5) * a, (Math.random() - 0.5) * a); g.rotate((Math.random() - 0.5) * 0.012 * Math.min(1, quakeT)); }
   g.scale(cam.s, cam.s); g.translate(-cam.x, -cam.y);
@@ -494,6 +498,7 @@ function draw(dt) {
   }
   for (const p of pings) { const a = clamp(p.t, 0, 1), r = (16 + ((3 - p.t) % 1) * 34) / cam.s; g.strokeStyle = 'rgba(255,210,90,' + a + ')'; g.lineWidth = 3 / cam.s; g.beginPath(); g.arc(p.x, p.y, r, 0, TAU); g.stroke(); }
   g.restore();
+  if (confettiT > 0 || confetti.length) drawConfetti(dt);
 }
 let mmT = 0;
 function drawMM() {
@@ -575,17 +580,17 @@ function release(c) { held.delete(c); for (const k in binds) if (binds[k] === c)
 function assign(a, code) { for (const k in binds) if (k !== a && binds[k] === code) binds[k] = binds[a]; binds[a] = code; saveCfg(); updateHelp(); }
 function updateHelp() {
   const kb = $('keys'); kb.textContent = '';
-  for (const [k, v] of [[tr('k_move'), tr('k_mouse')], [tr('a_split'), label(binds.split)], [tr('a_dsplit'), label(binds.dsplit)], [tr('a_psplit'), label(binds.psplit)], [tr('a_eject'), label(binds.eject)], [tr('k_line'), label(binds.hline) + ' / ' + label(binds.vline)]]) { const s = document.createElement('span'); s.append(k + ' '); const b = document.createElement('kbd'); b.textContent = v; s.append(b); kb.append(s); }
+  for (const [k, v] of [[tr('k_move'), tr('k_mouse')], [tr('a_split'), label(binds.split)], [tr('a_dsplit'), label(binds.dsplit)], [tr('a_psplit'), label(binds.psplit)], [tr('effects'), [binds.fx_quake, binds.fx_warn, binds.fx_disco].map(label).join(' ')], [tr('a_eject'), label(binds.eject)], [tr('k_line'), label(binds.hline) + ' / ' + label(binds.vline)]]) { const s = document.createElement('span'); s.append(k + ' '); const b = document.createElement('kbd'); b.textContent = v; s.append(b); kb.append(s); }
   setMode(watchChosen ? 'watch' : multiChosen);
 }
 function renderSettings() {
-  const kl = $('kl'); kl.textContent = '';
+  const kl = $('kl'); kl.textContent = ''; $('fxl').textContent = '';
   for (const [k, n] of ACT) {
     const row = document.createElement('div'); row.className = 'kr';
     const s = document.createElement('span'); s.textContent = tr(n);
     const b = document.createElement('button'); b.className = 'kb' + (listening === k ? ' wait' : ''); b.id = 'kb_' + k; b.textContent = listening === k ? tr('press_key') : label(binds[k]);
     b.onclick = e => { e.stopPropagation(); listening = k; renderSettings(); };
-    row.append(s, b); kl.appendChild(row);
+    row.append(s, b); (k.startsWith('fx_') ? $('fxl') : kl).appendChild(row);
   }
   for (const b of [0, 2]) { const el = $('mm' + b); if (!el.options.length) for (const [v, t] of MACROS) { const o = document.createElement('option'); o.value = v; o.textContent = tr(t); o.dataset.t = t; el.append(o); } el.value = mbtn[b]; }
   { const el = $('fcap'), opts = [0, ...[30, 60, 75, 90, 120, 144, 165, 240, 360].filter(r => r < hz)];
@@ -615,7 +620,6 @@ addEventListener('keydown', e => {
   }
   const tag = e.target.tagName; if (tag === 'INPUT' || tag === 'SELECT') return;
   if (e.code === 'Enter' && !isBound('Enter') && connected) { e.preventDefault(); openChat(); return; }
-  if (e.code === 'KeyK' && !isBound('KeyK') && connected) { e.preventDefault(); send(Net.enc.quake()); return; } // (secret, not listed anywhere)
   if (watching && $('ov').hidden && e.code === 'Space') { e.preventDefault(); send(Net.enc.spec(2)); return; }
   if (!playing) return;
   if ((e.ctrlKey || e.metaKey) && e.code === 'KeyC' && String(getSelection()).length) return; // copy selected chat text
@@ -722,6 +726,27 @@ $('ctx').addEventListener('keydown', e => {
   else if (e.key === 'Escape') closeChat();
 });
 $('shc').addEventListener('change', e => { showChat = e.target.checked; $('chat').hidden = !showChat; try { localStorage.setItem('gobblechat', showChat ? '1' : '0'); } catch (x) {} });
+
+/* ---------- fun effects and the arena record ---------- */
+function showBanner(kind, r) {
+  const el = $('fxb'); clearTimeout(showBanner.t); clearTimeout(showBanner.t2);
+  el.className = kind; el.hidden = false; void el.offsetWidth; el.classList.add('in');
+  if (kind === 'warn') {
+    $('fxt').textContent = tr('warn_title'); $('fxs').textContent = tr('warn_text');
+    showBanner.t2 = setTimeout(() => { $('fxt').textContent = '😄'; $('fxs').textContent = tr('warn_joke'); }, 3000);
+    showBanner.t = setTimeout(() => el.classList.remove('in'), 5000);
+  } else {
+    $('fxt').textContent = '🏆 ' + tr('record_title'); $('fxs').textContent = r.name + ' · ' + dm(r.m).toLocaleString();
+    showBanner.t = setTimeout(() => el.classList.remove('in'), 5000);
+  }
+}
+function renderRecord() { $('rec').hidden = !rec; if (rec) $('rec').textContent = '🏆 ' + tr('record_hud') + ': ' + rec.name + ' · ' + dm(rec.m).toLocaleString(); }
+function drawConfetti(dt) { // a burst of paper bits falling over the whole screen, drawn in screen space
+  if (confettiT > 0) { confettiT -= dt; for (let i = 0; i < 6; i++) confetti.push({ x: Math.random() * W, y: -10, vx: (Math.random() - 0.5) * 120, vy: 120 + Math.random() * 160, r: Math.random() * TAU, vr: (Math.random() - 0.5) * 10, c: 'hsl(' + (Math.random() * 360 | 0) + ' 90% 60%)', s: 5 + Math.random() * 6 }); }
+  g.save(); g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  for (let i = confetti.length - 1; i >= 0; i--) { const p = confetti[i]; p.x += p.vx * dt; p.y += p.vy * dt; p.r += p.vr * dt; if (p.y > H + 20) { confetti.splice(i, 1); continue; } g.translate(p.x, p.y); g.rotate(p.r); g.fillStyle = p.c; g.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2); g.setTransform(dpr, 0, 0, dpr, 0, 0); }
+  g.restore();
+}
 
 /* ---------- language ---------- */
 function renderLang() {

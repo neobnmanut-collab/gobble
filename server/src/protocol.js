@@ -36,6 +36,8 @@
 //  13 BATCH   repeated (u32 length, message): several messages sent as one, to save per-message work
 //  10 CHAT    u8 channel, u16 hue, u8 name length, name, utf8 text
 //  15 COLOURS u16 n, n x (u32 owner, u8 r, u8 g, u8 b): the colours multibox players picked for their orbs
+//  16 EFFECT  u8 effect (0 earthquake, 1 fake server warning, 2 disco) that a player set off for everyone
+//  17 RECORD  u32 mass, u8 1 = announce it big, u8 len, utf8 name: the arena's mass record (since the server started)
 //  11 PARTY   u8 code length, code, u8 n, n x u32 owner id of every box in your party
 const VERSION = 2;
 const Q = 65535;
@@ -94,7 +96,8 @@ const enc = {
     const w = new Writer(3 + cb.length + list.length * 4); w.u8(11); w.u8(cb.length); w.bytes(cb); w.u8(list.length); for (const id of list) w.u32(id); return w.done();
   },
   colours(list) { const w = new Writer(3 + list.length * 7); w.u8(15); w.u16(list.length); for (const [id, rgb] of list) { w.u32(id); w.u8(rgb >> 16 & 255); w.u8(rgb >> 8 & 255); w.u8(rgb & 255); } return w.done(); },
-  quake() { return Buffer.from([16]); },
+  effect(fx) { return Buffer.from([16, fx]); },
+  record(m, name, announce) { const nb = Buffer.from(String(name).slice(0, 16), 'utf8').subarray(0, 48); const w = new Writer(7 + nb.length); w.u8(17); w.u32(m); w.u8(announce ? 1 : 0); w.u8(nb.length); w.bytes(nb); return w.done(); },
   pong(token) { const w = new Writer(5); w.u8(9); w.u32(token); return w.done(); },
 };
 
@@ -112,7 +115,7 @@ function decode(buf) {
       case 15: if (buf.length < 7) return null; return { op, a: buf[1] << 16 | buf[2] << 8 | buf[3], i: buf[4] << 16 | buf[5] << 8 | buf[6] };
       case 9: if (buf.length < 5) return null; return { op, token: buf.readUInt32LE(1) };
       case 11: if (buf.length < 2) return null; return { op, growth: buf[1] };
-      case 16: return { op };
+      case 16: return { op, fx: buf.length > 1 ? Math.min(2, buf[1]) : 0 };
       case 14: if (buf.length < 2) return null; return { op, spec: buf[1] };
       case 12: return { op, name: buf.subarray(1, 49).toString('utf8') };
       case 10: if (buf.length < 3) return null; return { op, channel: buf[1] === 1 ? 1 : 0, text: buf.subarray(2, 2 + 240).toString('utf8') };

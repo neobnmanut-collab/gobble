@@ -129,6 +129,17 @@ button{font:700 1rem var(--font);cursor:pointer}
 @media (pointer:coarse){#gear kbd{display:none}}
 @media (max-width:560px){#live{top:auto;bottom:calc(env(safe-area-inset-bottom,0px) + 14px);font-size:.75rem}}
 #go:disabled{opacity:.5;cursor:not-allowed}
+#rec{margin:6px 0 0;padding-top:6px;border-top:1px solid var(--line);font-size:.8rem;color:#ffd166;font-weight:700;max-width:190px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* big centre banner for the arena record and the fake warning */
+#fxb{position:fixed;left:50%;top:18%;z-index:8;pointer-events:none;display:flex;flex-direction:column;align-items:center;gap:6px;padding:18px 34px;border-radius:18px;text-align:center;transform:translate(-50%,-30px) scale(.8);opacity:0;transition:transform .45s cubic-bezier(.2,1.6,.4,1),opacity .3s}
+#fxb.in{transform:translate(-50%,0) scale(1);opacity:1}
+#fxb b{font-size:clamp(1.6rem,4vw,2.8rem);font-weight:800;letter-spacing:-.02em}
+#fxb span{font-size:clamp(1rem,2.2vw,1.4rem);font-weight:700}
+#fxb.record{background:linear-gradient(180deg,#3a2a00,#1c1500);border:2px solid #ffd166;color:#ffe08a;box-shadow:0 0 60px rgba(255,209,102,.45)}
+#fxb.warn{background:#2a0606;border:2px solid #ff4d4d;color:#ffd0d0;box-shadow:0 0 50px rgba(255,60,60,.45);animation:blink .5s steps(2) 6}
+@keyframes blink{50%{border-color:#ffd0d0}}
+@media (prefers-reduced-motion:reduce){#fxb{transition:none}#fxb.warn{animation:none}}
+.c-fx{--c:#ff9a3c}
 /* settings: one colour per group, taken from the logo, used only as a thin accent */
 #st .card{padding:0;gap:0}
 #st .top{position:sticky;top:0;z-index:2;background:var(--surface);padding:18px 20px 12px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:12px}
@@ -160,7 +171,8 @@ button{font:700 1rem var(--font);cursor:pointer}
 <canvas id="c"></canvas>
 <canvas id="mm"></canvas>
 <div class="hud" id="hud"><span class="k" data-t="mass">Mass</span><b id="sc">0</b><span class="k" data-t="best">Best</span><b id="bs">0</b><span class="k" data-t="rank">Rank</span><b id="rk">–</b><span class="k" data-t="sector">Sector</span><b id="sec">–</b><span class="k" data-t="ping">Ping</span><b id="png">–</b><span class="k">FPS</span><b id="fpsv">–</b><span class="k" data-t="online">Online</span><b id="onl">–</b><div id="ct"></div></div>
-<div class="hud" id="lbw"><h2 data-t="top">Top orbs</h2><ol id="lb"></ol></div>
+<div class="hud" id="lbw"><h2 data-t="top">Top orbs</h2><ol id="lb"></ol><p id="rec" hidden></p></div>
+<div id="fxb" hidden><b id="fxt"></b><span id="fxs"></span></div>
 <div id="tc"><button id="bsp" data-t="split">Split</button><button id="bds" data-t="split2">2× Split</button><button id="bej" data-t="eject">Eject</button><button id="bsw" hidden data-t="swap">Swap</button><button id="bfd" hidden data-t="feed">Feed</button></div>
 <div class="ov" id="ov"><div class="card">
   <div class="logo" aria-label="Gobble"><svg viewBox="0 0 64 64" aria-hidden="true"><defs><clipPath id="lgc"><circle cx="27" cy="34" r="22"/></clipPath></defs><circle cx="27" cy="34" r="22" fill="#2aa58b"/><circle cx="45" cy="20" r="10" fill="#ff5d73"/><circle cx="45" cy="20" r="10" fill="#1d7563" clip-path="url(#lgc)"/><circle cx="18.5" cy="26.5" r="4.4" fill="#fff" fill-opacity=".92"/><circle cx="58.5" cy="8" r="2.6" fill="#ffd166"/><circle cx="60" cy="38" r="2.1" fill="#7cc6ff"/><circle cx="53" cy="53" r="1.7" fill="#c792ff"/></svg><span class="wm">Gobble<i></i></span></div>
@@ -185,7 +197,7 @@ button{font:700 1rem var(--font);cursor:pointer}
 <button id="gear">⚙ <span id="gearT" data-t="controls">Settings</span> <kbd id="gearK" hidden>Esc</kbd></button>
 <div class="ov" id="st" hidden><div class="card wide">
   <div class="top"><div class="sh"><h1 style="font-size:1.6rem" data-t="controls">Settings</h1><button class="x" id="cl2" aria-label="Close" data-ta="close">✕</button></div>
-  <nav class="nav" aria-label="Sections"><button type="button" class="c-gen" data-go="g-gen" data-t="nav_general">General</button><button type="button" class="c-key" data-go="g-key" data-t="keys">Keys</button><button type="button" class="c-play" data-go="g-play" data-t="nav_gameplay">Gameplay</button><button type="button" class="c-dis" data-go="g-dis" data-t="display">Display</button></nav></div>
+  <nav class="nav" aria-label="Sections"><button type="button" class="c-gen" data-go="g-gen" data-t="nav_general">General</button><button type="button" class="c-key" data-go="g-key" data-t="keys">Keys</button><button type="button" class="c-play" data-go="g-play" data-t="nav_gameplay">Gameplay</button><button type="button" class="c-fx" data-go="g-fx" data-t="effects">Effects</button><button type="button" class="c-dis" data-go="g-dis" data-t="display">Display</button></nav></div>
   <div class="body">
   <div class="grp c-gen" id="g-gen" data-t="nav_general">General</div>
   <div class="sec c-gen"><div class="row"><h2 data-t="language" style="margin:0">Language</h2><select id="lng" aria-label="Language"></select></div></div>
@@ -217,6 +229,8 @@ button{font:700 1rem var(--font);cursor:pointer}
     <label class="row"><span data-t="tg_feed">Rapid feed toggles on and off instead of holding</span><input type="checkbox" id="ftg"></label>
     <label class="row"><span data-t="tg_chat">Show chat (Enter to type)</span><input type="checkbox" id="shc"></label>
     <p class="hint" data-t="toggles_hint">This is an online game, so it keeps running while this panel is open. Your browser’s own shortcuts are blocked while you play.</p></div>
+  <div class="grp c-fx" id="g-fx" data-t="effects">Effects</div>
+  <div class="sec c-fx"><h2 data-t="effects">Effects</h2><p class="hint" data-t="effects_hint">Fun surprises everyone in the arena sees at once. Only for show: nobody gains or loses anything. One every 20 seconds.</p><div class="kg" id="fxl"></div></div>
   <div class="grp c-dis" id="g-dis" data-t="display">Display</div>
   <div class="sec c-dis"><h2 data-t="display">Display</h2>
     <div class="row"><span data-t="draw_delay">Draw delay</span><input type="range" id="dd" min="0" max="300" step="10"><b id="ddv"></b></div>
@@ -229,9 +243,9 @@ button{font:700 1rem var(--font);cursor:pointer}
   <div class="btns"><button class="kb" id="rs" data-t="reset">Reset defaults</button><button class="primary" id="cl" data-t="done">Done</button></div>
   </div>
 </div></div>
-<script src="i18n.js?v=44"></script>
-<script src="servers.js?v=44"></script>
-<script src="net.js?v=44"></script>
-<script src="game.js?v=44"></script>
+<script src="i18n.js?v=45"></script>
+<script src="servers.js?v=45"></script>
+<script src="net.js?v=45"></script>
+<script src="game.js?v=45"></script>
 </body>
 </html>

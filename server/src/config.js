@@ -38,6 +38,7 @@ module.exports = {
   MERGE_MAX: 40,         // ...but never longer than this
   GROWTH_DEFAULT: 1,     // growth a player gets until they pick one
   GROWTH: 1,               // highest growth boost a player can pick (1x up to this): pellets give this many times their mass, eaten orbs give 1 + (growth-1)/2 times
+  RECORD_MIN: 100000,    // a new arena record is announced to everyone once it's above this (shown as 50,000)
   TEST_MASS: 70000,      // test mode (page opened with ?test=1): the first orb starts with this (shown as 35,000) and test players never lose mass
 
   BOT_MAX: 23,           // at most this many bots...

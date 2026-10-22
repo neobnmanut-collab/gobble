@@ -67,9 +67,9 @@ wss.on('connection', (ws, req) => {
       case 8: cl.W = m.W; cl.H = m.H; cl.zoom = Math.max(0.01, Math.min(3, m.zoom || 1)); break;
       case 15: cl.colA = m.a; cl.colI = m.i; break;
       case 9: if (cl.ws.readyState === 1) cl.ws.send(enc.pong(m.token)); break;
-      case 16: { // (secret) shake everyone's screen; once every 20 s per player
+      case 16: { // fun effects everyone sees (earthquake, fake warning, disco); one every 20 s per player
         const now = Date.now(); if (now - (cl.quakeT || 0) < 20000) return; cl.quakeT = now;
-        const buf = enc.quake(); for (const o of game.clients) send(o, buf); break;
+        const buf = enc.effect(m.fx); for (const o of game.clients) send(o, buf); break;
       }
       case 14: // viewer mode: watch the arena without playing
         if (m.spec === 0) cl.spec = false;
@@ -143,6 +143,19 @@ function sendParties() {
     send(cl, enc.party(cl.party, ids));
   }
 }
+// arena record: the most mass one player has had at once since the server started. Beating it by a clear
+// margin is announced to everyone with a big banner (at most every 30 s); test-mode players don't count.
+const record = { m: 0, name: '', shown: 0, at: 0 };
+function checkRecord() {
+  for (const cl of game.clients) {
+    if (cl.dead || cl.test || !cl.boxes) continue;
+    let tot = 0; for (const c of game.cells) if (cl.boxes.includes(c.o)) tot += c.m;
+    if (tot > record.m) { record.m = tot; record.name = cl.name || 'Player'; }
+  }
+  const now = Date.now(), big = record.m >= C.RECORD_MIN && record.m > record.shown * 1.05 && now - record.at > 30000;
+  if (big) { record.shown = record.m; record.at = now; }
+  if (record.m) { const buf = enc.record(Math.round(record.m), record.name, big); for (const cl of game.clients) send(cl, buf); }
+}
 function sendLeaderboard() {
   const by = new Map();
   for (const c of game.cells) by.set(c.o, (by.get(c.o) || 0) + c.m);
@@ -188,7 +201,7 @@ function loop() {
   batching = true;
   // people on the menu only watch the arena in the background: 5 updates a second is plenty for them
   if (n % C.SEND_EVERY === 0) for (const cl of game.clients) if (!cl.dead || cl.spec || n % 5 === 0) sendWorld(cl);
-  if (n % 15 === 0) { sendLeaderboard(); sendParties(); }
+  if (n % 15 === 0) { sendLeaderboard(); sendParties(); checkRecord(); }
   if (n % 15 === 0) sendMinimap();
   if (n % 10 === 5) sendColours();
   batching = false;
