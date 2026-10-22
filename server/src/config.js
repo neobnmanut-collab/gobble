@@ -1,7 +1,7 @@
 'use strict';
 // Every gameplay number lives here, so balance can be tuned without touching the game code.
 module.exports = {
-  WORLD: 16200,          // arena width and height
+  WORLD: 22680,          // arena width and height (40% bigger than 16,200)
   GRID: 100,             // pellet grid cell size
   TICK_HZ: 25,           // simulation steps per second
   SEND_EVERY: 1,         // send a world update every step (25 updates per second)
