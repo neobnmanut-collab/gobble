@@ -123,7 +123,7 @@ class Game {
       const ow = { id, kind: 'human', client, name: client.multi ? `${name} ${b ? 'B' : 'A'}` : name, hue: hues[b], tx: p.x, ty: p.y, box: b };
       this.owners.set(id, ow); client.boxes.push(id);
       const q = b === 0 ? p : this.spotNear(client.boxes[0], rad(C.START_MASS));
-      const c = this.mkCell(id, q.x, q.y, C.START_MASS); c.prot = C.SPAWN_PROTECT; this.cells.push(c);
+      const c = this.mkCell(id, q.x, q.y, client.test && b === 0 ? C.TEST_MASS : C.START_MASS); c.prot = C.SPAWN_PROTECT; this.cells.push(c);
       ow.tx = q.x; ow.ty = q.y;
     }
     client.lastX = p.x; client.lastY = p.y;
@@ -361,7 +361,7 @@ class Game {
       if (ow) { if (ow.kind === 'bot') { dx = ow.b.wx - c.x; dy = ow.b.wy - c.y; } else { dx = ow.tx - c.x; dy = ow.ty - c.y; } }
       const d = Math.hypot(dx, dy); let dvx = 0, dvy = 0;
       if (d > 2) { const s = spd(c.m) * Math.min(1, d / (c.r + 20)); dvx = dx / d * s; dvy = dy / d * s; }
-      const kk = Math.min(1, dt * 7); c.ux += (dvx - c.ux) * kk; c.uy += (dvy - c.uy) * kk; c.x += c.ux * dt; c.y += c.uy * dt;
+      c.ux = dvx; c.uy = dvy; // turn toward the mouse instantly c.x += c.ux * dt; c.y += c.uy * dt;
       c.x += c.vx * dt; c.y += c.vy * dt; const k = Math.exp(-4 * dt); c.vx *= k; c.vy *= k;
       const lo = c.r * 0.5, hi = WS - c.r * 0.5;
       if (c.x < lo) { c.x = lo; c.vx = Math.abs(c.vx) * 0.5; } else if (c.x > hi) { c.x = hi; c.vx = -Math.abs(c.vx) * 0.5; }
@@ -375,7 +375,7 @@ class Game {
           const t = this.doSplit(c, ex / dd, ey / dd); t.vx *= 0.45; t.vy *= 0.45; oc.set(c.o, (oc.get(c.o) || 0) + 1);
         } else c.m = C.MAX_MASS;
       }
-      if (c.m > 1500) c.m -= c.m * Math.min(0.0049, 0.00147 * Math.sqrt(c.m / 1000)) * press * dt;
+      if (c.m > 1500 && !this.owners.get(c.o)?.client?.test) c.m -= c.m * Math.min(0.0049, 0.00147 * Math.sqrt(c.m / 1000)) * press * dt;
     }
     // orb vs orb: merging, eating, a short-range pull
     for (let i = 0; i < cells.length; i++) {

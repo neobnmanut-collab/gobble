@@ -14,6 +14,9 @@ const DEF = { split: 'Space', dsplit: 'KeyD', tsplit: 'KeyF', qsplit: 'KeyG', ej
 const ACT = ['split', 'dsplit', 'tsplit', 'qsplit', 'eject', 'hline', 'vline', 'fline', 'respawn', 'ping', 'swap', 'feed'].map(k => [k, 'a_' + k]);
 const MACROS = [['none', 'm_none'], ['split', 'a_split'], ['dsplit', 'a_dsplit'], ['tsplit', 'a_tsplit'], ['qsplit', 'a_qsplit'], ['eject', 'a_eject'], ['swap', 'm_swap']];
 let binds = Object.assign({}, DEF), dd = 60, rf = 40, pd = 50, lsi = false, lsn = 2, mal = true, ltg = false, ftg = false, mbtn = { 0: 'none', 2: 'none' };
+// test mode: open the page with ?test=1 to start one orb at 35,000 that never loses mass
+const TEST = /(^|[?&])test=1(&|$)/.test(location.search.slice(1));
+let lines = true; // lines from your orbs to the mouse
 let fcap = 0; // highest frames per second to draw; 0 = as many as the monitor shows
 // multibox colours: the orb you control and your other one. Text colours are worked out once, not per frame.
 const COL_DEF = ['#f4f4f4', '#e0443e'];
@@ -30,13 +33,13 @@ try {
   if (c) {
     if (c.binds) for (const k in DEF) if (typeof c.binds[k] === 'string') binds[k] = c.binds[k];
     const num = (k, a, b) => (typeof c[k] === 'number' ? clamp(c[k], a, b) : undefined), bool = k => (typeof c[k] === 'boolean' ? c[k] : undefined);
-    rf = num('rf', 40, 200) ?? rf; dd = num('dd2', 0, 300) ?? dd; pd = num('pd', 0, 200) ?? pd; lsn = num('lsn', 1, 4) ?? lsn; fcap = num('fcap', 0, 1000) ?? fcap; setCols(c.cA, c.cI);
+    rf = num('rf', 40, 200) ?? rf; dd = num('dd2', 0, 300) ?? dd; pd = num('pd', 0, 200) ?? pd; lsn = num('lsn', 1, 4) ?? lsn; fcap = num('fcap', 0, 1000) ?? fcap; lines = bool('lines') ?? lines; setCols(c.cA, c.cI);
     lsi = bool('lsi') ?? lsi; mal = bool('mal') ?? mal; ltg = bool('ltg') ?? ltg; ftg = bool('ftg') ?? ftg;
     if (c.mbtn) for (const b of [0, 2]) if (MACROS.some(m => m[0] === c.mbtn[b])) mbtn[b] = c.mbtn[b];
   }
 } catch (e) {}
 { const seen = new Set(); for (const [k] of ACT) { const v = binds[k]; if (!v) continue; if (seen.has(v)) binds[k] = Object.values(binds).includes(DEF[k]) ? '' : DEF[k]; seen.add(binds[k]); } }
-function saveCfg() { try { const old = JSON.parse(localStorage.getItem('gobblecfg') || '{}') || {}; localStorage.setItem('gobblecfg', JSON.stringify(Object.assign(old, { binds, fcap, cA: colA, cI: colI, dd2: dd, rf, pd, lsi, lsn, mal, ltg, ftg, mbtn }))); } catch (e) {} }
+function saveCfg() { try { const old = JSON.parse(localStorage.getItem('gobblecfg') || '{}') || {}; localStorage.setItem('gobblecfg', JSON.stringify(Object.assign(old, { binds, fcap, lines, cA: colA, cI: colI, dd2: dd, rf, pd, lsi, lsn, mal, ltg, ftg, mbtn }))); } catch (e) {} }
 function label(b) { if (!b) return tr('unbound'); if (b.startsWith('Mouse')) { const n = +b.slice(5); return n <= 2 ? tr(['mouse_left', 'mouse_middle', 'mouse_right'][n]) : tr('mouse_n', { n: n + 1 }); } return b.startsWith('Key') ? b.slice(3) : b.startsWith('Digit') ? b.slice(5) : b; }
 
 /* ---------- world as last seen from the server ---------- */
@@ -197,7 +200,7 @@ function startGame() {
   const nm = ($('nm').value.trim() || tr('player')).slice(0, 12);
   try { localStorage.setItem('gobblename', nm); } catch (e) {}
   const pc = cleanCode($('pty').value); $('pty').value = pc; try { localStorage.setItem('gobbleparty', pc); } catch (e) {}
-  send(Net.enc.join(multiChosen, innerWidth, innerHeight, nm, pc)); send(Net.enc.growth(growth));
+  send(Net.enc.join(multiChosen, innerWidth, innerHeight, nm, pc, TEST)); send(Net.enc.growth(growth));
   playing = true; paused = false; peak = 0; lock = null; sq.length = 0; feedOn = false; held.clear();
   $('ov').hidden = true; menuMode(false); $('sts').hidden = true; showMultiBtns(multiChosen);
 }
@@ -270,16 +273,16 @@ function drawSpike(v) {
   const R = v.r, ph = v.ph || 0;
   if (ph > 0.02) { // something smaller is passing through: ripples spread out and the spike turns see-through
     g.lineWidth = Math.max(2 / cam.s, R * 0.05);
-    for (const off of [0, 0.5]) { const q = (v.rp + off) % 1; g.strokeStyle = 'rgba(140,255,170,' + (ph * (1 - q) * 0.95).toFixed(3) + ')'; g.beginPath(); g.arc(v.x, v.y, R * (1 + q * 0.7), 0, TAU); g.stroke(); }
+    for (const off of [0, 0.5]) { const q = (v.rp + off) % 1; g.strokeStyle = 'rgba(255,226,120,' + (ph * (1 - q) * 0.95).toFixed(3) + ')'; g.beginPath(); g.arc(v.x, v.y, R * (1 + q * 0.7), 0, TAU); g.stroke(); }
     g.globalAlpha = 1 - ph * 0.6;
   }
   drawSpikeBody(v, R);
   g.globalAlpha = 1;
 }
 function drawSpikeBody(v, R) {
-  if (R * cam.s < 6) { const q = Math.max(R, 4 / cam.s); g.fillStyle = '#5fe07c'; g.beginPath(); for (let i = 0; i <= 16; i++) { const a = i / 16 * TAU + v.rot, r = i % 2 ? q * 0.75 : q * 1.15; i ? g.lineTo(v.x + Math.cos(a) * r, v.y + Math.sin(a) * r) : g.moveTo(v.x + Math.cos(a) * r, v.y + Math.sin(a) * r); } g.closePath(); g.fill(); return; }
+  if (R * cam.s < 6) { const q = Math.max(R, 4 / cam.s); g.fillStyle = '#ffd23f'; g.beginPath(); for (let i = 0; i <= 16; i++) { const a = i / 16 * TAU + v.rot, r = i % 2 ? q * 0.75 : q * 1.15; i ? g.lineTo(v.x + Math.cos(a) * r, v.y + Math.sin(a) * r) : g.moveTo(v.x + Math.cos(a) * r, v.y + Math.sin(a) * r); } g.closePath(); g.fill(); return; }
   g.beginPath(); for (let i = 0; i <= 32; i++) { const a = i / 32 * TAU + v.rot, r = i % 2 ? R * 0.9 : R * 1.04; i ? g.lineTo(v.x + Math.cos(a) * r, v.y + Math.sin(a) * r) : g.moveTo(v.x + Math.cos(a) * r, v.y + Math.sin(a) * r); }
-  g.closePath(); g.fillStyle = 'rgba(95,224,124,.92)'; g.fill(); g.strokeStyle = '#2f8a4c'; g.lineWidth = Math.max(3, R * 0.06); g.stroke();
+  g.closePath(); g.fillStyle = 'rgba(255,210,63,.94)'; g.fill(); g.strokeStyle = '#a8790f'; g.lineWidth = Math.max(3, R * 0.06); g.stroke();
   if (v.fed) { g.fillStyle = 'rgba(255,255,255,.8)'; for (let i = 0; i < v.fed; i++) { const a = i / 7 * TAU - Math.PI / 2; g.beginPath(); g.arc(v.x + Math.cos(a) * R * 0.45, v.y + Math.sin(a) * R * 0.45, R * 0.07, 0, TAU); g.fill(); } }
 }
 function drawOrb(c, multi) {
@@ -347,6 +350,11 @@ function draw(dt) {
   const list = []; for (const e of ents.values()) if (!(e.x < x0 - e.r || e.x > x1 + e.r || e.y < y0 - e.r || e.y > y1 + e.r)) list.push(e);
   list.sort((a, b) => a.m - b.m);
   const multi = myBoxes.length > 1;
+  if (lines && playing && aim) { // a thin line from each orb you control to the mouse
+    const a = activeId(); g.beginPath();
+    for (const c of list) if (c.o === a) { g.moveTo(c.x, c.y); g.lineTo(aim.x, aim.y); }
+    g.strokeStyle = 'rgba(255,255,255,.22)'; g.lineWidth = 1.6 / cam.s; g.stroke();
+  }
   for (const c of list) drawOrb(c, multi);
   // spikes: an orb smaller than a spike can't burst on it and simply passes through. While one is
   // inside, the spike turns see-through and sends out ripples, and the orb is drawn on top of it.
@@ -378,7 +386,7 @@ function drawMM() {
   for (let i = 1; i < 5; i++) { mg.moveTo(i * cw, 0); mg.lineTo(i * cw, s); mg.moveTo(0, i * cw); mg.lineTo(s, i * cw); } mg.stroke();
   mg.fillStyle = 'rgba(255,255,255,.3)'; mg.font = '700 ' + Math.max(8, cw * 0.2) + "px 'Bricolage Grotesque',system-ui,sans-serif"; mg.textAlign = 'left'; mg.textBaseline = 'top';
   for (let r = 0; r < 5; r++) for (let q = 0; q < 5; q++) mg.fillText('ABCDE'[r] + (q + 1), q * cw + 3, r * cw + 3);
-  mg.fillStyle = 'rgba(70,190,100,.55)'; for (const v of mini.spikes) { mg.beginPath(); mg.arc(v.x * k, v.y * k, 1.6, 0, TAU); mg.fill(); }
+  mg.fillStyle = 'rgba(255,210,63,.6)'; for (const v of mini.spikes) { mg.beginPath(); mg.arc(v.x * k, v.y * k, 1.6, 0, TAU); mg.fill(); }
   let me = 0; for (const c of mineCells()) me += c.m;
   for (const c of mini.big) { if (myBoxes.includes(c.o)) continue; mg.fillStyle = playing && c.r * c.r / 16 > me * 1.25 ? '#d9534f' : '#8fa8a2'; mg.beginPath(); mg.arc(c.x * k, c.y * k, Math.max(2, c.r * k), 0, TAU); mg.fill(); }
   // other real players: a gold ring so you can go and find them
@@ -467,7 +475,7 @@ function renderSettings() {
     const key = opts.join() + '|' + tr('fps_monitor', { n: hz });
     if (el.dataset.k !== key) { el.dataset.k = key; el.textContent = ''; for (const r of opts) { const o = document.createElement('option'); o.value = r; o.textContent = r ? r + ' FPS' : tr('fps_monitor', { n: hz }); el.append(o); } }
     el.value = opts.includes(fcap) ? fcap : 0; $('fpsnow').textContent = fps + ' FPS · ' + tr('fps_screen', { n: hz }); }
-  $('cA').value = colA; $('cI').value = colI;
+  $('cA').value = colA; $('cI').value = colI; $('lines').checked = lines;
   { const box = $('cpres'); if (!box.childElementCount) for (const [a, i] of COL_PRESETS) { const b = document.createElement('button'); b.type = 'button'; b.dataset.a = a; b.dataset.i = i; b.setAttribute('aria-label', a + ' / ' + i); const x = document.createElement('i'), y = document.createElement('i'); x.style.background = a; y.style.background = i; b.append(x, y); b.onclick = () => { setCols(a, i); saveCfg(); renderSettings(); }; box.append(b); }
     for (const b of box.children) b.setAttribute('aria-pressed', b.dataset.a === colA && b.dataset.i === colI); }
   $('dd').value = dd; $('ddv').textContent = dd + ' ms'; $('rf').value = rf; $('rfv').textContent = rf + ' ms'; $('pd').value = pd; $('pdv').textContent = pd + ' ms';
@@ -521,9 +529,9 @@ function tbtn(id, fn, hold) {
 tbtn('bsp', d => d && multiSplit(1)); tbtn('bds', d => d && multiSplit(2)); tbtn('bej', d => act('eject', d), true); tbtn('bsw', d => d && act('swap', true)); tbtn('bfd', d => act('feed', d), true);
 $('gear').addEventListener('click', () => { if (playing) { if ($('ov').hidden) openMenu(); else resumeGame(); } else openSettings(); }); $('mset').addEventListener('click', openSettings);
 for (const b of document.querySelectorAll('.nav button')) b.addEventListener('click', () => $(b.dataset.go).scrollIntoView({ behavior: 'smooth', block: 'start' })); $('cl').addEventListener('click', closeSettings); $('cl2').addEventListener('click', closeSettings);
-$('rs').addEventListener('click', () => { binds = Object.assign({}, DEF); dd = 60; fcap = 0; setCols(); rf = 40; pd = 50; lsi = false; lsn = 2; mal = true; ltg = false; ftg = false; mbtn = { 0: 'none', 2: 'none' }; saveCfg(); updateHelp(); renderSettings(); });
+$('rs').addEventListener('click', () => { binds = Object.assign({}, DEF); dd = 60; fcap = 0; lines = true; setCols(); rf = 40; pd = 50; lsi = false; lsn = 2; mal = true; ltg = false; ftg = false; mbtn = { 0: 'none', 2: 'none' }; saveCfg(); updateHelp(); renderSettings(); });
 const setting = (id, ev, fn) => $(id).addEventListener(ev, e => { fn(e.target); saveCfg(); renderSettings(); });
-setting('dd', 'input', t => dd = +t.value); setting('cA', 'input', t => setCols(t.value, colI)); setting('cI', 'input', t => setCols(colA, t.value)); setting('fcap', 'change', t => { fcap = +t.value || 0; nextDraw = 0; }); setting('rf', 'input', t => rf = +t.value); setting('pd', 'input', t => pd = +t.value);
+setting('dd', 'input', t => dd = +t.value); setting('lines', 'change', t => lines = t.checked); setting('cA', 'input', t => setCols(t.value, colI)); setting('cI', 'input', t => setCols(colA, t.value)); setting('fcap', 'change', t => { fcap = +t.value || 0; nextDraw = 0; }); setting('rf', 'input', t => rf = +t.value); setting('pd', 'input', t => pd = +t.value);
 setting('lsi', 'change', t => lsi = t.checked); setting('lsn', 'change', t => lsn = clamp(Math.round(+t.value) || 1, 1, 4)); setting('mal', 'change', t => mal = t.checked);
 setting('ltg', 'change', t => { ltg = t.checked; lock = null; }); setting('ftg', 'change', t => { ftg = t.checked; feedOn = false; });
 setting('mm0', 'change', t => mbtn[0] = t.value); setting('mm2', 'change', t => mbtn[2] = t.value);
@@ -531,19 +539,19 @@ $('mSolo').addEventListener('click', () => setMode(false)); $('mMulti').addEvent
 $('go').addEventListener('click', () => (playing ? resumeGame() : startGame()));
 $('nm').addEventListener('keydown', e => { if (e.key === 'Enter') startGame(); });
 
-/* ---------- growth speed, 1x to 5x, each player's own choice ---------- */
-let growth = 4; try { growth = Math.min(5, Math.max(1, +localStorage.getItem('gobblegrowth4') || 4)); } catch (e) {}
+/* ---------- growth speed, 1x to 3x, each player's own choice ---------- */
+let growth = 2; try { growth = Math.min(3, Math.max(1, +localStorage.getItem('gobblegrowth3') || 2)); } catch (e) {}
 function renderGrowth() {
   for (const id of ['grow', 'growc']) {
     const box = $(id); if (!box) continue; box.textContent = '';
-    for (let v = 1; v <= 5; v++) {
+    for (let v = 1; v <= 3; v++) {
       const b = document.createElement('button'); b.type = 'button'; b.textContent = v + '×'; b.setAttribute('aria-pressed', v === growth);
-      b.onclick = () => { growth = v; try { localStorage.setItem('gobblegrowth4', v); } catch (e) {} renderGrowth(); if (playing) send(Net.enc.growth(v)); };
+      b.onclick = () => { growth = v; try { localStorage.setItem('gobblegrowth3', v); } catch (e) {} renderGrowth(); if (playing) send(Net.enc.growth(v)); };
       box.append(b);
     }
   }
 }
-renderGrowth();
+renderGrowth(); $('tmode').hidden = !TEST;
 
 /* ---------- parties ---------- */
 function cleanCode(s) { return String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8); }

@@ -30,8 +30,9 @@ module.exports = {
   MERGE_BASE: 18,        // seconds split pieces must wait before they can join again...
   MERGE_PER_MASS: 0.004, // ...plus this many seconds per unit of piece mass...
   MERGE_MAX: 40,         // ...but never longer than this
-  GROWTH_DEFAULT: 4,     // growth a player gets until they pick one
-  GROWTH: 5,             // highest growth boost a player can pick (1x up to this): pellets give this many times their mass, eaten orbs give 1 + (GROWTH-1)/2 times (3x at 5)
+  GROWTH_DEFAULT: 2,     // growth a player gets until they pick one
+  GROWTH: 3,             // highest growth boost a player can pick (1x up to this): pellets give this many times their mass, eaten orbs give 1 + (growth-1)/2 times
+  TEST_MASS: 70000,      // test mode (page opened with ?test=1): the first orb starts with this (shown as 35,000) and test players never lose mass
 
   BOT_MAX: 23,           // at most this many bots...
   BOT_FILL: 40,          // ...and fewer once real players fill the arena up to this many

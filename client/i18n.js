@@ -8,7 +8,7 @@ const LANGS = {
 };
 const STR = {
 en: {
-  display: 'Display', draw_delay: 'Draw delay', draw_hint: 'How long orbs take to glide to each new position. Lower feels faster and snappier, higher looks smoother.', max_fps: "Max FPS", fps_now: "Right now", fps_monitor: "Monitor max ({n} Hz)", fps_screen: "monitor {n} Hz", fps_hint: "Your game draws one frame for every refresh of your monitor, so the most it can show is your monitor's refresh rate. If it stays near 30, turn off Energy Saver in Chrome and make sure hardware acceleration is on.",
+  display: 'Display', draw_delay: 'Draw delay', draw_hint: 'How long orbs take to glide to each new position. Lower feels faster and snappier, higher looks smoother.', max_fps: "Max FPS", fps_now: "Right now", fps_monitor: "Monitor max ({n} Hz)", fps_screen: "monitor {n} Hz", fps_hint: "Your game draws one frame for every refresh of your monitor, so the most it can show is your monitor's refresh rate. If it stays near 30, turn off Energy Saver in Chrome and make sure hardware acceleration is on.", lines_mouse: "Lines from your orbs to the mouse", test_mode: "Test mode: one orb starts at 35,000 and you never lose mass.",
   intro: 'Eat pellets, swallow orbs a quarter smaller than you, and steer clear of the spikes once you’re big. Pick how fast you grow below.',
   peak: 'Peak mass', swallowed: 'Swallowed', survived: 'Survived', name_ph: 'Your name',
   solo: 'Solo', multibox: 'Multibox', mode_multi: 'Control two orbs. Switch between them with {key}.', mode_solo: 'Play with a single orb.',
@@ -39,7 +39,7 @@ en: {
   r_eu: 'Europe', r_us: 'USA', r_here: 'This computer', checking: 'checking…', guest: 'Guest', player: 'Player',
 },
 es: {
-  display: 'Pantalla', draw_delay: 'Retraso de dibujo', draw_hint: 'Cuánto tardan los orbes en deslizarse a cada nueva posición. Más bajo se siente más rápido y ágil; más alto se ve más suave.', max_fps: "FPS máximos", fps_now: "Ahora mismo", fps_monitor: "Máximo del monitor ({n} Hz)", fps_screen: "monitor {n} Hz", fps_hint: "El juego dibuja un fotograma por cada refresco del monitor, así que lo máximo que puede mostrar es la frecuencia de tu monitor. Si se queda cerca de 30, desactiva el Ahorro de energía de Chrome y asegúrate de que la aceleración por hardware esté activada.",
+  display: 'Pantalla', draw_delay: 'Retraso de dibujo', draw_hint: 'Cuánto tardan los orbes en deslizarse a cada nueva posición. Más bajo se siente más rápido y ágil; más alto se ve más suave.', max_fps: "FPS máximos", fps_now: "Ahora mismo", fps_monitor: "Máximo del monitor ({n} Hz)", fps_screen: "monitor {n} Hz", fps_hint: "El juego dibuja un fotograma por cada refresco del monitor, así que lo máximo que puede mostrar es la frecuencia de tu monitor. Si se queda cerca de 30, desactiva el Ahorro de energía de Chrome y asegúrate de que la aceleración por hardware esté activada.", lines_mouse: "Líneas de tus orbes al ratón", test_mode: "Modo de prueba: un orbe empieza con 35.000 y nunca pierdes masa.",
   intro: 'Come bolitas, traga orbes un cuarto más pequeños que tú y aléjate de los pinchos cuando seas grande. Elige abajo lo rápido que creces.',
   peak: 'Masa máxima', swallowed: 'Tragados', survived: 'Sobreviviste', name_ph: 'Tu nombre',
   solo: 'Solo', multibox: 'Multibox', mode_multi: 'Controla dos orbes. Cambia entre ellos con {key}.', mode_solo: 'Juega con un solo orbe.',
@@ -70,7 +70,7 @@ es: {
   r_eu: 'Europa', r_us: 'EE. UU.', r_here: 'Este equipo', checking: 'comprobando…', guest: 'Invitado', player: 'Jugador',
 },
 pt: {
-  display: 'Tela', draw_delay: 'Atraso de desenho', draw_hint: 'Quanto tempo os orbes levam para deslizar até cada nova posição. Menor parece mais rápido e ágil; maior fica mais suave.', max_fps: "FPS máximo", fps_now: "Agora", fps_monitor: "Máximo do monitor ({n} Hz)", fps_screen: "monitor {n} Hz", fps_hint: "O jogo desenha um quadro a cada atualização do monitor, então o máximo que pode mostrar é a taxa do seu monitor. Se ficar perto de 30, desative a Economia de energia do Chrome e confira se a aceleração de hardware está ligada.",
+  display: 'Tela', draw_delay: 'Atraso de desenho', draw_hint: 'Quanto tempo os orbes levam para deslizar até cada nova posição. Menor parece mais rápido e ágil; maior fica mais suave.', max_fps: "FPS máximo", fps_now: "Agora", fps_monitor: "Máximo do monitor ({n} Hz)", fps_screen: "monitor {n} Hz", fps_hint: "O jogo desenha um quadro a cada atualização do monitor, então o máximo que pode mostrar é a taxa do seu monitor. Se ficar perto de 30, desative a Economia de energia do Chrome e confira se a aceleração de hardware está ligada.", lines_mouse: "Linhas dos seus orbes até o mouse", test_mode: "Modo de teste: um orbe começa com 35.000 e você nunca perde massa.",
   intro: 'Coma bolinhas, engula orbes um quarto menores que você e fuja dos espinhos quando estiver grande. Escolha abaixo a velocidade de crescimento.',
   peak: 'Massa máxima', swallowed: 'Engolidos', survived: 'Sobreviveu', name_ph: 'Seu nome',
   solo: 'Solo', multibox: 'Multibox', mode_multi: 'Controle dois orbes. Alterne entre eles com {key}.', mode_solo: 'Jogue com um único orbe.',
@@ -101,7 +101,7 @@ pt: {
   r_eu: 'Europa', r_us: 'EUA', r_here: 'Este computador', checking: 'verificando…', guest: 'Convidado', player: 'Jogador',
 },
 fr: {
-  display: 'Affichage', draw_delay: 'Délai d’affichage', draw_hint: 'Le temps que mettent les orbes à glisser vers chaque nouvelle position. Plus bas, c’est plus rapide et nerveux ; plus haut, plus fluide.', max_fps: "FPS max", fps_now: "En ce moment", fps_monitor: "Max de l’écran ({n} Hz)", fps_screen: "écran {n} Hz", fps_hint: "Le jeu dessine une image à chaque rafraîchissement de l’écran : il ne peut donc pas dépasser la fréquence de ton écran. S’il reste vers 30, désactive l’Économiseur d’énergie de Chrome et vérifie que l’accélération matérielle est activée.",
+  display: 'Affichage', draw_delay: 'Délai d’affichage', draw_hint: 'Le temps que mettent les orbes à glisser vers chaque nouvelle position. Plus bas, c’est plus rapide et nerveux ; plus haut, plus fluide.', max_fps: "FPS max", fps_now: "En ce moment", fps_monitor: "Max de l’écran ({n} Hz)", fps_screen: "écran {n} Hz", fps_hint: "Le jeu dessine une image à chaque rafraîchissement de l’écran : il ne peut donc pas dépasser la fréquence de ton écran. S’il reste vers 30, désactive l’Économiseur d’énergie de Chrome et vérifie que l’accélération matérielle est activée.", lines_mouse: "Lignes de tes orbes vers la souris", test_mode: "Mode test : un orbe commence à 35 000 et tu ne perds jamais de masse.",
   intro: 'Mange des billes, avale les orbes un quart plus petits que toi et évite les pics quand tu es gros. Choisis ci-dessous ta vitesse de croissance.',
   peak: 'Masse max', swallowed: 'Avalés', survived: 'Survie', name_ph: 'Ton pseudo',
   solo: 'Solo', multibox: 'Multibox', mode_multi: 'Contrôle deux orbes. Passe de l’un à l’autre avec {key}.', mode_solo: 'Joue avec un seul orbe.',
@@ -132,7 +132,7 @@ fr: {
   r_eu: 'Europe', r_us: 'États-Unis', r_here: 'Cet ordinateur', checking: 'vérification…', guest: 'Invité', player: 'Joueur',
 },
 de: {
-  display: 'Anzeige', draw_delay: 'Zeichenverzögerung', draw_hint: 'Wie lange Orbs zu jeder neuen Position gleiten. Niedriger fühlt sich schneller und direkter an, höher sieht weicher aus.', max_fps: "Max. FPS", fps_now: "Gerade", fps_monitor: "Monitor-Maximum ({n} Hz)", fps_screen: "Monitor {n} Hz", fps_hint: "Das Spiel zeichnet bei jeder Bildwiederholung deines Monitors ein Bild, mehr als die Bildwiederholrate geht also nicht. Bleibt es bei etwa 30, schalte in Chrome den Energiesparmodus aus und prüfe, ob die Hardwarebeschleunigung an ist.",
+  display: 'Anzeige', draw_delay: 'Zeichenverzögerung', draw_hint: 'Wie lange Orbs zu jeder neuen Position gleiten. Niedriger fühlt sich schneller und direkter an, höher sieht weicher aus.', max_fps: "Max. FPS", fps_now: "Gerade", fps_monitor: "Monitor-Maximum ({n} Hz)", fps_screen: "Monitor {n} Hz", fps_hint: "Das Spiel zeichnet bei jeder Bildwiederholung deines Monitors ein Bild, mehr als die Bildwiederholrate geht also nicht. Bleibt es bei etwa 30, schalte in Chrome den Energiesparmodus aus und prüfe, ob die Hardwarebeschleunigung an ist.", lines_mouse: "Linien von deinen Kugeln zur Maus", test_mode: "Testmodus: Eine Kugel startet mit 35.000 und du verlierst nie Masse.",
   intro: 'Friss Kugeln, verschlinge Orbs, die ein Viertel kleiner sind als du, und meide die Stacheln, sobald du groß bist. Wähle unten, wie schnell du wächst.',
   peak: 'Höchste Masse', swallowed: 'Gefressen', survived: 'Überlebt', name_ph: 'Dein Name',
   solo: 'Solo', multibox: 'Multibox', mode_multi: 'Steuere zwei Orbs. Wechsle mit {key} zwischen ihnen.', mode_solo: 'Spiele mit einem einzelnen Orb.',
@@ -163,7 +163,7 @@ de: {
   r_eu: 'Europa', r_us: 'USA', r_here: 'Dieser Computer', checking: 'prüfe…', guest: 'Gast', player: 'Spieler',
 },
 it: {
-  display: 'Visualizzazione', draw_delay: 'Ritardo di disegno', draw_hint: 'Quanto impiegano gli orb a scivolare verso ogni nuova posizione. Più basso sembra più veloce e reattivo, più alto più fluido.', max_fps: "FPS massimi", fps_now: "Adesso", fps_monitor: "Massimo del monitor ({n} Hz)", fps_screen: "monitor {n} Hz", fps_hint: "Il gioco disegna un fotogramma a ogni aggiornamento del monitor, quindi il massimo è la frequenza del tuo monitor. Se resta vicino a 30, disattiva il Risparmio energetico di Chrome e controlla che l’accelerazione hardware sia attiva.",
+  display: 'Visualizzazione', draw_delay: 'Ritardo di disegno', draw_hint: 'Quanto impiegano gli orb a scivolare verso ogni nuova posizione. Più basso sembra più veloce e reattivo, più alto più fluido.', max_fps: "FPS massimi", fps_now: "Adesso", fps_monitor: "Massimo del monitor ({n} Hz)", fps_screen: "monitor {n} Hz", fps_hint: "Il gioco disegna un fotogramma a ogni aggiornamento del monitor, quindi il massimo è la frequenza del tuo monitor. Se resta vicino a 30, disattiva il Risparmio energetico di Chrome e controlla che l’accelerazione hardware sia attiva.", lines_mouse: "Linee dalle tue sfere al mouse", test_mode: "Modalità test: una sfera parte da 35.000 e non perdi mai massa.",
   intro: 'Mangia le palline, inghiotti gli orb più piccoli di un quarto e stai lontano dalle punte quando sei grande. Scegli sotto quanto in fretta cresci.',
   peak: 'Massa massima', swallowed: 'Inghiottiti', survived: 'Sopravvissuto', name_ph: 'Il tuo nome',
   solo: 'Solo', multibox: 'Multibox', mode_multi: 'Controlla due orb. Passa dall’uno all’altro con {key}.', mode_solo: 'Gioca con un solo orb.',
@@ -194,7 +194,7 @@ it: {
   r_eu: 'Europa', r_us: 'USA', r_here: 'Questo computer', checking: 'verifica…', guest: 'Ospite', player: 'Giocatore',
 },
 pl: {
-  display: 'Wyświetlanie', draw_delay: 'Opóźnienie rysowania', draw_hint: 'Jak długo kule płyną do każdej nowej pozycji. Niżej jest szybciej i żywiej, wyżej płynniej.', max_fps: "Maks. FPS", fps_now: "Teraz", fps_monitor: "Maksimum monitora ({n} Hz)", fps_screen: "monitor {n} Hz", fps_hint: "Gra rysuje jedną klatkę przy każdym odświeżeniu monitora, więc więcej niż częstotliwość monitora nie pokaże. Jeśli trzyma się około 30, wyłącz Oszczędzanie energii w Chrome i sprawdź, czy przyspieszenie sprzętowe jest włączone.",
+  display: 'Wyświetlanie', draw_delay: 'Opóźnienie rysowania', draw_hint: 'Jak długo kule płyną do każdej nowej pozycji. Niżej jest szybciej i żywiej, wyżej płynniej.', max_fps: "Maks. FPS", fps_now: "Teraz", fps_monitor: "Maksimum monitora ({n} Hz)", fps_screen: "monitor {n} Hz", fps_hint: "Gra rysuje jedną klatkę przy każdym odświeżeniu monitora, więc więcej niż częstotliwość monitora nie pokaże. Jeśli trzyma się około 30, wyłącz Oszczędzanie energii w Chrome i sprawdź, czy przyspieszenie sprzętowe jest włączone.", lines_mouse: "Linie od twoich kul do myszy", test_mode: "Tryb testowy: jedna kula zaczyna z 35 000 i nigdy nie tracisz masy.",
   intro: 'Jedz kulki, połykaj kule o ćwierć mniejsze od siebie i omijaj kolce, gdy już urośniesz. Poniżej wybierz tempo wzrostu.',
   peak: 'Największa masa', swallowed: 'Połknięte', survived: 'Przetrwano', name_ph: 'Twoja nazwa',
   solo: 'Solo', multibox: 'Multibox', mode_multi: 'Steruj dwiema kulami. Przełączaj się między nimi klawiszem {key}.', mode_solo: 'Graj jedną kulą.',
@@ -225,7 +225,7 @@ pl: {
   r_eu: 'Europa', r_us: 'USA', r_here: 'Ten komputer', checking: 'sprawdzanie…', guest: 'Gość', player: 'Gracz',
 },
 ru: {
-  display: 'Отображение', draw_delay: 'Задержка отрисовки', draw_hint: 'Сколько времени орбы плавно движутся к каждой новой позиции. Меньше — быстрее и резче, больше — плавнее.', max_fps: "Макс. FPS", fps_now: "Сейчас", fps_monitor: "Максимум монитора ({n} Гц)", fps_screen: "монитор {n} Гц", fps_hint: "Игра рисует один кадр на каждое обновление монитора, поэтому больше частоты монитора не бывает. Если держится около 30, выключите Энергосбережение в Chrome и проверьте, что аппаратное ускорение включено.",
+  display: 'Отображение', draw_delay: 'Задержка отрисовки', draw_hint: 'Сколько времени орбы плавно движутся к каждой новой позиции. Меньше — быстрее и резче, больше — плавнее.', max_fps: "Макс. FPS", fps_now: "Сейчас", fps_monitor: "Максимум монитора ({n} Гц)", fps_screen: "монитор {n} Гц", fps_hint: "Игра рисует один кадр на каждое обновление монитора, поэтому больше частоты монитора не бывает. Если держится около 30, выключите Энергосбережение в Chrome и проверьте, что аппаратное ускорение включено.", lines_mouse: "Линии от ваших шаров к мыши", test_mode: "Тестовый режим: один шар начинает с 35 000, и вы никогда не теряете массу.",
   intro: 'Ешь шарики, глотай орбы на четверть меньше себя и держись подальше от шипов, когда станешь большим. Ниже выбери скорость роста.',
   peak: 'Макс. масса', swallowed: 'Съедено', survived: 'Продержался', name_ph: 'Твоё имя',
   solo: 'Соло', multibox: 'Мультибокс', mode_multi: 'Управляй двумя орбами. Переключайся между ними клавишей {key}.', mode_solo: 'Играй одним орбом.',
@@ -256,7 +256,7 @@ ru: {
   r_eu: 'Европа', r_us: 'США', r_here: 'Этот компьютер', checking: 'проверка…', guest: 'Гость', player: 'Игрок',
 },
 uk: {
-  display: 'Відображення', draw_delay: 'Затримка відмальовування', draw_hint: 'Скільки часу орби плавно рухаються до кожної нової позиції. Менше — швидше й різкіше, більше — плавніше.', max_fps: "Макс. FPS", fps_now: "Зараз", fps_monitor: "Максимум монітора ({n} Гц)", fps_screen: "монітор {n} Гц", fps_hint: "Гра малює один кадр на кожне оновлення монітора, тож більше за частоту монітора не буде. Якщо тримається біля 30, вимкніть Енергозбереження в Chrome і перевірте, що апаратне прискорення увімкнене.",
+  display: 'Відображення', draw_delay: 'Затримка відмальовування', draw_hint: 'Скільки часу орби плавно рухаються до кожної нової позиції. Менше — швидше й різкіше, більше — плавніше.', max_fps: "Макс. FPS", fps_now: "Зараз", fps_monitor: "Максимум монітора ({n} Гц)", fps_screen: "монітор {n} Гц", fps_hint: "Гра малює один кадр на кожне оновлення монітора, тож більше за частоту монітора не буде. Якщо тримається біля 30, вимкніть Енергозбереження в Chrome і перевірте, що апаратне прискорення увімкнене.", lines_mouse: "Лінії від ваших куль до миші", test_mode: "Тестовий режим: одна куля починає з 35 000, і ви ніколи не втрачаєте масу.",
   intro: 'Їж кульки, ковтай орби на чверть менші за тебе й тримайся подалі від шипів, коли станеш великим. Нижче обери швидкість росту.',
   peak: 'Макс. маса', swallowed: 'З’їдено', survived: 'Протримався', name_ph: 'Твоє ім’я',
   solo: 'Соло', multibox: 'Мультибокс', mode_multi: 'Керуй двома орбами. Перемикайся між ними клавішею {key}.', mode_solo: 'Грай одним орбом.',
@@ -287,7 +287,7 @@ uk: {
   r_eu: 'Європа', r_us: 'США', r_here: 'Цей комп’ютер', checking: 'перевірка…', guest: 'Гість', player: 'Гравець',
 },
 tr: {
-  display: 'Görünüm', draw_delay: 'Çizim gecikmesi', draw_hint: 'Kürelerin her yeni konuma ne kadar sürede kaydığı. Düşük değer daha hızlı ve keskin, yüksek değer daha akıcı görünür.', max_fps: "Maks. FPS", fps_now: "Şu an", fps_monitor: "Monitör en yüksek ({n} Hz)", fps_screen: "monitör {n} Hz", fps_hint: "Oyun, monitörün her yenilenmesinde bir kare çizer; yani en fazla monitörünün yenileme hızını gösterebilir. 30 civarında kalıyorsa Chrome'da Enerji Tasarrufu'nu kapat ve donanım hızlandırmanın açık olduğundan emin ol.",
+  display: 'Görünüm', draw_delay: 'Çizim gecikmesi', draw_hint: 'Kürelerin her yeni konuma ne kadar sürede kaydığı. Düşük değer daha hızlı ve keskin, yüksek değer daha akıcı görünür.', max_fps: "Maks. FPS", fps_now: "Şu an", fps_monitor: "Monitör en yüksek ({n} Hz)", fps_screen: "monitör {n} Hz", fps_hint: "Oyun, monitörün her yenilenmesinde bir kare çizer; yani en fazla monitörünün yenileme hızını gösterebilir. 30 civarında kalıyorsa Chrome'da Enerji Tasarrufu'nu kapat ve donanım hızlandırmanın açık olduğundan emin ol.", lines_mouse: "Toplarından fareye çizgiler", test_mode: "Test modu: bir top 35.000 ile başlar ve hiç kütle kaybetmezsin.",
   intro: 'Topçukları ye, senden dörtte bir küçük küreleri yut ve büyüyünce dikenlerden uzak dur. Aşağıdan ne kadar hızlı büyüyeceğini seç.',
   peak: 'En yüksek kütle', swallowed: 'Yutulan', survived: 'Hayatta kalma', name_ph: 'Adın',
   solo: 'Tekli', multibox: 'Multibox', mode_multi: 'İki küre yönet. Aralarında {key} ile geçiş yap.', mode_solo: 'Tek bir küreyle oyna.',
@@ -318,7 +318,7 @@ tr: {
   r_eu: 'Avrupa', r_us: 'ABD', r_here: 'Bu bilgisayar', checking: 'kontrol ediliyor…', guest: 'Misafir', player: 'Oyuncu',
 },
 lv: {
-  display: 'Attēlojums', draw_delay: 'Zīmēšanas aizture', draw_hint: 'Cik ilgi orbi slīd uz katru jauno vietu. Mazāka vērtība šķiet ātrāka un asāka, lielāka izskatās plūdenāka.', max_fps: "Maks. FPS", fps_now: "Pašlaik", fps_monitor: "Monitora maksimums ({n} Hz)", fps_screen: "monitors {n} Hz", fps_hint: "Spēle uzzīmē vienu kadru katrā monitora atsvaidzes reizē, tāpēc vairāk par monitora frekvenci nav iespējams. Ja turas ap 30, izslēdz Chrome enerģijas taupīšanu un pārbaudi, vai aparatūras paātrinājums ir ieslēgts.",
+  display: 'Attēlojums', draw_delay: 'Zīmēšanas aizture', draw_hint: 'Cik ilgi orbi slīd uz katru jauno vietu. Mazāka vērtība šķiet ātrāka un asāka, lielāka izskatās plūdenāka.', max_fps: "Maks. FPS", fps_now: "Pašlaik", fps_monitor: "Monitora maksimums ({n} Hz)", fps_screen: "monitors {n} Hz", fps_hint: "Spēle uzzīmē vienu kadru katrā monitora atsvaidzes reizē, tāpēc vairāk par monitora frekvenci nav iespējams. Ja turas ap 30, izslēdz Chrome enerģijas taupīšanu un pārbaudi, vai aparatūras paātrinājums ir ieslēgts.", lines_mouse: "Līnijas no tavām lodēm līdz pelei", test_mode: "Testa režīms: viena lode sāk ar 35 000, un tu nekad nezaudē masu.",
   intro: 'Ēd bumbiņas, norij orbus, kas ir par ceturtdaļu mazāki par tevi, un, kad esi liels, turies pa gabalu no ērkšķiem. Zemāk izvēlies augšanas ātrumu.',
   peak: 'Lielākā masa', swallowed: 'Norīti', survived: 'Izdzīvoji', name_ph: 'Tavs vārds',
   solo: 'Solo', multibox: 'Multibox', mode_multi: 'Vadi divus orbus. Pārslēdzies starp tiem ar {key}.', mode_solo: 'Spēlē ar vienu orbu.',
@@ -349,7 +349,7 @@ lv: {
   r_eu: 'Eiropa', r_us: 'ASV', r_here: 'Šis dators', checking: 'pārbauda…', guest: 'Viesis', player: 'Spēlētājs',
 },
 zh: {
-  display: '显示', draw_delay: '绘制延迟', draw_hint: '球滑向每个新位置所用的时间。越低越快、越灵敏，越高越平滑。', max_fps: "最高帧率", fps_now: "当前", fps_monitor: "显示器最高 ({n} Hz)", fps_screen: "显示器 {n} Hz", fps_hint: "游戏在显示器每次刷新时绘制一帧，所以最高只能达到显示器的刷新率。如果一直在 30 左右，请关闭 Chrome 的节能模式，并确认已开启硬件加速。",
+  display: '显示', draw_delay: '绘制延迟', draw_hint: '球滑向每个新位置所用的时间。越低越快、越灵敏，越高越平滑。', max_fps: "最高帧率", fps_now: "当前", fps_monitor: "显示器最高 ({n} Hz)", fps_screen: "显示器 {n} Hz", fps_hint: "游戏在显示器每次刷新时绘制一帧，所以最高只能达到显示器的刷新率。如果一直在 30 左右，请关闭 Chrome 的节能模式，并确认已开启硬件加速。", lines_mouse: "从你的球到鼠标的连线", test_mode: "测试模式：一个球初始为 35,000，且永不掉质量。",
   intro: '吃掉小球，吞下比你小四分之一的球，长大后要避开尖刺。在下方选择你的成长速度。',
   peak: '最大质量', swallowed: '吞掉', survived: '存活时间', name_ph: '你的名字',
   solo: '单人', multibox: '双控', mode_multi: '同时控制两个球，用 {key} 切换。', mode_solo: '只控制一个球。',

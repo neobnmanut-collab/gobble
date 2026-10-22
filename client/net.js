@@ -53,10 +53,10 @@
 
   function msg(size, fill) { const ab = new ArrayBuffer(size), dv = new DataView(ab); fill(dv); return ab; }
   const enc = {
-    join(multi, W, H, name, party) {
+    join(multi, W, H, name, party, test) {
       const nb = te.encode(String(name).slice(0, 14)).slice(0, 48), pb = te.encode(String(party || '')).slice(0, 16);
       const ab = new ArrayBuffer(7 + pb.length + nb.length), dv = new DataView(ab);
-      dv.setUint8(0, 1); dv.setUint8(1, multi ? 1 : 0); dv.setUint16(2, Math.min(65535, W | 0), true); dv.setUint16(4, Math.min(65535, H | 0), true);
+      dv.setUint8(0, 1); dv.setUint8(1, (multi ? 1 : 0) | (test ? 2 : 0)); dv.setUint16(2, Math.min(65535, W | 0), true); dv.setUint16(4, Math.min(65535, H | 0), true);
       dv.setUint8(6, pb.length); new Uint8Array(ab, 7).set(pb); new Uint8Array(ab, 7 + pb.length).set(nb); return ab;
     },
     name(n) { const nb = te.encode(String(n).slice(0, 14)).slice(0, 48), ab = new ArrayBuffer(1 + nb.length); new Uint8Array(ab)[0] = 12; new Uint8Array(ab, 1).set(nb); return ab; },

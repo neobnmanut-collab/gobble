@@ -13,7 +13,7 @@
 //   9 PING    u32 token             (answered at once with PONG, for the ping display)
 //  10 CHAT    u8 channel 0=everyone 1=party, utf8 text
 //  12 NAME    utf8 name (so people on the menu can chat before playing)
-//  11 GROWTH  u8 growth speed 1-5 (this player's own boost; sent after JOIN and whenever changed)
+//  11 GROWTH  u8 growth speed 1-3 (this player's own boost; sent after JOIN and whenever changed)
 //
 // Server -> browser
 //   1 HELLO   f32 world size, u8 protocol version, f32 speed constant, u8 len + build id (changes on every deploy)
@@ -99,7 +99,7 @@ function decode(buf) {
   const op = buf[0];
   try {
     switch (op) {
-      case 1: { if (buf.length < 7) return null; const pl = Math.min(buf[6], 16); return { op, multi: !!buf[1], W: buf.readUInt16LE(2), H: buf.readUInt16LE(4), party: buf.subarray(7, 7 + pl).toString('utf8'), name: buf.subarray(7 + pl, 7 + pl + 48).toString('utf8') }; }
+      case 1: { if (buf.length < 7) return null; const pl = Math.min(buf[6], 16); return { op, multi: !!(buf[1] & 1), test: !!(buf[1] & 2), W: buf.readUInt16LE(2), H: buf.readUInt16LE(4), party: buf.subarray(7, 7 + pl).toString('utf8'), name: buf.subarray(7 + pl, 7 + pl + 48).toString('utf8') }; }
       case 2: case 6: if (buf.length < 9) return null; { const x = buf.readFloatLE(1), y = buf.readFloatLE(5); if (!Number.isFinite(x) || !Number.isFinite(y)) return null; return { op, x, y }; }
       case 3: case 7: return { op };
       case 4: case 5: if (buf.length < 4) return null; return { op, on: !!buf[1], ms: buf.readUInt16LE(2) };

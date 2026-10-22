@@ -56,7 +56,7 @@ wss.on('connection', (ws, req) => {
         const now = Date.now(); if (now - cl.lastJoin < 800) return; cl.lastJoin = now;
         let h = 0; for (const c of game.clients) if (!c.dead && c !== cl) h++;
         if (h >= C.MAX_PLAYERS) return send(cl, enc.full());
-        cl.W = m.W; cl.H = m.H; game.join(cl, m.name, m.multi, m.party); cl.sentParty = ''; break;
+        cl.W = m.W; cl.H = m.H; cl.test = m.test; game.join(cl, m.name, m.multi, m.party); cl.sentParty = ''; break;
       }
       case 2: if (!cl.dead) game.setTarget(cl, m.x, m.y); break;
       case 3: if (!cl.dead && cl.splitBudget >= 1) { cl.splitBudget--; game.split(cl); } break;
