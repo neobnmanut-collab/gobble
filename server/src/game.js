@@ -179,9 +179,9 @@ class Game {
   }
   // stream = rapid feed: one tight, straight jet (like water from a straw) that fans out gently as it slows down
   shoot(c, dx, dy, v, j = 0.3, stream = false) {
-    if (stream) j = 0.05;
+    if (stream) j = 0.09;
     const a = (Math.random() - 0.5) * j, co = Math.cos(a), si = Math.sin(a), ex = dx * co - dy * si, ey = dx * si + dy * co;
-    const sv = v * (1 + (Math.random() - 0.5) * (stream ? 0.08 : j * 0.6)), ih = j > 0.1 || stream ? 1 : 0;
+    const sv = v * (1 + (Math.random() - 0.5) * (stream ? 0.14 : j * 0.6)), ih = j > 0.1 || stream ? 1 : 0;
     const side = stream ? (Math.random() - 0.5) * 2 * v * 0.075 : 0; // sideways drift that outlasts the forward push, so the end spreads
     this.ejected.push({
       id: this.nextPellet++, x: c.x + ex * (c.r + 4), y: c.y + ey * (c.r + 4), m: C.EJECT_MASS, own: c.o, src: c, imm: 0.35, hb: this.owners.get(c.o)?.hue ?? 0,

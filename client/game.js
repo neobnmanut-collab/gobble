@@ -401,7 +401,7 @@ function textSprite(str, devPx, weight, fill, stroke) {
   if (txtCache.size > 500) txtCache.delete(txtCache.keys().next().value); // forget the oldest
   return sp;
 }
-const fb = Array.from({ length: 12 }, () => []), ejb = new Map(), BLOB_R = 21; // fed blobs look a bit bigger than their real size (16)
+const fb = Array.from({ length: 12 }, () => []), ejb = new Map(), BLOB_R = 23; // fed blobs look bigger than their real size (16)
 function draw(dt) {
   const k = dd <= 0 ? 1 : smooth(dt / (dd / 1000 * 0.6)), now = performance.now(), aid = playing ? activeId() : -1, aim = playing ? aimPoint() : null;
   for (const e of ents.values()) {
@@ -452,7 +452,7 @@ function draw(dt) {
   const jd = Math.min(dt, 0.033);
   for (const [id, b] of blobs) {
     if (pellets.has(id)) continue;
-    const sp = Math.hypot(b.vx, b.vy), td = Math.min(0.45, sp / 2200);
+    const sp = Math.hypot(b.vx, b.vy), td = Math.min(0.16, sp / 6000); // only a slight stretch, so neighbours don't run into each other
     if (sp > 30) b.ang = Math.atan2(b.vy, b.vx);
     b.dv += (300 * (td - b.d) - 9 * b.dv) * jd; b.d = clamp(b.d + b.dv * jd, -0.35, 0.6);
     b.sv += (260 * (1 - b.s) - 8 * b.sv) * jd; b.s += b.sv * jd;
