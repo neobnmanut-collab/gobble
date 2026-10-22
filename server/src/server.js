@@ -70,6 +70,12 @@ wss.on('connection', (ws, req) => {
       case 8: cl.W = m.W; cl.H = m.H; cl.zoom = Math.max(0.01, Math.min(3, m.zoom || 1)); break;
       case 15: cl.colA = m.a; cl.colI = m.i; cl.skin = m.skin < 12 ? m.skin : 255; cl.badge = m.badge < BADGES.length ? m.badge : 255; break;
       case 9: if (cl.ws.readyState === 1) cl.ws.send(enc.pong(m.token)); break;
+      case 19: { // change party on the fly (from the menu or mid-game)
+        const code = String(m.code).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8), old = cl.party || '';
+        if (code === old) break; cl.party = code; cl.sentParty = '';
+        if (cl.voice) { if (old) voiceRoster(old); if (code) voiceRoster(code); else { cl.voice = false; send(cl, enc.voiceRoster(cl.vid, [])); } }
+        break;
+      }
       case 18: { // party voice chat: the server only introduces party members to each other; the sound goes browser to browser
         if (m.kind === 0) { if (!cl.party) { send(cl, enc.voiceRoster(cl.vid, [])); return; } cl.voice = true; voiceRoster(cl.party); }
         else if (m.kind === 1) { const p = cl.voice && cl.party; cl.voice = false; send(cl, enc.voiceRoster(cl.vid, [])); if (p) voiceRoster(p); }

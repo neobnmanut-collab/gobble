@@ -10,6 +10,7 @@
 //   6 SWAP    f32 x, f32 y          (where the box you leave keeps heading)
 //   7 RESPAWN
 //   8 SIZE    u16 screenW, u16 screenH, u16 zoom x1000 (how far this player has zoomed out with the wheel)
+//  19 PARTY   utf8 party code: join or leave a party right away, without starting a new game
 //  18 VOICE   u8 0 = join party voice, 1 = leave, 2 = WebRTC signal (u32 to, utf8 JSON) for a party member
 //  15 LOOK    u8 r,g,b of the active multibox orb, u8 r,g,b of the other one, u8 sticker skin (255 none), u8 chat badge (255 none)
 //   9 PING    u32 token             (answered at once with PONG, for the ping display)
@@ -119,6 +120,7 @@ function decode(buf) {
       case 15: if (buf.length < 7) return null; return { op, a: buf[1] << 16 | buf[2] << 8 | buf[3], i: buf[4] << 16 | buf[5] << 8 | buf[6], skin: buf.length > 7 ? buf[7] : 255, badge: buf.length > 8 ? buf[8] : 255 };
       case 9: if (buf.length < 5) return null; return { op, token: buf.readUInt32LE(1) };
       case 11: if (buf.length < 2) return null; return { op, growth: buf[1] };
+      case 19: return { op, code: buf.subarray(1, 17).toString('utf8') };
       case 18: { if (buf.length < 2) return null; const kind = buf[1]; if (kind === 2) { if (buf.length < 6) return null; return { op, kind, to: buf.readUInt32LE(2), data: buf.subarray(6, 6 + 8000).toString('utf8') }; } return { op, kind }; }
       case 16: return { op, fx: buf.length > 1 ? Math.min(8, buf[1]) : 0 };
       case 14: if (buf.length < 2) return null; return { op, spec: buf[1] };

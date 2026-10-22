@@ -108,7 +108,7 @@ function connect() {
   wake();
   try { ws = new WebSocket(wsUrl()); } catch (e) { return reconnect(); }
   ws.binaryType = 'arraybuffer';
-  ws.onopen = () => { connAt = performance.now(); chatSeen.clear(); for (const c of chatStore) { const k = c.channel + '|' + c.name + '|' + c.text; chatSeen.set(k, (chatSeen.get(k) || 0) + 1); } connected = true; everConnected = true; retry = 0; full = false; $('wake').hidden = true; setStatus(''); ws.send(Net.enc.size(innerWidth, innerHeight, zm)); sendPing(); sendName(); sendCols(); };
+  ws.onopen = () => { connAt = performance.now(); chatSeen.clear(); for (const c of chatStore) { const k = c.channel + '|' + c.name + '|' + c.text; chatSeen.set(k, (chatSeen.get(k) || 0) + 1); } connected = true; everConnected = true; retry = 0; full = false; $('wake').hidden = true; setStatus(''); ws.send(Net.enc.size(innerWidth, innerHeight, zm)); sendPing(); sendName(); sendCols(); const pc0 = cleanCode($('pty').value); if (pc0) ws.send(Net.enc.party(pc0)); };
   ws.onmessage = e => { if (typeof e.data !== 'string') handle(Net.decode(e.data, WS)); };
   ws.onclose = () => { for (const id of [...peers.keys()]) dropPeer(id); connected = false; if (playing) { playing = false; showMenu(tr('lost'), tr('lost_s')); } ents.clear(); spikes.clear(); blobs.clear(); pellets.clear(); owners.clear(); reconnect(); };
   ws.onerror = () => {};
@@ -713,8 +713,10 @@ function renderParty() {
   const n = playing ? new Set([...partyIds].map(id => owners.get(id)?.name?.replace(/ [AB]$/, ''))).size : 0;
   $('pnote').textContent = playing && partyCode ? tr('party_note', { code: partyCode, n }) : tr('party_share');
 }
-$('pnew').addEventListener('click', () => { const a = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let c = ''; for (let i = 0; i < 5; i++) c += a[Math.floor(Math.random() * a.length)]; $('pty').value = c; renderParty(); });
-$('pty').addEventListener('input', () => { $('pty').value = cleanCode($('pty').value); renderParty(); });
+$('pnew').addEventListener('click', () => { const a = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let c = ''; for (let i = 0; i < 5; i++) c += a[Math.floor(Math.random() * a.length)]; $('pty').value = c; renderParty(); sendPartyCode(); });
+// the party code takes effect right away (no need to press Play again), so friends can group up and use voice
+function sendPartyCode() { clearTimeout(sendPartyCode.t); sendPartyCode.t = setTimeout(() => { const c = cleanCode($('pty').value); try { localStorage.setItem('gobbleparty', c); } catch (e) {} if (connected) send(Net.enc.party(c)); }, 350); }
+$('pty').addEventListener('input', () => { $('pty').value = cleanCode($('pty').value); renderParty(); sendPartyCode(); });
 $('pcopy').addEventListener('click', () => {
   const t = $('plink').textContent;
   (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => { $('pcopy').textContent = tr('copied'); setTimeout(() => $('pcopy').textContent = tr('copy_link'), 1500); })
@@ -880,7 +882,7 @@ function drawConfetti(dt) { // a burst of paper bits falling over the whole scre
   g.restore();
 }
 
-function toast(t) { const el = $('toast'); el.textContent = t; el.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => el.hidden = true, 1800); }
+function toast(t) { const el = $('toast'); el.textContent = t; el.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => el.hidden = true, 3500); }
 $('mpass').addEventListener('click', openPass); $('bpx').addEventListener('click', closePass); $('bpdone').addEventListener('click', closePass);
 renderPassBtn();
 
@@ -897,7 +899,7 @@ function micLive() { return !!mic && (openMic || pttDown); }
 function applyMic() { if (mic) for (const t of mic.getAudioTracks()) t.enabled = micLive(); renderVoice(); }
 async function joinVoice() {
   if (voiceOn) return;
-  if (!partyCode) { toast('🎤 ' + tr('voice_need_party')); return; }
+  if (!partyCode && !cleanCode($('pty').value)) { toast('🎤 ' + tr('voice_need_party')); return; }
   try { mic = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } }); }
   catch (e) { toast('🎤 ' + tr('voice_denied')); return; }
   try { vctx = vctx || new (window.AudioContext || window.webkitAudioContext)(); vctx.resume(); } catch (e) {}

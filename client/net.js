@@ -65,6 +65,7 @@
     },
     name(n) { const nb = te.encode(String(n).slice(0, 14)).slice(0, 48), ab = new ArrayBuffer(1 + nb.length); new Uint8Array(ab)[0] = 12; new Uint8Array(ab, 1).set(nb); return ab; },
     spec(v) { return msg(2, d => { d.setUint8(0, 14); d.setUint8(1, v); }); },
+    party(code) { const b = te.encode(String(code || '')).slice(0, 16), ab = new ArrayBuffer(1 + b.length); new Uint8Array(ab)[0] = 19; new Uint8Array(ab, 1).set(b); return ab; },
     voice(kind) { return msg(2, d => { d.setUint8(0, 18); d.setUint8(1, kind); }); },
     voiceSignal(to, data) { const b = te.encode(data), ab = new ArrayBuffer(6 + b.length), d = new DataView(ab); d.setUint8(0, 18); d.setUint8(1, 2); d.setUint32(2, to, true); new Uint8Array(ab, 6).set(b); return ab; },
     effect(fx) { return msg(2, d => { d.setUint8(0, 16); d.setUint8(1, fx); }); },
