@@ -372,7 +372,13 @@ const FACES = (() => {
     f.save(); f.beginPath(); f.arc(0, 0, 0.9, 0, TAU); f.clip(); f.fillStyle = 'rgba(0,0,0,.16)'; f.beginPath(); f.arc(0.12, 0.16, 0.92, 0, TAU); f.arc(-0.06, -0.08, 0.86, 0, TAU, true); f.fill('evenodd'); f.restore(); // shaded lower edge
     d(f);
     f.fillStyle = 'rgba(255,255,255,.35)'; f.beginPath(); f.ellipse(-0.4, -0.55, 0.22, 0.1, -0.6, 0, TAU); f.fill(); // gloss
-    out.push({ img: cv2, col });
+    // the same face without the sticker body: player skins are drawn on top of the player's own colour, so they
+    // never look like bots and multibox players still see their active/other colours
+    const fc = document.createElement('canvas'); fc.width = fc.height = S; const h = fc.getContext('2d');
+    h.translate(S / 2, S / 2); h.scale(U, U); h.lineCap = h.lineJoin = 'round'; h.textAlign = 'center'; h.textBaseline = 'middle';
+    h.save(); h.beginPath(); h.arc(0, 0, 0.9, 0, TAU); h.clip(); h.fillStyle = 'rgba(0,0,0,.14)'; h.beginPath(); h.arc(0.12, 0.16, 0.92, 0, TAU); h.arc(-0.06, -0.08, 0.86, 0, TAU, true); h.fill('evenodd'); h.restore();
+    d(h); h.fillStyle = 'rgba(255,255,255,.3)'; h.beginPath(); h.ellipse(-0.4, -0.55, 0.22, 0.1, -0.6, 0, TAU); h.fill();
+    out.push({ img: cv2, face: fc, col });
   }
   return out;
 })();
@@ -382,10 +388,11 @@ function drawOrb(c, multi) {
   const skin = mineC ? pass.skin : ownerSkin.has(c.o) ? ownerSkin.get(c.o) : -1;
   let tx = box && !ring ? (act ? txtA : txtI) : oc && !oc.clash ? oc.txt : null;
   g.fillStyle = ownerFill(c.o);
-  if (skin >= 0 && R * cam.s > 7 && discoT <= 0) { // a sticker skin from the battle pass, with a ring in the multibox colour
-    const sk = FACES[skin]; g.drawImage(sk.img, c.x - R * STICK, c.y - R * STICK, R * 2 * STICK, R * 2 * STICK);
-    if (box || (oc && !oc.clash)) { g.beginPath(); g.arc(c.x, c.y, R * 1.02, 0, TAU); g.lineWidth = Math.max(3 / cam.s, R * 0.09); g.strokeStyle = g.fillStyle; g.stroke(); }
-    tx = null; return drawName(c, ow, R, tx);
+  if (skin >= 0 && R * cam.s > 7 && discoT <= 0) { // battle pass skin: the face drawn on the player's own colour (no sticker edge, so never mistaken for a bot)
+    g.beginPath(); g.arc(c.x, c.y, R, 0, TAU); g.fill();
+    if (ring && act) { g.lineWidth = Math.max(2.5 / cam.s, R * 0.07); g.strokeStyle = '#fff'; g.stroke(); }
+    const k = R * STICK / 0.9; g.drawImage(FACES[skin].face, c.x - k, c.y - k, k * 2, k * 2);
+    return drawName(c, ow, R, tx || { name: '#fff', mass: 'rgba(255,255,255,.45)', stroke: true });
   }
   const st = faces && ow && !ow.human ? FACES[ow.id % FACES.length] : null;
   if (st && R * cam.s > 7 && discoT <= 0) g.drawImage(st.img, c.x - R * STICK, c.y - R * STICK, R * 2 * STICK, R * 2 * STICK); // bots are stickers
