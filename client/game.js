@@ -357,16 +357,30 @@ function drawOrb(c, multi) {
   else { if (st) g.fillStyle = st.col; g.beginPath(); g.arc(c.x, c.y, R, 0, TAU); g.fill(); }
   if (ring && act) { g.beginPath(); g.arc(c.x, c.y, R, 0, TAU); g.lineWidth = Math.max(2.5 / cam.s, R * 0.07); g.strokeStyle = '#fff'; g.stroke(); } // white ring on the orb you control
   if (R * cam.s > 18) {
-    const fs = Math.max(12, R * 0.34), name = ow ? ow.name : '';
+    const fs = Math.max(12, R * 0.34), name = ow ? ow.name : '', px = fs * cam.s;
     g.globalAlpha = 0.55; // names and mass are see-through so faces and colours show through
-    g.font = '800 ' + fs + "px 'Bricolage Grotesque',system-ui,sans-serif"; g.textAlign = 'center'; g.textBaseline = 'middle';
-    g.fillStyle = tx ? tx.name : '#fff';
-    if (fs * cam.s >= 16 && (!tx || tx.stroke)) { g.lineWidth = fs * 0.14; g.strokeStyle = 'rgba(0,0,0,.45)'; g.strokeText(name, c.x, c.y); }
-    g.fillText(name, c.x, c.y);
-    const ms = fs * 0.45; g.font = '700 ' + ms + "px 'Bricolage Grotesque',system-ui,sans-serif"; g.fillStyle = tx ? tx.mass : 'rgba(255,255,255,.38)';
-    g.fillText(String(dm(c.m)), c.x, c.y + fs * 0.72);
+    // names are drawn once into a small cached image and then just stamped, which is far cheaper than drawing text every frame
+    if (name) { const sp = textSprite(name, px * dpr, 800, tx ? tx.name : '#fff', px >= 16 && (!tx || tx.stroke)), k = fs / sp.px; g.drawImage(sp.c, c.x - sp.w * k / 2, c.y - sp.h * k / 2, sp.w * k, sp.h * k); }
+    if (px * 0.45 >= 7) { const ms = fs * 0.45; g.font = '700 ' + Math.round(ms * 4) / 4 + "px 'Bricolage Grotesque',system-ui,sans-serif"; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = tx ? tx.mass : 'rgba(255,255,255,.38)'; g.fillText(String(dm(c.m)), c.x, c.y + fs * 0.72); }
     g.globalAlpha = 1;
   }
+}
+// cached text images: one per name, colour and size step (sizes go up in ~12% steps, so zooming reuses them)
+const txtCache = new Map();
+function textSprite(str, devPx, weight, fill, stroke) {
+  const b = Math.max(8, Math.round(Math.pow(2, Math.round(Math.log2(devPx) * 6) / 6)));
+  const key = b + '|' + fill + '|' + (stroke ? 1 : 0) + '|' + weight + '|' + str;
+  let sp = txtCache.get(key);
+  if (sp) return sp;
+  const font = weight + ' ' + b + "px 'Bricolage Grotesque',system-ui,sans-serif", pad = Math.ceil(b * 0.2);
+  g.font = font; const w = Math.ceil(g.measureText(str).width) + pad * 2, h = Math.ceil(b * 1.35) + pad;
+  const cv2 = document.createElement('canvas'); cv2.width = w; cv2.height = h; const t = cv2.getContext('2d');
+  t.font = font; t.textAlign = 'center'; t.textBaseline = 'middle'; t.lineJoin = 'round';
+  if (stroke) { t.lineWidth = b * 0.14; t.strokeStyle = 'rgba(0,0,0,.45)'; t.strokeText(str, w / 2, h / 2); }
+  t.fillStyle = fill; t.fillText(str, w / 2, h / 2);
+  sp = { c: cv2, w, h, px: b }; txtCache.set(key, sp);
+  if (txtCache.size > 500) txtCache.delete(txtCache.keys().next().value); // forget the oldest
+  return sp;
 }
 const fb = Array.from({ length: 12 }, () => []), BLOB_R = 21; // fed blobs look a bit bigger than their real size (16)
 function draw(dt) {
