@@ -14,6 +14,7 @@ const DEF = { split: 'Space', dsplit: 'KeyD', tsplit: 'KeyF', qsplit: 'KeyG', ej
 const ACT = ['split', 'dsplit', 'tsplit', 'qsplit', 'eject', 'hline', 'vline', 'fline', 'respawn', 'ping', 'swap', 'feed'].map(k => [k, 'a_' + k]);
 const MACROS = [['none', 'm_none'], ['split', 'a_split'], ['dsplit', 'a_dsplit'], ['tsplit', 'a_tsplit'], ['qsplit', 'a_qsplit'], ['eject', 'a_eject'], ['swap', 'm_swap']];
 let binds = Object.assign({}, DEF), dd = 60, rf = 40, pd = 50, lsi = false, lsn = 2, mal = true, ltg = false, ftg = false, mbtn = { 0: 'none', 2: 'none' };
+let fcap = 0; // highest frames per second to draw; 0 = as many as the monitor shows
 let best = 0;
 try { best = +localStorage.getItem('gobblebest_mp') || 0; } catch (e) {}
 try {
@@ -21,13 +22,13 @@ try {
   if (c) {
     if (c.binds) for (const k in DEF) if (typeof c.binds[k] === 'string') binds[k] = c.binds[k];
     const num = (k, a, b) => (typeof c[k] === 'number' ? clamp(c[k], a, b) : undefined), bool = k => (typeof c[k] === 'boolean' ? c[k] : undefined);
-    rf = num('rf', 40, 200) ?? rf; dd = num('dd2', 0, 300) ?? dd; pd = num('pd', 0, 200) ?? pd; lsn = num('lsn', 1, 4) ?? lsn;
+    rf = num('rf', 40, 200) ?? rf; dd = num('dd2', 0, 300) ?? dd; pd = num('pd', 0, 200) ?? pd; lsn = num('lsn', 1, 4) ?? lsn; fcap = num('fcap', 0, 1000) ?? fcap;
     lsi = bool('lsi') ?? lsi; mal = bool('mal') ?? mal; ltg = bool('ltg') ?? ltg; ftg = bool('ftg') ?? ftg;
     if (c.mbtn) for (const b of [0, 2]) if (MACROS.some(m => m[0] === c.mbtn[b])) mbtn[b] = c.mbtn[b];
   }
 } catch (e) {}
 { const seen = new Set(); for (const [k] of ACT) { const v = binds[k]; if (!v) continue; if (seen.has(v)) binds[k] = Object.values(binds).includes(DEF[k]) ? '' : DEF[k]; seen.add(binds[k]); } }
-function saveCfg() { try { const old = JSON.parse(localStorage.getItem('gobblecfg') || '{}') || {}; localStorage.setItem('gobblecfg', JSON.stringify(Object.assign(old, { binds, dd2: dd, rf, pd, lsi, lsn, mal, ltg, ftg, mbtn }))); } catch (e) {} }
+function saveCfg() { try { const old = JSON.parse(localStorage.getItem('gobblecfg') || '{}') || {}; localStorage.setItem('gobblecfg', JSON.stringify(Object.assign(old, { binds, fcap, dd2: dd, rf, pd, lsi, lsn, mal, ltg, ftg, mbtn }))); } catch (e) {} }
 function label(b) { if (!b) return tr('unbound'); if (b.startsWith('Mouse')) { const n = +b.slice(5); return n <= 2 ? tr(['mouse_left', 'mouse_middle', 'mouse_right'][n]) : tr('mouse_n', { n: n + 1 }); } return b.startsWith('Key') ? b.slice(3) : b.startsWith('Digit') ? b.slice(5) : b; }
 
 /* ---------- world as last seen from the server ---------- */
@@ -361,12 +362,30 @@ function hud() {
   const who = lb.players >= 0 ? tr('players_bots', { p: lb.players, b: lb.bots }) : tr('in_arena', { n: lb.total });
   $('pc').textContent = connected ? who : ''; $('live').hidden = !(connected && playing && lb.players >= 0); $('livet').textContent = who; $('onl').textContent = connected && lb.players >= 0 ? tr('hud_online', { p: lb.players, b: lb.bots }) : '–';
   $('png').textContent = connected && ping ? ping + ' ms' : '–';
+  $('fpsv').textContent = fps + ' / ' + hz; if (!$('st').hidden) $('fpsnow').textContent = fps + ' FPS · ' + tr('fps_screen', { n: hz });
   if (!$('ov').hidden) renderRegions();
 }
 
 /* ---------- loop ---------- */
 let last = performance.now(), ht = 0, aimT = 0;
+// The browser calls us once per monitor refresh. We time those calls to find the monitor's real
+// refresh rate (60, 75, 120, 144, 165, 240 Hz...), count the frames we actually draw each second,
+// and skip refreshes when a lower limit is picked.
+const RATES = [30, 50, 60, 72, 75, 90, 100, 120, 144, 165, 170, 180, 200, 240, 280, 300, 360, 480, 500];
+let hz = 60, fps = 0, fN = 0, fT = 0, rawPrev = 0, nextDraw = 0; const gaps = [];
+function snapHz(v) { let b = v; for (const r of RATES) if (Math.abs(r - v) / r < 0.04) { b = r; break; } return Math.round(b); }
 function frame(t) {
+  requestAnimationFrame(frame);
+  if (rawPrev) { const gap = t - rawPrev; if (gap > 1 && gap < 60) { gaps.push(gap); if (gaps.length > 120) gaps.shift(); } }
+  rawPrev = t;
+  // a slow computer can miss refreshes, so use the quicker gaps and only ever raise the estimate
+  if (gaps.length >= 30 && fN === 0) { const s = gaps.slice().sort((a, b) => a - b), nh = snapHz(1000 / s[s.length >> 2]); if (nh > hz) { hz = nh; if (!$('st').hidden) renderSettings(); } }
+  if (fcap > 0 && fcap < hz - 1) {
+    const iv = 1000 / fcap, half = 500 / hz;
+    if (t < nextDraw - half) return;
+    nextDraw = t - nextDraw > iv ? t + iv : nextDraw + iv;
+  }
+  fN++; if (t - fT >= 500) { fps = Math.round(fN * 1000 / (t - fT)); fN = 0; fT = t; }
   const dt = clamp((t - last) / 1000, 0, 0.1); last = t; T += dt;
   if (playing && !paused) {
     for (let i = sq.length - 1; i >= 0; i--) { sq[i] -= dt; if (sq[i] <= 0) { sq.splice(i, 1); split(); } }
@@ -377,7 +396,6 @@ function frame(t) {
   camera(dt); draw(dt);
   mmT -= dt; if (mmT <= 0) { mmT = 0.2; drawMM(); }
   ht += dt; if (ht > 0.25) { ht = 0; hud(); }
-  requestAnimationFrame(frame);
 }
 
 /* ---------- settings panel ---------- */
@@ -400,6 +418,10 @@ function renderSettings() {
     row.append(s, b); kl.appendChild(row);
   }
   for (const b of [0, 2]) { const el = $('mm' + b); if (!el.options.length) for (const [v, t] of MACROS) { const o = document.createElement('option'); o.value = v; o.textContent = tr(t); o.dataset.t = t; el.append(o); } el.value = mbtn[b]; }
+  { const el = $('fcap'), opts = [0, ...[30, 60, 75, 90, 120, 144, 165, 240, 360].filter(r => r < hz)];
+    const key = opts.join() + '|' + tr('fps_monitor', { n: hz });
+    if (el.dataset.k !== key) { el.dataset.k = key; el.textContent = ''; for (const r of opts) { const o = document.createElement('option'); o.value = r; o.textContent = r ? r + ' FPS' : tr('fps_monitor', { n: hz }); el.append(o); } }
+    el.value = opts.includes(fcap) ? fcap : 0; $('fpsnow').textContent = fps + ' FPS · ' + tr('fps_screen', { n: hz }); }
   $('dd').value = dd; $('ddv').textContent = dd + ' ms'; $('rf').value = rf; $('rfv').textContent = rf + ' ms'; $('pd').value = pd; $('pdv').textContent = pd + ' ms';
   $('lsi').checked = lsi; $('lsn').value = lsn; $('mal').checked = mal; $('ltg').checked = ltg; $('ftg').checked = ftg;
 }
@@ -448,9 +470,9 @@ function tbtn(id, fn, hold) {
 }
 tbtn('bsp', d => d && multiSplit(1)); tbtn('bds', d => d && multiSplit(2)); tbtn('bej', d => act('eject', d), true); tbtn('bsw', d => d && act('swap', true)); tbtn('bfd', d => act('feed', d), true);
 $('gear').addEventListener('click', openSettings); $('cl').addEventListener('click', closeSettings); $('cl2').addEventListener('click', closeSettings);
-$('rs').addEventListener('click', () => { binds = Object.assign({}, DEF); dd = 60; rf = 40; pd = 50; lsi = false; lsn = 2; mal = true; ltg = false; ftg = false; mbtn = { 0: 'none', 2: 'none' }; saveCfg(); updateHelp(); renderSettings(); });
+$('rs').addEventListener('click', () => { binds = Object.assign({}, DEF); dd = 60; fcap = 0; rf = 40; pd = 50; lsi = false; lsn = 2; mal = true; ltg = false; ftg = false; mbtn = { 0: 'none', 2: 'none' }; saveCfg(); updateHelp(); renderSettings(); });
 const setting = (id, ev, fn) => $(id).addEventListener(ev, e => { fn(e.target); saveCfg(); renderSettings(); });
-setting('dd', 'input', t => dd = +t.value); setting('rf', 'input', t => rf = +t.value); setting('pd', 'input', t => pd = +t.value);
+setting('dd', 'input', t => dd = +t.value); setting('fcap', 'change', t => { fcap = +t.value || 0; nextDraw = 0; }); setting('rf', 'input', t => rf = +t.value); setting('pd', 'input', t => pd = +t.value);
 setting('lsi', 'change', t => lsi = t.checked); setting('lsn', 'change', t => lsn = clamp(Math.round(+t.value) || 1, 1, 4)); setting('mal', 'change', t => mal = t.checked);
 setting('ltg', 'change', t => { ltg = t.checked; lock = null; }); setting('ftg', 'change', t => { ftg = t.checked; feedOn = false; });
 setting('mm0', 'change', t => mbtn[0] = t.value); setting('mm2', 'change', t => mbtn[2] = t.value);

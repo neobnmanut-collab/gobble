@@ -128,7 +128,7 @@ button{font:700 1rem var(--font);cursor:pointer}
 <body>
 <canvas id="c"></canvas>
 <canvas id="mm"></canvas>
-<div class="hud" id="hud"><span class="k" data-t="mass">Mass</span><b id="sc">0</b><span class="k" data-t="best">Best</span><b id="bs">0</b><span class="k" data-t="rank">Rank</span><b id="rk">–</b><span class="k" data-t="sector">Sector</span><b id="sec">–</b><span class="k" data-t="ping">Ping</span><b id="png">–</b><span class="k" data-t="online">Online</span><b id="onl">–</b><div id="ct"></div></div>
+<div class="hud" id="hud"><span class="k" data-t="mass">Mass</span><b id="sc">0</b><span class="k" data-t="best">Best</span><b id="bs">0</b><span class="k" data-t="rank">Rank</span><b id="rk">–</b><span class="k" data-t="sector">Sector</span><b id="sec">–</b><span class="k" data-t="ping">Ping</span><b id="png">–</b><span class="k">FPS</span><b id="fpsv">–</b><span class="k" data-t="online">Online</span><b id="onl">–</b><div id="ct"></div></div>
 <div class="hud" id="lbw"><h2 data-t="top">Top orbs</h2><ol id="lb"></ol></div>
 <div id="tc"><button id="bsp" data-t="split">Split</button><button id="bds" data-t="split2">2× Split</button><button id="bej" data-t="eject">Eject</button><button id="bsw" hidden data-t="swap">Swap</button><button id="bfd" hidden data-t="feed">Feed</button></div>
 <div class="ov" id="ov"><div class="card">
@@ -163,6 +163,9 @@ button{font:700 1rem var(--font);cursor:pointer}
   <div class="sec"><h2 data-t="growth">Growth speed</h2><div class="seg" id="growc" role="group" aria-label="Growth speed"></div><p class="hint" data-t="growth_hint">How fast you grow from pellets and from orbs you eat. Changes right away, even mid-game.</p></div>
   <div class="sec"><h2 data-t="display">Display</h2>
     <div class="row"><span data-t="draw_delay">Draw delay</span><input type="range" id="dd" min="0" max="300" step="10"><b id="ddv"></b></div>
+    <div class="row"><span data-t="max_fps">Max FPS</span><select id="fcap"></select></div>
+    <div class="row"><span data-t="fps_now">Right now</span><b id="fpsnow">–</b></div>
+    <p class="hint" data-t="fps_hint">Your game draws one frame for every refresh of your monitor, so the most it can show is your monitor's refresh rate. If it stays near 30, turn off Energy Saver in Chrome and make sure hardware acceleration is on.</p>
     <p class="hint" data-t="draw_hint">How long orbs take to glide to each new position. Lower feels faster and snappier, higher looks smoother.</p></div>
   <div class="sec"><h2 data-t="rapid_feed">Rapid feed</h2>
     <div class="row"><span data-t="time_shots">Time between shots</span><input type="range" id="rf" min="40" max="200" step="5"><b id="rfv"></b></div></div>
@@ -181,9 +184,9 @@ button{font:700 1rem var(--font);cursor:pointer}
     <p class="hint" data-t="toggles_hint">This is an online game, so it keeps running while this panel is open. Your browser’s own shortcuts are blocked while you play.</p></div>
   <div class="btns"><button class="kb" id="rs" data-t="reset">Reset defaults</button><button class="primary" id="cl" data-t="done">Done</button></div>
 </div></div>
-<script src="i18n.js?v=25"></script>
-<script src="servers.js?v=25"></script>
-<script src="net.js?v=25"></script>
-<script src="game.js?v=25"></script>
+<script src="i18n.js?v=26"></script>
+<script src="servers.js?v=26"></script>
+<script src="net.js?v=26"></script>
+<script src="game.js?v=26"></script>
 </body>
 </html>
