@@ -148,7 +148,7 @@ function handle(m) {
           // new blob: place it where it sits on the orb that shot it, as that orb is drawn right now
           let from = null, bd = 90; for (const o of ents.values()) { const d = Math.hypot(b.x - o.tx, b.y - o.ty) - o.tr; if (d < bd) { bd = d; from = o; } }
           const sx = from ? from.x + (b.x - from.tx) : b.x, sy = from ? from.y + (b.y - from.ty) : b.y;
-          blobs.set(b.id, { x: sx, y: sy, ox: sx, oy: sy, tx: b.x, ty: b.y, vx: 0, vy: 0, lt: lastTick, hue: Math.round(b.hue / 30) % 12 * 30, ghost: 0 });
+          blobs.set(b.id, { x: sx, y: sy, ox: sx, oy: sy, tx: b.x, ty: b.y, vx: 0, vy: 0, lt: lastTick, hue: Math.round(b.hue / 30) % 12 * 30, ghost: 0, s: 0.55, sv: 0, d: 0, dv: 0, ang: 0 });
         }
       }
       // a blob that stopped becomes a pellet with the same id: keep drawing it until that pellet arrives
@@ -368,7 +368,7 @@ function drawOrb(c, multi) {
     g.globalAlpha = 1;
   }
 }
-const fb = Array.from({ length: 12 }, () => []);
+const fb = Array.from({ length: 12 }, () => []), BLOB_R = 21; // fed blobs look a bit bigger than their real size (16)
 function draw(dt) {
   const k = dd <= 0 ? 1 : smooth(dt / (dd / 1000 * 0.6)), now = performance.now(), aid = playing ? activeId() : -1, aim = playing ? aimPoint() : null;
   for (const e of ents.values()) {
@@ -408,11 +408,22 @@ function draw(dt) {
     for (const f of pellets.values()) if (f.x > x0 - 20 && f.x < x1 + 20 && f.y > y0 - 20 && f.y < y1 + 20) fb[f.hb % 12].push(f);
     for (let h = 0; h < 12; h++) {
       const a = fb[h]; if (!a.length) continue; g.fillStyle = 'hsl(' + h * 30 + ' 70% 60%)'; g.beginPath();
-      for (const f of a) { const rr = f.ej ? 16 : fr; if (psz < 2.2) g.rect(f.x - rr * 0.85, f.y - rr * 0.85, rr * 1.7, rr * 1.7); else { g.moveTo(f.x + rr, f.y); g.arc(f.x, f.y, rr, 0, TAU); } }
+      for (const f of a) { const rr = f.ej ? BLOB_R : fr; if (rr * cam.s < 2.2) g.rect(f.x - rr * 0.85, f.y - rr * 0.85, rr * 1.7, rr * 1.7); else { g.moveTo(f.x + rr, f.y); g.arc(f.x, f.y, rr, 0, TAU); } }
       g.fill();
     }
   }
-  for (const [id, b] of blobs) { if (b.x < x0 || b.x > x1 || b.y < y0 || b.y > y1) continue; if (pellets.has(id)) continue; g.fillStyle = 'hsl(' + b.hue + ' 70% 60%)'; g.beginPath(); g.arc(b.x, b.y, 16, 0, TAU); g.fill(); }
+  // fed blobs are drawn like little rubber jelly balls: they pop out with a bounce, stretch along their flight
+  // and wobble a few times when they land (springs, purely visual; the real size and mass are unchanged)
+  const jd = Math.min(dt, 0.033);
+  for (const [id, b] of blobs) {
+    if (pellets.has(id)) continue;
+    const sp = Math.hypot(b.vx, b.vy), td = Math.min(0.45, sp / 2200);
+    if (sp > 30) b.ang = Math.atan2(b.vy, b.vx);
+    b.dv += (300 * (td - b.d) - 9 * b.dv) * jd; b.d = clamp(b.d + b.dv * jd, -0.35, 0.6);
+    b.sv += (260 * (1 - b.s) - 8 * b.sv) * jd; b.s += b.sv * jd;
+    if (b.x < x0 - 30 || b.x > x1 + 30 || b.y < y0 - 30 || b.y > y1 + 30) continue;
+    const r = BLOB_R * b.s; g.fillStyle = 'hsl(' + b.hue + ' 70% 60%)'; g.beginPath(); g.ellipse(b.x, b.y, r * (1 + b.d), r / (1 + b.d), b.ang, 0, TAU); g.fill();
+  }
   // orbs, small first
   const list = []; for (const e of ents.values()) if (!(e.x < x0 - e.r || e.x > x1 + e.r || e.y < y0 - e.r || e.y > y1 + e.r)) list.push(e);
   list.sort((a, b) => a.m - b.m);
