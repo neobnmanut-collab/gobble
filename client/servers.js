@@ -4,3 +4,5 @@ window.GAME_SERVERS = [
   { id: 'eu', name: 'Europe', url: 'https://gobble-n1zy.onrender.com' },
   { id: 'us', name: 'USA', url: 'https://gobble-us.onrender.com' },
 ];
+// your community links: buttons appear in the menu once these are filled in
+window.GAME_DISCORD = '';

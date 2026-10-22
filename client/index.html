@@ -4,7 +4,20 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Blobbit</title>
-<meta name="description" content="Eat, grow and split in a shared arena.">
+<meta name="description" content="Blobbit is a free multiplayer orb game in your browser: eat, split, multibox, pop needles and climb the battle pass. No download, play with friends in seconds.">
+<link rel="canonical" href="https://gobble-n1zy.onrender.com/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Blobbit">
+<meta property="og:title" content="Blobbit – free multiplayer orb game">
+<meta property="og:description" content="Eat, split and grow in a live arena. Multibox, party voice chat, battle pass and funny sticker bots. Free in your browser.">
+<meta property="og:url" content="https://gobble-n1zy.onrender.com/">
+<meta property="og:image" content="https://gobble-n1zy.onrender.com/og.png">
+<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Blobbit – free multiplayer orb game">
+<meta name="twitter:description" content="Eat, split and grow in a live arena. Free in your browser.">
+<meta name="twitter:image" content="https://gobble-n1zy.onrender.com/og.png">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"VideoGame","name":"Blobbit","url":"https://gobble-n1zy.onrender.com/","description":"Free multiplayer orb game in the browser: eat, split, multibox, pop needles and climb the battle pass.","genre":["Action","Multiplayer","io game"],"gamePlatform":"Web browser","applicationCategory":"Game","operatingSystem":"Any","offers":{"@type":"Offer","price":"0","priceCurrency":"EUR"},"inLanguage":["en","es","pt","fr","de","it","pl","ru","uk","tr","lv","zh"]}</script>
 <meta name="theme-color" content="#000000">
 <link rel="icon" href="favicon.ico?v=2" sizes="48x48">
 <link rel="icon" href="favicon.svg?v=2" type="image/svg+xml">
@@ -147,6 +160,7 @@ button{font:700 1rem var(--font);cursor:pointer}
 @keyframes blink{50%{border-color:#ffd0d0}}
 @media (prefers-reduced-motion:reduce){#fxb{transition:none}#fxb.warn{animation:none}}
 .c-fx{--c:#ff9a3c}
+.social{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}.soc{padding:7px 12px;border-radius:999px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font:700 .82rem var(--font);text-decoration:none;cursor:pointer}.soc:hover{border-color:#7cc6ff}
 .legal{font-size:.75rem!important;text-align:center;margin:-4px 0 0!important}.legal a{color:var(--muted)}#vlist .vm{pointer-events:auto}
 #toast{position:fixed;left:50%;top:38%;transform:translateX(-50%);z-index:9;padding:12px 20px;border-radius:999px;background:rgba(20,20,20,.95);border:2px solid #ffd166;font-weight:800;font-size:1.05rem;pointer-events:none}
 #fxb.level{background:linear-gradient(180deg,#1d1438,#120c24);border:2px solid #c792ff;color:#eadcff;box-shadow:0 0 50px rgba(199,146,255,.45)}
@@ -219,9 +233,10 @@ button{font:700 1rem var(--font);cursor:pointer}
   <div class="mbtns"><button type="button" class="ghost" id="mset" data-t="controls">Settings</button><button type="button" class="ghost pass" id="mpass">🎖</button><button class="primary" id="go" data-t="play">Play</button></div>
   <p id="net" hidden></p>
   <p id="wake" hidden data-t="wake">The server was resting while nobody played. It wakes up in under a minute; the game connects by itself.</p>
+  <div class="social"><button type="button" class="soc" id="inv">🔗 <span data-t="invite">Invite friends</span></button><button type="button" class="soc" id="shr" hidden>📣 <span data-t="share">Share</span></button><a class="soc" id="dsc" hidden target="_blank" rel="noopener">💬 Discord</a></div>
   <p id="pc"></p>
   <div class="keys" id="keys"></div>
-  <p class="legal"><a href="privacy.html" target="_blank" rel="noopener" data-t="privacy">Privacy</a> · <a href="terms.html" target="_blank" rel="noopener" data-t="terms">Terms</a> · <span data-t="age_note">13+ · chat and voice with other players</span></p>
+  <p class="legal"><a href="privacy.html" target="_blank" rel="noopener" data-t="privacy">Privacy</a> · <a href="terms.html" target="_blank" rel="noopener" data-t="terms">Terms</a> · <a href="press.html" target="_blank" rel="noopener">Press</a> · <span data-t="age_note">13+ · chat and voice with other players</span></p>
 </div></div>
 <div id="chat"><div id="chead"><span data-t="chat">Chat</span><button type="button" id="cmin" aria-label="Hide chat">–</button></div><div id="clog" aria-live="polite"></div><div id="vlist" hidden></div><div id="cin"><button type="button" id="vbtn" aria-label="Join voice">🎤</button><button type="button" id="cch">All</button><input type="text" id="ctx" maxlength="120" placeholder="Press Play to chat" autocomplete="off" aria-label="Chat message" disabled><button type="button" id="csend" disabled data-t="send">Send</button></div></div>
 <div id="live" hidden><i></i><span id="livet"></span></div>
@@ -288,9 +303,9 @@ button{font:700 1rem var(--font);cursor:pointer}
   <div class="btns"><button class="kb" id="rs" data-t="reset">Reset defaults</button><button class="primary" id="cl" data-t="done">Done</button></div>
   </div>
 </div></div>
-<script src="i18n.js?v=59"></script>
-<script src="servers.js?v=59"></script>
-<script src="net.js?v=59"></script>
-<script src="game.js?v=59"></script>
+<script src="i18n.js?v=60"></script>
+<script src="servers.js?v=60"></script>
+<script src="net.js?v=60"></script>
+<script src="game.js?v=60"></script>
 </body>
 </html>

@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://gobble-n1zy.onrender.com/sitemap.xml

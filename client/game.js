@@ -193,6 +193,7 @@ function handle(m) {
       playing = false; held.clear(); feedOn = false; lock = null; sq.length = 0;
       const nb = m.peak > best; if (nb) { best = m.peak; try { localStorage.setItem('gobblebest_mp', best); } catch (e) {} }
       addXP(m.kills * 15); const L = passLevel(); $('xpl').hidden = TEST; $('xpl').textContent = tr('bp_xp', { n: xpRun }) + ' · ' + tr('bp_level', { n: L.lv }) + (L.need ? ' (' + L.xp + ' / ' + L.need + ')' : '');
+      lastPeak = m.peak; $('shr').hidden = false;
       $('sts').hidden = false; $('s1').textContent = dm(m.peak).toLocaleString(); $('s2').textContent = m.kills; $('s3').textContent = fmtT(m.alive);
       showMenu(tr('eaten'), nb ? tr('new_best') : tr('best_so_far', { m: dm(best).toLocaleString() })); $('go').dataset.t = 'play_again'; $('go').textContent = tr('play_again');
       break;
@@ -986,6 +987,18 @@ function renderVoice() {
     const ic = talk ? '🔊 ' : st === 'connected' ? '🔈 ' : st === 'failed' ? '⚠️ ' : '⏳ '; const mu = !me && muted.has(baseName(r.name)); s.className = 'vm' + (talk && !mu ? ' talk' : '') + (st === 'failed' ? ' bad' : ''); s.textContent = (mu ? '🔇 ' : ic) + r.name; s.title = mu ? tr('mute_tip') : st; if (!me) { s.style.cursor = 'pointer'; s.onclick = () => toggleMute(r.name); } l.append(s); }
 }
 $('vbtn').addEventListener('click', e => { e.currentTarget.blur(); if (voiceOn) leaveVoice(); else joinVoice(); });
+
+/* ---------- sharing: invite friends, share a good game, community link ---------- */
+function shareOrCopy(text, url) {
+  if (navigator.share) { navigator.share({ title: GAME_NAME, text, url }).catch(() => {}); return; }
+  const all = text + ' ' + url;
+  (navigator.clipboard ? navigator.clipboard.writeText(all) : Promise.reject()).then(() => toast('✅ ' + tr('copied'))).catch(() => toast(all));
+}
+function siteLink() { const code = cleanCode($('pty').value); if (code) return inviteLink(code); const u = new URL(location.href); u.search = ''; u.hash = ''; if (region && region !== 'here' && region !== 'eu') u.searchParams.set('r', region); return u.toString(); }
+$('inv').addEventListener('click', () => shareOrCopy(tr('invite_text'), siteLink()));
+$('shr').addEventListener('click', () => shareOrCopy(tr('share_text', { m: dm(lastPeak).toLocaleString() }), siteLink()));
+if (window.GAME_DISCORD) { $('dsc').href = window.GAME_DISCORD; $('dsc').hidden = false; }
+let lastPeak = 0;
 
 /* ---------- language ---------- */
 function renderLang() {
