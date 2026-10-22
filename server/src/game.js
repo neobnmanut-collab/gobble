@@ -194,7 +194,7 @@ class Game {
     const o = this.activeOwner(client), ow = this.owners.get(o); if (!ow) return;
     for (const c of this.cells) {
       if (c.o !== o || c.m < MINM + C.EJECT_MASS) continue;
-      const dx = ow.tx - c.x, dy = ow.ty - c.y, d = Math.hypot(dx, dy) || 1; this.shoot(c, dx / d, dy / d, 1400, 0.3, true);
+      const dx = ow.tx - c.x, dy = ow.ty - c.y, d = Math.hypot(dx, dy) || 1; this.shoot(c, dx / d, dy / d, C.EJECT_SPEED, 0.3, true);
     }
   }
   feedOther(client) {
