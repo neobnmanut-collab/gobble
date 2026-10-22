@@ -67,6 +67,10 @@ wss.on('connection', (ws, req) => {
       case 8: cl.W = m.W; cl.H = m.H; cl.zoom = Math.max(0.01, Math.min(3, m.zoom || 1)); break;
       case 15: cl.colA = m.a; cl.colI = m.i; break;
       case 9: if (cl.ws.readyState === 1) cl.ws.send(enc.pong(m.token)); break;
+      case 16: { // (secret) shake everyone's screen; once every 30 s per player
+        const now = Date.now(); if (now - (cl.quakeT || 0) < 30000) return; cl.quakeT = now;
+        const buf = enc.quake(); for (const o of game.clients) send(o, buf); break;
+      }
       case 14: // viewer mode: watch the arena without playing
         if (m.spec === 0) cl.spec = false;
         else { if (!cl.dead) game.leave(cl, true); cl.spec = true; cl.specO = m.spec === 2 ? game.watchNext(cl.specO) : game.watchNext(null); }

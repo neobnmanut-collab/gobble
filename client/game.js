@@ -19,6 +19,7 @@ const TEST = /(^|[?&])test=1(&|$)/.test(location.search.slice(1));
 let lines = true; // lines from your orbs to the mouse
 let ring = false; // multibox: mark the active orb with a white ring instead of recolouring both
 let faces = true; // funny faces on bots
+let quakeT = 0; // seconds of screen shake left
 let fcap = 0; // highest frames per second to draw; 0 = as many as the monitor shows
 // multibox colours: the orb you control and your other one. Text colours are worked out once, not per frame.
 const COL_DEF = ['#f4f4f4', '#e0443e'];
@@ -138,6 +139,7 @@ function handle(m) {
       break;
     case 2: myBoxes = m.ids; active = m.active; break;
     case 3: for (const o of m.list) owners.set(o.id, o); break;
+    case 16: quakeT = 2; break;
     case 15: ownerCol.clear(); for (const [id, hex] of m.list) ownerCol.set(id, { hex, txt: textFor(hex), clash: false }); markClashes(); break;
     case 4: {
       lastTick = performance.now(); view.x = m.vx; view.y = m.vy;
@@ -430,7 +432,9 @@ function draw(dt) {
     b.x = b.ox + (b.tx - b.ox) * p + b.vx * over; b.y = b.oy + (b.ty - b.oy) * p + b.vy * over;
   }
   g.setTransform(dpr, 0, 0, dpr, 0, 0); g.fillStyle = '#111'; g.fillRect(0, 0, W, H);
-  g.save(); g.translate(W / 2, H / 2); g.scale(cam.s, cam.s); g.translate(-cam.x, -cam.y);
+  g.save(); g.translate(W / 2, H / 2);
+  if (quakeT > 0) { quakeT -= dt; const a = 22 * Math.min(1, quakeT); g.translate((Math.random() - 0.5) * a, (Math.random() - 0.5) * a); g.rotate((Math.random() - 0.5) * 0.012 * Math.min(1, quakeT)); }
+  g.scale(cam.s, cam.s); g.translate(-cam.x, -cam.y);
   const hw = W / 2 / cam.s, hh = H / 2 / cam.s;
   let x0 = Math.max(cam.x - hw, cam.v[0]), x1 = Math.min(cam.x + hw, cam.v[1]), y0 = Math.max(cam.y - hh, cam.v[2]), y1 = Math.min(cam.y + hh, cam.v[3]);
   g.strokeStyle = '#333'; g.lineWidth = 6 / cam.s; g.strokeRect(0, 0, WS, WS);
@@ -611,6 +615,7 @@ addEventListener('keydown', e => {
   }
   const tag = e.target.tagName; if (tag === 'INPUT' || tag === 'SELECT') return;
   if (e.code === 'Enter' && !isBound('Enter') && connected) { e.preventDefault(); openChat(); return; }
+  if (e.code === 'KeyK' && !isBound('KeyK') && connected) { e.preventDefault(); send(Net.enc.quake()); return; } // (secret, not listed anywhere)
   if (watching && $('ov').hidden && e.code === 'Space') { e.preventDefault(); send(Net.enc.spec(2)); return; }
   if (!playing) return;
   if ((e.ctrlKey || e.metaKey) && e.code === 'KeyC' && String(getSelection()).length) return; // copy selected chat text

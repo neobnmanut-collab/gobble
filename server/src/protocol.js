@@ -94,6 +94,7 @@ const enc = {
     const w = new Writer(3 + cb.length + list.length * 4); w.u8(11); w.u8(cb.length); w.bytes(cb); w.u8(list.length); for (const id of list) w.u32(id); return w.done();
   },
   colours(list) { const w = new Writer(3 + list.length * 7); w.u8(15); w.u16(list.length); for (const [id, rgb] of list) { w.u32(id); w.u8(rgb >> 16 & 255); w.u8(rgb >> 8 & 255); w.u8(rgb & 255); } return w.done(); },
+  quake() { return Buffer.from([16]); },
   pong(token) { const w = new Writer(5); w.u8(9); w.u32(token); return w.done(); },
 };
 
@@ -111,6 +112,7 @@ function decode(buf) {
       case 15: if (buf.length < 7) return null; return { op, a: buf[1] << 16 | buf[2] << 8 | buf[3], i: buf[4] << 16 | buf[5] << 8 | buf[6] };
       case 9: if (buf.length < 5) return null; return { op, token: buf.readUInt32LE(1) };
       case 11: if (buf.length < 2) return null; return { op, growth: buf[1] };
+      case 16: return { op };
       case 14: if (buf.length < 2) return null; return { op, spec: buf[1] };
       case 12: return { op, name: buf.subarray(1, 49).toString('utf8') };
       case 10: if (buf.length < 3) return null; return { op, channel: buf[1] === 1 ? 1 : 0, text: buf.subarray(2, 2 + 240).toString('utf8') };

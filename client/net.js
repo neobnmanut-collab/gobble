@@ -44,6 +44,7 @@
       case 7: return { op, peak: u32(), kills: u16(), alive: u32() };
       case 8: return { op };
       case 9: return { op, token: u32() };
+      case 16: return { op };
       case 15: { const n = u16(), list = []; for (let i = 0; i < n; i++) { const id = u32(), r = u8(), gg = u8(), b = u8(); list.push([id, '#' + ((1 << 24) | (r << 16) | (gg << 8) | b).toString(16).slice(1)]); } return { op, list }; }
       case 13: { const parts = []; while (o + 4 <= ab.byteLength) { const n = u32(); parts.push(ab.slice(o, o + n)); o += n; } return { op, parts }; }
       case 10: { const channel = u8(), hue = u16(), nl = u8(); const name = td.decode(new Uint8Array(ab, o, nl)); o += nl; return { op, channel, hue, name, text: td.decode(new Uint8Array(ab, o)) }; }
@@ -62,6 +63,7 @@
     },
     name(n) { const nb = te.encode(String(n).slice(0, 14)).slice(0, 48), ab = new ArrayBuffer(1 + nb.length); new Uint8Array(ab)[0] = 12; new Uint8Array(ab, 1).set(nb); return ab; },
     spec(v) { return msg(2, d => { d.setUint8(0, 14); d.setUint8(1, v); }); },
+    quake() { return msg(1, d => d.setUint8(0, 16)); },
     growth(v) { return msg(2, d => { d.setUint8(0, 11); d.setUint8(1, v); }); },
     chat(channel, text) {
       const tb = te.encode(String(text).slice(0, 120)).slice(0, 240), ab = new ArrayBuffer(2 + tb.length);
