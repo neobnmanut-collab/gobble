@@ -237,7 +237,7 @@ class Game {
 
   /* ---------- bots ---------- */
   addBot() {
-    const id = this.newOwnerId(), m = (Math.random() < 0.15 ? rnd(1200, 3800) : rnd(400, 650)) * 1.35 /* bots start 35% bigger */, p = this.safeSpot(650, m);
+    const id = this.newOwnerId(), m = rnd(C.BOT_START * 0.92, C.BOT_START * 1.08) /* every bot starts at about the same size */, p = this.safeSpot(650, m);
     this.owners.set(id, {
       id, kind: 'bot', name: BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)], hue: Math.floor(rnd(0, 360)),
       b: { ox: 0, oy: 0, tox: 0, toy: 0, wx: p.x, wy: p.y, tt: rnd(0, 0.3), agg: rnd(1.3, 2.3), caut: rnd(0.7, 1.05), skill: rnd(0.4, 1), // greedy and always hungry

@@ -42,6 +42,7 @@ module.exports = {
   RECORD_MIN: 100000,    // a new arena record is announced to everyone once it's above this (shown as 50,000)
   TEST_MASS: 70000,      // test mode (page opened with ?test=1): the first orb starts with this (shown as 35,000) and test players never lose mass
 
+  BOT_START: 700,        // bots start at about this mass (shown as 350), give or take 8%
   BOT_MAX: 23,           // at most this many bots...
   BOT_FILL: 40,          // ...and fewer once real players fill the arena up to this many
   MAX_PLAYERS: 120,      // human players allowed at once
