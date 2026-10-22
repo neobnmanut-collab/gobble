@@ -470,7 +470,7 @@ class Game {
       if (f.y < 0) { f.y = 0; f.vy = Math.abs(f.vy) * 0.6; } else if (f.y > WS) { f.y = WS; f.vy = -Math.abs(f.vy) * 0.6; }
       if (Math.abs(f.vx) + Math.abs(f.vy) + Math.abs(f.lx || 0) + Math.abs(f.ly || 0) < 8 && f.imm <= 0) {
         f.dead = true;
-        if (this.nSettled < C.SETTLED_EJECT_CAP) { this.grid[gi(f.y) * GN + gi(f.x)].push({ id: f.id, x: f.x, y: f.y, m: f.m, hb: (Math.round(f.hb / 30) % 12 + 12) % 12, ej: 1 }); this.nSettled++; }
+        if (this.nSettled < C.SETTLED_EJECT_CAP) { this.grid[gi(f.y) * GN + gi(f.x)].push({ id: f.id, x: f.x, y: f.y, m: f.m, hb: (Math.round(f.hb / 30) % 12 + 12) % 12, ej: 1, own: f.own }); this.nSettled++; }
         continue;
       }
       const k = gi(f.y) * GN + gi(f.x); let arr = ejG.get(k); if (!arr) ejG.set(k, arr = []); arr.push(f);
@@ -549,7 +549,8 @@ class Game {
     const W = clamp(cl.W || 1280, 320, 3840), H = clamp(cl.H || 720, 320, 2160);
     const base = clamp(Math.min(W, H) / 600, 0.7, 1.4) * 1.35;
     const sN = Math.min(base / (1 + Math.sqrt(sm) / 26), Math.min(W, H) * 0.45 / (ext + 80));
-    const vw = W / 2 / sN * C.VIEW_SCALE, vh = H / 2 / sN * C.VIEW_SCALE;
+    // zooming out with the wheel widens what this player is sent, up to the whole arena (no vision limit)
+    const zo = 1 / Math.min(1, cl.zoom || 1), vw = Math.min(WS, W / 2 / sN * C.VIEW_SCALE * zo), vh = Math.min(WS, H / 2 / sN * C.VIEW_SCALE * zo);
     return { x0: cx - vw, x1: cx + vw, y0: cy - vh, y1: cy + vh, cx, cy };
   }
 }

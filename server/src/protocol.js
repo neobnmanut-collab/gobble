@@ -9,7 +9,8 @@
 //   5 FEED    u8 on, u16 ms         (feed the other multibox box)
 //   6 SWAP    f32 x, f32 y          (where the box you leave keeps heading)
 //   7 RESPAWN
-//   8 SIZE    u16 screenW, u16 screenH
+//   8 SIZE    u16 screenW, u16 screenH, u16 zoom x1000 (how far this player has zoomed out with the wheel)
+//  15 COLOURS u8 r,g,b of the active multibox orb, u8 r,g,b of the other one
 //   9 PING    u32 token             (answered at once with PONG, for the ping display)
 //  10 CHAT    u8 channel 0=everyone 1=party, utf8 text
 //  12 NAME    utf8 name (so people on the menu can chat before playing)
@@ -23,8 +24,8 @@
 //   4 TICK    f32 viewX, f32 viewY,
 //             u16 n cells  (u32 id, u32 owner, u16 x, u16 y, u16 r*4, u32 mass)
 //             u16 n spikes (u32 id, u16 x, u16 y, u16 r*4, u8 fed)
-//             u16 n sliding blobs (u32 id, u16 x, u16 y, u8 hue/2)
-//             u16 n pellets added (u32 id, u16 x, u16 y, u8 colour 0-11, u8 1=fed blob)
+//             u16 n sliding blobs (u32 id, u16 x, u16 y, u32 owner who fed it)
+//             u16 n pellets added (u32 id, u16 x, u16 y, u8 colour 0-11, u8 1=fed blob [then u32 owner])
 //             u16 n pellets removed (u32 id)
 //   5 LEADER  u16 your rank (0 = not playing), u16 orbs ranked, u8 n, n x (u32 owner, u32 mass), u16 real players online, u16 bots
 //   6 MINIMAP u8 n spikes (u16 x, u16 y), u8 n big orbs (u16 x, u16 y, u16 r*4, u32 owner),
@@ -34,6 +35,7 @@
 //   9 PONG    u32 token
 //  13 BATCH   repeated (u32 length, message): several messages sent as one, to save per-message work
 //  10 CHAT    u8 channel, u16 hue, u8 name length, name, utf8 text
+//  15 COLOURS u16 n, n x (u32 owner, u8 r, u8 g, u8 b): the colours multibox players picked for their orbs
 //  11 PARTY   u8 code length, code, u8 n, n x u32 owner id of every box in your party
 const VERSION = 2;
 const Q = 65535;
@@ -63,12 +65,12 @@ const enc = {
     return w.done();
   },
   tick(world, vx, vy, cells, spikes, ejected, added, removed) {
-    const w = new Writer(9 + 2 + cells.length * 18 + 2 + spikes.length * 11 + 2 + ejected.length * 9 + 2 + added.length * 10 + 2 + removed.length * 4);
+    const w = new Writer(9 + 2 + cells.length * 18 + 2 + spikes.length * 11 + 2 + ejected.length * 12 + 2 + added.length * 14 + 2 + removed.length * 4);
     w.u8(4); w.f32(vx); w.f32(vy);
     w.u16(cells.length); for (const c of cells) { w.u32(c.id); w.u32(c.o); w.u16(q(c.x, world)); w.u16(q(c.y, world)); w.u16(c.r * 4); w.u32(c.m); }
     w.u16(spikes.length); for (const v of spikes) { w.u32(v.id); w.u16(q(v.x, world)); w.u16(q(v.y, world)); w.u16(v.r * 4); w.u8(v.fed); }
-    w.u16(ejected.length); for (const f of ejected) { w.u32(f.id); w.u16(q(f.x, world)); w.u16(q(f.y, world)); w.u8((f.hb % 360) / 2); }
-    w.u16(added.length); for (const f of added) { w.u32(f.id); w.u16(q(f.x, world)); w.u16(q(f.y, world)); w.u8(f.hb); w.u8(f.ej ? 1 : 0); }
+    w.u16(ejected.length); for (const f of ejected) { w.u32(f.id); w.u16(q(f.x, world)); w.u16(q(f.y, world)); w.u32(f.own || 0); }
+    w.u16(added.length); for (const f of added) { w.u32(f.id); w.u16(q(f.x, world)); w.u16(q(f.y, world)); w.u8(f.hb); w.u8(f.ej ? 1 : 0); if (f.ej) w.u32(f.own || 0); }
     w.u16(removed.length); for (const id of removed) w.u32(id);
     return w.done();
   },
@@ -91,6 +93,7 @@ const enc = {
     const cb = Buffer.from(String(code || ''), 'utf8').subarray(0, 16), list = ids.slice(0, 64);
     const w = new Writer(3 + cb.length + list.length * 4); w.u8(11); w.u8(cb.length); w.bytes(cb); w.u8(list.length); for (const id of list) w.u32(id); return w.done();
   },
+  colours(list) { const w = new Writer(3 + list.length * 7); w.u8(15); w.u16(list.length); for (const [id, rgb] of list) { w.u32(id); w.u8(rgb >> 16 & 255); w.u8(rgb >> 8 & 255); w.u8(rgb & 255); } return w.done(); },
   pong(token) { const w = new Writer(5); w.u8(9); w.u32(token); return w.done(); },
 };
 
@@ -104,7 +107,8 @@ function decode(buf) {
       case 2: case 6: if (buf.length < 9) return null; { const x = buf.readFloatLE(1), y = buf.readFloatLE(5); if (!Number.isFinite(x) || !Number.isFinite(y)) return null; return { op, x, y }; }
       case 3: case 7: return { op };
       case 4: case 5: if (buf.length < 4) return null; return { op, on: !!buf[1], ms: buf.readUInt16LE(2) };
-      case 8: if (buf.length < 5) return null; return { op, W: buf.readUInt16LE(1), H: buf.readUInt16LE(3) };
+      case 8: if (buf.length < 5) return null; return { op, W: buf.readUInt16LE(1), H: buf.readUInt16LE(3), zoom: buf.length >= 7 ? buf.readUInt16LE(5) / 1000 : 1 };
+      case 15: if (buf.length < 7) return null; return { op, a: buf[1] << 16 | buf[2] << 8 | buf[3], i: buf[4] << 16 | buf[5] << 8 | buf[6] };
       case 9: if (buf.length < 5) return null; return { op, token: buf.readUInt32LE(1) };
       case 11: if (buf.length < 2) return null; return { op, growth: buf[1] };
       case 14: if (buf.length < 2) return null; return { op, spec: buf[1] };

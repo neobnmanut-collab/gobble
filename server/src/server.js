@@ -64,7 +64,8 @@ wss.on('connection', (ws, req) => {
       case 5: cl.feedOn = m.on; cl.ejectMs = Math.max(C.EJECT_MIN_MS, Math.min(1000, m.ms || 60)); break;
       case 6: if (!cl.dead) game.swap(cl, m.x, m.y); break;
       case 7: if (!cl.dead) game.respawn(cl); break;
-      case 8: cl.W = m.W; cl.H = m.H; break;
+      case 8: cl.W = m.W; cl.H = m.H; cl.zoom = Math.max(0.01, Math.min(3, m.zoom || 1)); break;
+      case 15: cl.colA = m.a; cl.colI = m.i; break;
       case 9: if (cl.ws.readyState === 1) cl.ws.send(enc.pong(m.token)); break;
       case 14: // viewer mode: watch the arena without playing
         if (m.spec === 0) cl.spec = false;
@@ -151,6 +152,12 @@ function sendLeaderboard() {
     send(cl, enc.leader(rank, all.length, top, players, bots));
   }
 }
+// the colours each multibox player picked, so everyone sees their orbs (and fed blobs) in those colours
+function sendColours() {
+  const list = [];
+  for (const cl of game.clients) if (!cl.dead && cl.multi && cl.colA !== undefined && cl.boxes) cl.boxes.forEach((id, i) => list.push([id, i === cl.active ? cl.colA : cl.colI]));
+  const buf = enc.colours(list); for (const cl of game.clients) send(cl, buf);
+}
 function sendMinimap() {
   const big = game.cells.filter(c => c.m > 6000).sort((a, b) => b.m - a.m).slice(0, 40);
   // every real player's box, as one dot at its centre
@@ -179,6 +186,7 @@ function loop() {
   if (n % C.SEND_EVERY === 0) for (const cl of game.clients) if (!cl.dead || cl.spec || n % 5 === 0) sendWorld(cl);
   if (n % 15 === 0) { sendLeaderboard(); sendParties(); }
   if (n % 15 === 0) sendMinimap();
+  if (n % 10 === 5) sendColours();
   batching = false;
   for (const cl of game.clients) { const o = cl.out; if (!o || !o.length) continue; cl.out = null; send(cl, o.length === 1 ? o[0] : enc.batch(o)); }
   const took = performance.now() - t0, late = performance.now() - next; stats.tickMs = stats.tickMs * 0.95 + took * 0.05; stats.ticks++;

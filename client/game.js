@@ -23,10 +23,24 @@ let fcap = 0; // highest frames per second to draw; 0 = as many as the monitor s
 // multibox colours: the orb you control and your other one. Text colours are worked out once, not per frame.
 const COL_DEF = ['#f4f4f4', '#e0443e'];
 const COL_PRESETS = [['#f4f4f4', '#e0443e'], ['#ffd23f', '#6b6b6b'], ['#3ee07a', '#5c5c5c'], ['#4fc3ff', '#b45cff'], ['#ff5d73', '#3a7bff'], ['#ffffff', '#4a4a4a']];
-let colA = COL_DEF[0], colI = COL_DEF[1], txtA = null, txtI = null;
+let colA = COL_DEF[0], colI = COL_DEF[1], txtA = null, txtI = null, colsReady = false;
 function light(hex) { const n = parseInt(hex.slice(1), 16), r = n >> 16, g2 = n >> 8 & 255, b = n & 255; return 0.299 * r + 0.587 * g2 + 0.114 * b > 165; }
 function textFor(hex) { return light(hex) ? { name: '#1a1a1a', mass: 'rgba(0,0,0,.4)', stroke: false } : { name: '#fff', mass: 'rgba(255,255,255,.45)', stroke: true }; }
-function setCols(a, i) { const ok = v => typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v); colA = ok(a) ? a.toLowerCase() : COL_DEF[0]; colI = ok(i) ? i.toLowerCase() : COL_DEF[1]; txtA = textFor(colA); txtI = textFor(colI); }
+function setCols(a, i) { const ok = v => typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v); colA = ok(a) ? a.toLowerCase() : COL_DEF[0]; colI = ok(i) ? i.toLowerCase() : COL_DEF[1]; txtA = textFor(colA); txtI = textFor(colI); if (colsReady) { markClashes(); setTimeout(sendCols, 0); } }
+// other multibox players' chosen colours (owner id -> { hex, txt, clash }). If someone picked (nearly) the same
+// colours as you, you see their orbs in their normal colour instead, so you never mix them up with your own.
+const ownerCol = new Map(); colsReady = true;
+function rgbOf(h) { const n = parseInt(h.slice(1), 16); return [n >> 16, n >> 8 & 255, n & 255]; }
+function near(a, b) { const x = rgbOf(a), y = rgbOf(b); return Math.hypot(x[0] - y[0], x[1] - y[1], x[2] - y[2]) < 80; }
+function markClashes() { for (const v of ownerCol.values()) v.clash = near(v.hex, colA) || near(v.hex, colI); }
+function sendCols() { if (connected) send(Net.enc.cols(colA, colI)); }
+function ownerFill(o) { // the colour an owner's orbs and fed blobs are drawn in
+  const mineC = myBoxes.includes(o), ow = owners.get(o);
+  if (mineC && myBoxes.length > 1 && !ring) return o === activeId() ? colA : colI;
+  const oc = !mineC && ownerCol.get(o); if (oc && !oc.clash) return oc.hex;
+  if (!mineC && partyIds.has(o)) return 'hsl(' + partyHue() + ' 80% 58%)';
+  return 'hsl(' + (ow ? ow.hue : 0) + ' 72% 52%)';
+}
 setCols();
 let best = 0;
 try { best = +localStorage.getItem('gobblebest_mp') || 0; } catch (e) {}
@@ -92,7 +106,7 @@ function connect() {
   wake();
   try { ws = new WebSocket(wsUrl()); } catch (e) { return reconnect(); }
   ws.binaryType = 'arraybuffer';
-  ws.onopen = () => { connected = true; everConnected = true; retry = 0; full = false; $('wake').hidden = true; setStatus(''); ws.send(Net.enc.size(innerWidth, innerHeight)); sendPing(); sendName(); };
+  ws.onopen = () => { connected = true; everConnected = true; retry = 0; full = false; $('wake').hidden = true; setStatus(''); ws.send(Net.enc.size(innerWidth, innerHeight, zm)); sendPing(); sendName(); sendCols(); };
   ws.onmessage = e => { if (typeof e.data !== 'string') handle(Net.decode(e.data, WS)); };
   ws.onclose = () => { connected = false; if (playing) { playing = false; showMenu(tr('lost'), tr('lost_s')); } ents.clear(); spikes.clear(); blobs.clear(); pellets.clear(); owners.clear(); reconnect(); };
   ws.onerror = () => {};
@@ -124,6 +138,7 @@ function handle(m) {
       break;
     case 2: myBoxes = m.ids; active = m.active; break;
     case 3: for (const o of m.list) owners.set(o.id, o); break;
+    case 15: ownerCol.clear(); for (const [id, hex] of m.list) ownerCol.set(id, { hex, txt: textFor(hex), clash: false }); markClashes(); break;
     case 4: {
       lastTick = performance.now(); view.x = m.vx; view.y = m.vy;
       const seen = new Set();
@@ -148,7 +163,7 @@ function handle(m) {
           // new blob: place it where it sits on the orb that shot it, as that orb is drawn right now
           let from = null, bd = 90; for (const o of ents.values()) { const d = Math.hypot(b.x - o.tx, b.y - o.ty) - o.tr; if (d < bd) { bd = d; from = o; } }
           const sx = from ? from.x + (b.x - from.tx) : b.x, sy = from ? from.y + (b.y - from.ty) : b.y;
-          blobs.set(b.id, { x: sx, y: sy, ox: sx, oy: sy, tx: b.x, ty: b.y, vx: 0, vy: 0, lt: lastTick, hue: Math.round(b.hue / 30) % 12 * 30, ghost: 0, s: 0.55, sv: 0, d: 0, dv: 0, ang: 0 });
+          blobs.set(b.id, { x: sx, y: sy, ox: sx, oy: sy, tx: b.x, ty: b.y, vx: 0, vy: 0, lt: lastTick, o: b.o, ghost: 0, s: 0.55, sv: 0, d: 0, dv: 0, ang: 0 });
         }
       }
       // a blob that stopped becomes a pellet with the same id: keep drawing it until that pellet arrives
@@ -276,7 +291,7 @@ function act(k, down) {
 }
 
 /* ---------- drawing ---------- */
-function resize() { dpr = Math.min(1.25, window.devicePixelRatio || 1); W = innerWidth; H = innerHeight; cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); if (connected) send(Net.enc.size(W, H)); }
+function resize() { dpr = Math.min(1.25, window.devicePixelRatio || 1); W = innerWidth; H = innerHeight; cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); if (connected) send(Net.enc.size(W, H, zm)); }
 addEventListener('resize', resize); resize();
 function camera(dt) {
   const mine = playing ? mineCells() : [];
@@ -288,7 +303,7 @@ function camera(dt) {
   }
   const base = clamp(Math.min(W, H) / 600, 0.7, 1.4) * 1.35;
   const sN = Math.min(base / (1 + Math.sqrt(sm) / 26), Math.min(W, H) * 0.45 / (ext + 80)) * (watching && !mine.length ? 0.55 : 1), fit = Math.min(W, H) / (WS * 2.1), s = Math.max(fit, sN * zm);
-  const vs = VIEW_SCALE; cam.v = [cx - W / 2 / sN * vs, cx + W / 2 / sN * vs, cy - H / 2 / sN * vs, cy + H / 2 / sN * vs];
+  const vs = VIEW_SCALE / Math.min(1, zm); cam.v = [cx - W / 2 / sN * vs, cx + W / 2 / sN * vs, cy - H / 2 / sN * vs, cy + H / 2 / sN * vs];
   const pr = mine.length ? (dd <= 0 ? smooth(dt * 30) : smooth(dt / Math.max(0.025, dd / 1000 * 0.9))) : smooth(dt * 3); cam.x += (cx - cam.x) * pr; cam.y += (cy - cam.y) * pr; cam.s += (s - cam.s) * smooth(dt * 3);
 }
 function drawSpike(v) {
@@ -353,9 +368,9 @@ const FACES = (() => {
 })();
 function drawOrb(c, multi) {
   const mineC = myBoxes.includes(c.o), ow = owners.get(c.o), R = c.r;
-  const box = multi && mineC, act = box && c.o === activeId(), tx = box && !ring ? (act ? txtA : txtI) : null;
-  const mate = !mineC && partyIds.has(c.o);
-  g.fillStyle = box && !ring ? (act ? colA : colI) : box ? 'hsl(' + (ow ? ow.hue : 0) + ' 72% 52%)' : mate ? 'hsl(' + partyHue() + ' 80% 58%)' : 'hsl(' + (ow ? ow.hue : 0) + ' 72% 52%)';
+  const box = multi && mineC, act = box && c.o === activeId(), oc = !mineC && ownerCol.get(c.o);
+  const tx = box && !ring ? (act ? txtA : txtI) : oc && !oc.clash ? oc.txt : null;
+  g.fillStyle = ownerFill(c.o);
   const st = faces && ow && !ow.human ? FACES[ow.id % FACES.length] : null;
   if (st && R * cam.s > 7) g.drawImage(st.img, c.x - R * STICK, c.y - R * STICK, R * 2 * STICK, R * 2 * STICK); // bots are stickers
   else { if (st) g.fillStyle = st.col; g.beginPath(); g.arc(c.x, c.y, R, 0, TAU); g.fill(); }
@@ -386,7 +401,7 @@ function textSprite(str, devPx, weight, fill, stroke) {
   if (txtCache.size > 500) txtCache.delete(txtCache.keys().next().value); // forget the oldest
   return sp;
 }
-const fb = Array.from({ length: 12 }, () => []), BLOB_R = 21; // fed blobs look a bit bigger than their real size (16)
+const fb = Array.from({ length: 12 }, () => []), ejb = new Map(), BLOB_R = 21; // fed blobs look a bit bigger than their real size (16)
 function draw(dt) {
   const k = dd <= 0 ? 1 : smooth(dt / (dd / 1000 * 0.6)), now = performance.now(), aid = playing ? activeId() : -1, aim = playing ? aimPoint() : null;
   for (const e of ents.values()) {
@@ -423,7 +438,9 @@ function draw(dt) {
   const fr = rad(3), psz = fr * cam.s;
   if (psz > 0.35) {
     for (const b of fb) b.length = 0;
-    for (const f of pellets.values()) if (f.x > x0 - 20 && f.x < x1 + 20 && f.y > y0 - 20 && f.y < y1 + 20) fb[f.hb % 12].push(f);
+    ejb.clear();
+    for (const f of pellets.values()) if (f.x > x0 - 20 && f.x < x1 + 20 && f.y > y0 - 20 && f.y < y1 + 20) { if (f.ej) { const k = owners.has(f.o) || ownerCol.has(f.o) ? ownerFill(f.o) : 'hsl(' + f.hb * 30 + ' 70% 60%)'; let a = ejb.get(k); if (!a) ejb.set(k, a = []); a.push(f); } else fb[f.hb % 12].push(f); }
+    for (const [k, a] of ejb) { g.fillStyle = k; g.beginPath(); for (const f of a) { if (BLOB_R * cam.s < 2.2) g.rect(f.x - BLOB_R * 0.85, f.y - BLOB_R * 0.85, BLOB_R * 1.7, BLOB_R * 1.7); else { g.moveTo(f.x + BLOB_R, f.y); g.arc(f.x, f.y, BLOB_R, 0, TAU); } } g.fill(); }
     for (let h = 0; h < 12; h++) {
       const a = fb[h]; if (!a.length) continue; g.fillStyle = 'hsl(' + h * 30 + ' 70% 60%)'; g.beginPath();
       for (const f of a) { const rr = f.ej ? BLOB_R : fr; if (rr * cam.s < 2.2) g.rect(f.x - rr * 0.85, f.y - rr * 0.85, rr * 1.7, rr * 1.7); else { g.moveTo(f.x + rr, f.y); g.arc(f.x, f.y, rr, 0, TAU); } }
@@ -440,7 +457,7 @@ function draw(dt) {
     b.dv += (300 * (td - b.d) - 9 * b.dv) * jd; b.d = clamp(b.d + b.dv * jd, -0.35, 0.6);
     b.sv += (260 * (1 - b.s) - 8 * b.sv) * jd; b.s += b.sv * jd;
     if (b.x < x0 - 30 || b.x > x1 + 30 || b.y < y0 - 30 || b.y > y1 + 30) continue;
-    const r = BLOB_R * b.s; g.fillStyle = 'hsl(' + b.hue + ' 70% 60%)'; g.beginPath(); g.ellipse(b.x, b.y, r * (1 + b.d), r / (1 + b.d), b.ang, 0, TAU); g.fill();
+    const r = BLOB_R * b.s; g.fillStyle = ownerFill(b.o); g.beginPath(); g.ellipse(b.x, b.y, r * (1 + b.d), r / (1 + b.d), b.ang, 0, TAU); g.fill();
   }
   // orbs, small first
   const list = []; for (const e of ents.values()) if (!(e.x < x0 - e.r || e.x > x1 + e.r || e.y < y0 - e.r || e.y > y1 + e.r)) list.push(e);
@@ -617,7 +634,7 @@ addEventListener('auxclick', e => { if (playing) e.preventDefault(); });
 addEventListener('contextmenu', e => { if (e.target.closest && e.target.closest('#clog')) return; if (listening || playing || e.target === cv) e.preventDefault(); });
 addEventListener('blur', releaseAll);
 document.addEventListener('visibilitychange', () => { if (document.hidden) releaseAll(); else try { window.focus(); } catch (x) {} });
-cv.addEventListener('wheel', e => { e.preventDefault(); zm = clamp(zm * Math.exp(-e.deltaY * 0.0015), 0.01, 3); }, { passive: false });
+cv.addEventListener('wheel', e => { e.preventDefault(); zm = clamp(zm * Math.exp(-e.deltaY * 0.0015), 0.01, 3); clearTimeout(resize.z); resize.z = setTimeout(() => { if (connected) send(Net.enc.size(W, H, zm)); }, 120); }, { passive: false });
 function tbtn(id, fn, hold) {
   const b = $(id);
   b.addEventListener('pointerdown', e => { e.preventDefault(); if (!playing) return; fn(true); });

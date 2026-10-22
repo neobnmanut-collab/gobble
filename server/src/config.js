@@ -11,9 +11,9 @@ module.exports = {
   PELLET_REGROW: 150,    // pellets regrown per second, up to PELLETS
   SETTLED_EJECT_CAP: 6000, // ejected blobs that have stopped and lie on the map
 
-  SPIKES: 18,
-  SPIKE_LIFE: 19,        // seconds a needle lasts before it vanishes and a new one appears somewhere else...
-  SPIKE_LIFE_JITTER: 4,  // ...give or take this many seconds, so they don't all change at once
+  SPIKES: 11,
+  SPIKE_LIFE: 30,        // seconds a needle lasts before it vanishes and a new one appears somewhere else...
+  SPIKE_LIFE_JITTER: 6,  // ...give or take this many seconds, so they don't all change at once
   SPIKE_FEED: 9,         // blobs a needle must be fed before it shoots out a new needle
   SPIKE_DRAW_MASS: 640,  // spikes are exactly the size of the smallest orb that can burst on them (shown as 320)
   SPIKE_POP_MASS: 640,   // orbs at or above this burst on a spike (shown as 320); smaller orbs pass through

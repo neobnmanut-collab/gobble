@@ -27,9 +27,9 @@
         const spikes = []; n = u16();
         for (let i = 0; i < n; i++) spikes.push({ id: u32(), x: pos(), y: pos(), r: u16() / 4, fed: u8() });
         const blobs = []; n = u16();
-        for (let i = 0; i < n; i++) blobs.push({ id: u32(), x: pos(), y: pos(), hue: u8() * 2 });
+        for (let i = 0; i < n; i++) blobs.push({ id: u32(), x: pos(), y: pos(), o: u32() });
         const added = []; n = u16();
-        for (let i = 0; i < n; i++) added.push({ id: u32(), x: pos(), y: pos(), hb: u8(), ej: u8() === 1 });
+        for (let i = 0; i < n; i++) { const f = { id: u32(), x: pos(), y: pos(), hb: u8(), ej: u8() === 1, o: 0 }; if (f.ej) f.o = u32(); added.push(f); }
         const removed = []; n = u16();
         for (let i = 0; i < n; i++) removed.push(u32());
         return { op, vx, vy, cells, spikes, blobs, added, removed };
@@ -44,6 +44,7 @@
       case 7: return { op, peak: u32(), kills: u16(), alive: u32() };
       case 8: return { op };
       case 9: return { op, token: u32() };
+      case 15: { const n = u16(), list = []; for (let i = 0; i < n; i++) { const id = u32(), r = u8(), gg = u8(), b = u8(); list.push([id, '#' + ((1 << 24) | (r << 16) | (gg << 8) | b).toString(16).slice(1)]); } return { op, list }; }
       case 13: { const parts = []; while (o + 4 <= ab.byteLength) { const n = u32(); parts.push(ab.slice(o, o + n)); o += n; } return { op, parts }; }
       case 10: { const channel = u8(), hue = u16(), nl = u8(); const name = td.decode(new Uint8Array(ab, o, nl)); o += nl; return { op, channel, hue, name, text: td.decode(new Uint8Array(ab, o)) }; }
       case 11: { const cl = u8(); const code = td.decode(new Uint8Array(ab, o, cl)); o += cl; const n = u8(), ids = []; for (let i = 0; i < n; i++) ids.push(u32()); return { op, code, ids }; }
@@ -73,7 +74,8 @@
     swap(x, y) { return msg(9, d => { d.setUint8(0, 6); d.setFloat32(1, x, true); d.setFloat32(5, y, true); }); },
     respawn() { return msg(1, d => d.setUint8(0, 7)); },
     ping(token) { return msg(5, d => { d.setUint8(0, 9); d.setUint32(1, token >>> 0, true); }); },
-    size(W, H) { return msg(5, d => { d.setUint8(0, 8); d.setUint16(1, Math.min(65535, W | 0), true); d.setUint16(3, Math.min(65535, H | 0), true); }); },
+    size(W, H, z) { return msg(7, d => { d.setUint8(0, 8); d.setUint16(1, Math.min(65535, W | 0), true); d.setUint16(3, Math.min(65535, H | 0), true); d.setUint16(5, Math.min(65535, Math.round((z || 1) * 1000)), true); }); },
+    cols(a, i) { const p = h => parseInt(h.slice(1), 16); return msg(7, d => { d.setUint8(0, 15); const A = p(a), I = p(i); d.setUint8(1, A >> 16 & 255); d.setUint8(2, A >> 8 & 255); d.setUint8(3, A & 255); d.setUint8(4, I >> 16 & 255); d.setUint8(5, I >> 8 & 255); d.setUint8(6, I & 255); }); },
   };
 
   const Net = { decode, enc };
