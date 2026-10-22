@@ -655,7 +655,7 @@ $('pcopy').addEventListener('click', () => {
 function addChat(m) {
   if (!showChat) return;
   const log = $('clog'), atBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 30;
-  const li = document.createElement('div'); li.className = 'cm';
+  const li = document.createElement('div'); li.className = 'cm'; li.style.setProperty('--pc', 'hsl(' + m.hue + ' 75% 60%)'); setTimeout(() => li.classList.add('old'), 30000);
   if (m.channel === 1) { const t = document.createElement('span'); t.className = 'ctag'; t.textContent = tr('party'); li.append(t); }
   const n = document.createElement('b'); n.textContent = m.name + ': '; n.style.color = 'hsl(' + m.hue + ' 75% 65%)'; li.append(n, document.createTextNode(m.text));
   log.append(li); while (log.children.length > 60) log.firstChild.remove();
@@ -702,7 +702,6 @@ try { $('nm').value = localStorage.getItem('gobblename') || ''; multiChosen = lo
   if (rq && SERVERS.some(s => s.id === rq)) { region = rq; try { localStorage.setItem('gobbleregion', region); } catch (e) {} }
 }
 $('shc').checked = showChat; $('chat').hidden = !showChat; renderParty();
-if (innerWidth < 760) { $('chat').classList.add('min'); $('cmin').textContent = '+'; } // small screens: chat starts folded so it doesn't cover the menu
 updateHelp(); mx = W / 2; my = H / 2;
 renderRegions(); probeRegions(); setInterval(() => { if (!playing) probeRegions(); }, 20000);
 connect(); requestAnimationFrame(frame);

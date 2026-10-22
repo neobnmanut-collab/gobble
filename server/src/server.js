@@ -77,7 +77,7 @@ wss.on('connection', (ws, req) => {
         const who = (!cl.dead && cl.name) || cl.chatName || cl.name || 'Guest';
         const text = m.text.replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120); if (!text) return;
         if (m.channel === 1 && !cl.party) return;
-        const hue = cl.boxes && cl.boxes.length ? (game.owners.get(cl.boxes[0])?.hue ?? 170) : 170;
+        let hue = 0; for (const ch of who) hue = (hue * 31 + ch.charCodeAt(0)) % 360; // each name gets its own chat colour
         const buf = enc.chat(m.channel, hue, who, text);
         for (const o of game.clients) if (m.channel === 0 || (o.party && o.party === cl.party)) send(o, buf);
         break;
