@@ -247,11 +247,36 @@ function camera(dt) {
   const pr = mine.length ? (dd <= 0 ? smooth(dt * 30) : smooth(dt / Math.max(0.025, dd / 1000 * 0.9))) : smooth(dt * 3); cam.x += (cx - cam.x) * pr; cam.y += (cy - cam.y) * pr; cam.s += (s - cam.s) * smooth(dt * 3);
 }
 function drawSpike(v) {
-  const R = v.r;
+  const R = v.r, ph = v.ph || 0;
+  if (ph > 0.02) { // something smaller is passing through: ripples spread out and the spike turns see-through
+    g.lineWidth = Math.max(2 / cam.s, R * 0.05);
+    for (const off of [0, 0.5]) { const q = (v.rp + off) % 1; g.strokeStyle = 'rgba(140,255,170,' + (ph * (1 - q) * 0.95).toFixed(3) + ')'; g.beginPath(); g.arc(v.x, v.y, R * (1 + q * 0.7), 0, TAU); g.stroke(); }
+    g.globalAlpha = 1 - ph * 0.6;
+  }
+  drawSpikeBody(v, R);
+  g.globalAlpha = 1;
+}
+function drawSpikeBody(v, R) {
   if (R * cam.s < 6) { const q = Math.max(R, 4 / cam.s); g.fillStyle = '#5fe07c'; g.beginPath(); for (let i = 0; i <= 16; i++) { const a = i / 16 * TAU + v.rot, r = i % 2 ? q * 0.75 : q * 1.15; i ? g.lineTo(v.x + Math.cos(a) * r, v.y + Math.sin(a) * r) : g.moveTo(v.x + Math.cos(a) * r, v.y + Math.sin(a) * r); } g.closePath(); g.fill(); return; }
   g.beginPath(); for (let i = 0; i <= 32; i++) { const a = i / 32 * TAU + v.rot, r = i % 2 ? R * 0.9 : R * 1.04; i ? g.lineTo(v.x + Math.cos(a) * r, v.y + Math.sin(a) * r) : g.moveTo(v.x + Math.cos(a) * r, v.y + Math.sin(a) * r); }
   g.closePath(); g.fillStyle = 'rgba(95,224,124,.92)'; g.fill(); g.strokeStyle = '#2f8a4c'; g.lineWidth = Math.max(3, R * 0.06); g.stroke();
   if (v.fed) { g.fillStyle = 'rgba(255,255,255,.8)'; for (let i = 0; i < v.fed; i++) { const a = i / 7 * TAU - Math.PI / 2; g.beginPath(); g.arc(v.x + Math.cos(a) * R * 0.45, v.y + Math.sin(a) * R * 0.45, R * 0.07, 0, TAU); g.fill(); } }
+}
+function drawOrb(c, multi) {
+  const mineC = myBoxes.includes(c.o), ow = owners.get(c.o), R = c.r;
+  const white = multi && mineC && c.o === activeId(), red = multi && mineC && c.o !== activeId();
+  const mate = !mineC && partyIds.has(c.o);
+  g.fillStyle = white ? '#f4f4f4' : red ? '#e0443e' : mate ? 'hsl(' + partyHue() + ' 80% 58%)' : 'hsl(' + (ow ? ow.hue : 0) + ' 72% 52%)';
+  g.beginPath(); g.arc(c.x, c.y, R, 0, TAU); g.fill();
+  if (R * cam.s > 18) {
+    const fs = Math.max(12, R * 0.34), name = ow ? ow.name : '';
+    g.font = '800 ' + fs + "px 'Bricolage Grotesque',system-ui,sans-serif"; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillStyle = white ? '#1a1a1a' : '#fff';
+    if (fs * cam.s >= 16 && !white) { g.lineWidth = fs * 0.14; g.strokeStyle = 'rgba(0,0,0,.45)'; g.strokeText(name, c.x, c.y); }
+    g.fillText(name, c.x, c.y);
+    const ms = fs * 0.45; g.font = '700 ' + ms + "px 'Bricolage Grotesque',system-ui,sans-serif"; g.fillStyle = white ? 'rgba(0,0,0,.4)' : 'rgba(255,255,255,.38)';
+    g.fillText(String(dm(c.m)), c.x, c.y + fs * 0.72);
+  }
 }
 const fb = Array.from({ length: 12 }, () => []);
 function draw(dt) {
@@ -298,23 +323,19 @@ function draw(dt) {
   const list = []; for (const e of ents.values()) if (!(e.x < x0 - e.r || e.x > x1 + e.r || e.y < y0 - e.r || e.y > y1 + e.r)) list.push(e);
   list.sort((a, b) => a.m - b.m);
   const multi = myBoxes.length > 1;
-  for (const c of list) {
-    const mineC = myBoxes.includes(c.o), ow = owners.get(c.o), R = c.r;
-    const white = multi && mineC && c.o === activeId(), red = multi && mineC && c.o !== activeId();
-    const mate = !mineC && partyIds.has(c.o);
-    g.fillStyle = white ? '#f4f4f4' : red ? '#e0443e' : mate ? 'hsl(' + partyHue() + ' 80% 58%)' : 'hsl(' + (ow ? ow.hue : 0) + ' 72% 52%)';
-    g.beginPath(); g.arc(c.x, c.y, R, 0, TAU); g.fill();
-    if (R * cam.s > 18) {
-      const fs = Math.max(12, R * 0.34), name = ow ? ow.name : '';
-      g.font = '800 ' + fs + "px 'Bricolage Grotesque',system-ui,sans-serif"; g.textAlign = 'center'; g.textBaseline = 'middle';
-      g.fillStyle = white ? '#1a1a1a' : '#fff';
-      if (fs * cam.s >= 16 && !white) { g.lineWidth = fs * 0.14; g.strokeStyle = 'rgba(0,0,0,.45)'; g.strokeText(name, c.x, c.y); }
-      g.fillText(name, c.x, c.y);
-      const ms = fs * 0.45; g.font = '700 ' + ms + "px 'Bricolage Grotesque',system-ui,sans-serif"; g.fillStyle = white ? 'rgba(0,0,0,.4)' : 'rgba(255,255,255,.38)';
-      g.fillText(String(dm(c.m)), c.x, c.y + fs * 0.72);
-    }
+  for (const c of list) drawOrb(c, multi);
+  // spikes: an orb smaller than a spike can't burst on it and simply passes through. While one is
+  // inside, the spike turns see-through and sends out ripples, and the orb is drawn on top of it.
+  const thru = [];
+  for (const v of spikes.values()) {
+    if (v.x < x0 - v.r || v.x > x1 + v.r || v.y < y0 - v.r || v.y > y1 + v.r) continue;
+    let inside = false;
+    for (const c of list) if (c.r < v.r && Math.abs(c.x - v.x) < c.r + v.r && Math.abs(c.y - v.y) < c.r + v.r && Math.hypot(c.x - v.x, c.y - v.y) < c.r + v.r) { inside = true; if (!thru.includes(c)) thru.push(c); }
+    v.ph = (v.ph || 0) + ((inside ? 1 : 0) - (v.ph || 0)) * Math.min(1, dt * (inside ? 14 : 5));
+    if (v.ph > 0.02) v.rp = ((v.rp || 0) + dt * 1.6) % 1;
+    drawSpike(v);
   }
-  for (const v of spikes.values()) if (!(v.x < x0 - v.r || v.x > x1 + v.r || v.y < y0 - v.r || v.y > y1 + v.r)) drawSpike(v);
+  for (const c of thru) drawOrb(c, multi);
   if (playing && lock) {
     g.strokeStyle = 'rgba(255,255,255,.22)'; g.lineWidth = 2 / cam.s; g.setLineDash([10 / cam.s, 8 / cam.s]); g.beginPath();
     if (lock.t === 'h') { g.moveTo(Math.max(0, x0), lock.y); g.lineTo(Math.min(WS, x1), lock.y); }

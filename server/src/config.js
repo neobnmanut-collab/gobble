@@ -12,13 +12,13 @@ module.exports = {
   SETTLED_EJECT_CAP: 6000, // ejected blobs that have stopped and lie on the map
 
   SPIKES: 32,
-  SPIKE_DRAW_MASS: 100,  // spikes look like an orb of this mass
-  SPIKE_POP_MASS: 800,   // orbs at or above this burst on a spike
+  SPIKE_DRAW_MASS: 640,  // spikes are exactly the size of the smallest orb that can burst on them (shown as 320)
+  SPIKE_POP_MASS: 640,   // orbs at or above this burst on a spike (shown as 320); smaller orbs pass through
   SPIKE_GAIN: 400,       // mass a spike adds to the orb that swallows it
   SPIKE_PIECES: 5,
 
   START_MASS: 800,
-  MIN_PIECE: 400,        // no orb is ever smaller than this
+  MIN_PIECE: 320,        // no orb is ever smaller than this (shown as 160); orbs can split from twice this
   MAX_PIECES: 12,
   MAX_MASS: 120000,      // an orb above this splits in two (shown as 60,000)
   EJECT_MASS: 16,
