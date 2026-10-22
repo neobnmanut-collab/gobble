@@ -309,7 +309,11 @@ function act(k, down) {
 }
 
 /* ---------- drawing ---------- */
-function resize() { dpr = Math.min(1.25, window.devicePixelRatio || 1); W = innerWidth; H = innerHeight; cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); if (connected) send(Net.enc.size(W, H, zm)); }
+// graphics quality: how many pixels the arena is drawn with. 'auto' lowers it by itself when the computer can't keep up
+let gq = 'auto', autoScale = 1, slowSecs = 0;
+try { gq = localStorage.getItem('gobblegq') || 'auto'; } catch (e) {}
+function renderScale() { return gq === 'high' ? 1 : gq === 'medium' ? 0.8 : gq === 'low' ? 0.6 : autoScale; }
+function resize() { dpr = Math.min(1.25, window.devicePixelRatio || 1) * renderScale(); W = innerWidth; H = innerHeight; cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); if (connected) send(Net.enc.size(W, H, zm)); }
 addEventListener('resize', resize); resize();
 function camera(dt) {
   const mine = playing ? mineCells() : [];
@@ -567,7 +571,7 @@ function hud() {
   const who = lb.players >= 0 ? tr('players_bots', { p: lb.players, b: lb.bots }) : tr('in_arena', { n: lb.total });
   $('pc').textContent = connected ? who : ''; $('live').hidden = !(connected && playing && lb.players >= 0); $('livet').textContent = who; $('onl').textContent = connected && lb.players >= 0 ? tr('hud_online', { p: lb.players, b: lb.bots }) : '–';
   $('png').textContent = connected && ping ? ping + ' ms' : '–';
-  $('fpsv').textContent = fps + ' / ' + hz; if (!$('st').hidden) $('fpsnow').textContent = fps + ' FPS · ' + tr('fps_screen', { n: hz });
+  $('fpsv').textContent = fps + ' / ' + hz; if (!$('st').hidden) $('gqnow').textContent = Math.round(renderScale() * 100) + '%'; if (!$('st').hidden) $('fpsnow').textContent = fps + ' FPS · ' + tr('fps_screen', { n: hz });
   if (!$('ov').hidden) renderRegions();
 }
 
@@ -590,7 +594,12 @@ function frame(t) {
     if (t < nextDraw - half) return;
     nextDraw = t - nextDraw > iv ? t + iv : nextDraw + iv;
   }
-  fN++; if (t - fT >= 500) { fps = Math.round(fN * 1000 / (t - fT)); fN = 0; fT = t; }
+  fN++; if (t - fT >= 500) { fps = Math.round(fN * 1000 / (t - fT)); fN = 0; fT = t;
+    // auto quality: if the game runs well below the screen's speed for a few seconds, draw with fewer pixels
+    if (gq === 'auto' && playing && document.visibilityState === 'visible') {
+      if (fps < Math.min(hz, 144) * 0.75) slowSecs += 0.5; else slowSecs = Math.max(0, slowSecs - 0.25);
+      if (slowSecs >= 3 && autoScale > 0.55) { autoScale = Math.max(0.55, autoScale - 0.15); slowSecs = 0; resize(); }
+    } }
   const dt = clamp((t - last) / 1000, 0, 0.1); last = t; T += dt;
   if (playing) { aliveXP += dt; if (aliveXP >= 60) { aliveXP -= 60; addXP(20); } } // 20 XP for every minute alive
   if (playing && !paused) {
@@ -638,7 +647,7 @@ function renderSettings() {
     const key = opts.join() + '|' + tr('fps_monitor', { n: hz });
     if (el.dataset.k !== key) { el.dataset.k = key; el.textContent = ''; for (const r of opts) { const o = document.createElement('option'); o.value = r; o.textContent = r ? r + ' FPS' : tr('fps_monitor', { n: hz }); el.append(o); } }
     el.value = opts.includes(fcap) ? fcap : 0; $('fpsnow').textContent = fps + ' FPS · ' + tr('fps_screen', { n: hz }); }
-  $('cA').value = colA; $('cI').value = colI; $('lines').checked = lines; $('omic').checked = openMic; $('ring').checked = ring; $('faces').checked = faces;
+  $('cA').value = colA; $('cI').value = colI; $('lines').checked = lines; $('gq').value = gq; $('gqnow').textContent = Math.round(renderScale() * 100) + '%'; $('omic').checked = openMic; $('ring').checked = ring; $('faces').checked = faces;
   { const box = $('cpres'); if (!box.childElementCount) for (const [a, i] of COL_PRESETS) { const b = document.createElement('button'); b.type = 'button'; b.dataset.a = a; b.dataset.i = i; b.setAttribute('aria-label', a + ' / ' + i); const x = document.createElement('i'), y = document.createElement('i'); x.style.background = a; y.style.background = i; b.append(x, y); b.onclick = () => { setCols(a, i); saveCfg(); renderSettings(); }; box.append(b); }
     for (const b of box.children) b.setAttribute('aria-pressed', b.dataset.a === colA && b.dataset.i === colI); }
   $('dd').value = dd; $('ddv').textContent = dd + ' ms'; $('rf').value = rf; $('rfv').textContent = rf + ' ms'; $('pd').value = pd; $('pdv').textContent = pd + ' ms'; $('ppd').value = ppd; $('ppdv').textContent = ppd + ' ms';
@@ -698,7 +707,7 @@ $('gear').addEventListener('click', () => { if (playing || watching) { if ($('ov
 for (const b of document.querySelectorAll('.nav button')) b.addEventListener('click', () => $(b.dataset.go).scrollIntoView({ behavior: 'smooth', block: 'start' })); $('cl').addEventListener('click', closeSettings); $('cl2').addEventListener('click', closeSettings);
 $('rs').addEventListener('click', () => { binds = Object.assign({}, DEF); binds2 = {}; dd = 60; fcap = 0; lines = true; ring = false; faces = true; setCols(); rf = 25; pd = 50; ppd = 120; lsi = false; lsn = 2; mal = true; ltg = false; ftg = false; mbtn = { 0: 'none', 2: 'swap' }; saveCfg(); updateHelp(); renderSettings(); });
 const setting = (id, ev, fn) => $(id).addEventListener(ev, e => { fn(e.target); saveCfg(); renderSettings(); });
-setting('dd', 'input', t => dd = +t.value); setting('lines', 'change', t => lines = t.checked); setting('omic', 'change', t => { openMic = t.checked; try { localStorage.setItem('gobbleopenmic', openMic ? '1' : '0'); } catch (e) {} applyMic(); }); setting('ring', 'change', t => ring = t.checked); setting('faces', 'change', t => faces = t.checked); setting('cA', 'input', t => setCols(t.value, colI)); setting('cI', 'input', t => setCols(colA, t.value)); setting('fcap', 'change', t => { fcap = +t.value || 0; nextDraw = 0; }); setting('rf', 'input', t => rf = +t.value); setting('pd', 'input', t => pd = +t.value); setting('ppd', 'input', t => ppd = +t.value);
+setting('dd', 'input', t => dd = +t.value); setting('lines', 'change', t => lines = t.checked); setting('gq', 'change', t => { gq = t.value; autoScale = 1; slowSecs = 0; try { localStorage.setItem('gobblegq', gq); } catch (e) {} resize(); }); setting('omic', 'change', t => { openMic = t.checked; try { localStorage.setItem('gobbleopenmic', openMic ? '1' : '0'); } catch (e) {} applyMic(); }); setting('ring', 'change', t => ring = t.checked); setting('faces', 'change', t => faces = t.checked); setting('cA', 'input', t => setCols(t.value, colI)); setting('cI', 'input', t => setCols(colA, t.value)); setting('fcap', 'change', t => { fcap = +t.value || 0; nextDraw = 0; }); setting('rf', 'input', t => rf = +t.value); setting('pd', 'input', t => pd = +t.value); setting('ppd', 'input', t => ppd = +t.value);
 setting('lsi', 'change', t => lsi = t.checked); setting('lsn', 'change', t => lsn = clamp(Math.round(+t.value) || 1, 1, 4)); setting('mal', 'change', t => mal = t.checked);
 setting('ltg', 'change', t => { ltg = t.checked; lock = null; }); setting('ftg', 'change', t => { ftg = t.checked; feedOn = false; });
 setting('mm0', 'change', t => mbtn[0] = t.value); setting('mm2', 'change', t => mbtn[2] = t.value);
