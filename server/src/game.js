@@ -240,7 +240,7 @@ class Game {
     const id = this.newOwnerId(), m = (Math.random() < 0.15 ? rnd(1200, 3800) : rnd(400, 650)) * 1.35 /* bots start 35% bigger */, p = this.safeSpot(650, m);
     this.owners.set(id, {
       id, kind: 'bot', name: BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)], hue: Math.floor(rnd(0, 360)),
-      b: { ox: 0, oy: 0, tox: 0, toy: 0, wx: p.x, wy: p.y, tt: rnd(0, 0.3), agg: rnd(0.6, 1.5), caut: rnd(0.8, 1.35), skill: rnd(0.35, 1),
+      b: { ox: 0, oy: 0, tox: 0, toy: 0, wx: p.x, wy: p.y, tt: rnd(0, 0.3), agg: rnd(1.3, 2.3), caut: rnd(0.7, 1.05), skill: rnd(0.4, 1), // greedy and always hungry
         react: rnd(0.2, 0.38), wa: rnd(0, TAU), ign: null, ignT: 0, chase: null, chT: 0, chD: 0, gu: 5 },
     });
     this.cells.push(this.mkCell(id, p.x, p.y, m));
@@ -264,6 +264,8 @@ class Game {
       const dx = tx - p.x, dy = ty - p.y, d = Math.hypot(dx, dy) || 1; this.doSplit(p, dx / d, dy / d); n++;
     }
   }
+  // note: bots only ever look at owners, and each multibox box is its own owner, so to a bot the two boxes of
+  // one multibox player are simply two different players
   think(o, ps, lead, b) {
     const cells = this.cells, spikes = this.spikes, grid = this.grid, oc = this.oc;
     b.tt = rnd(b.react * 0.75, b.react * 1.35);
@@ -289,8 +291,8 @@ class Game {
         const dx = q.x - lead.x, dy = q.y - lead.y, d = Math.hypot(dx, dy) || 1; if (d > view) continue;
         const closing = -(q.ux * dx + q.uy * dy) / d, wall = Math.min(q.x, q.y, WS - q.x, WS - q.y);
         let sc = q.m / (d + 80) * b.agg;
-        if (spd(q.m) > mySp * 1.05 && d > lead.r + 140 && closing < 20 && wall > 260) sc *= 0.2;
-        if (this.owners.get(q.o)?.kind === 'human') sc *= 1.15;
+        if (spd(q.m) > mySp * 1.05 && d > lead.r + 140 && closing < 20 && wall > 260) sc *= 0.5; // greedy: still tries for faster prey
+        if (this.owners.get(q.o)?.kind === 'human') sc *= 1.4;
         if ((oc.get(q.o) || 1) > 1 && q.mt > 2) sc *= 1.25; // split-up prey can't rejoin yet: easy pickings
         if (wall < q.r + 300) sc *= 1.2; // cornered prey can't run far
         if (sc > bs) { bs = sc; tgt = q; td = d; }
@@ -298,12 +300,12 @@ class Game {
     }
     if (tgt) for (const q of cells) if (q.o !== o && q.o !== tgt.o && q.m > lead.m * C.EAT_RATIO && Math.hypot(q.x - tgt.x, q.y - tgt.y) < q.r + 280 * b.caut) { tgt = null; break; }
     if (tgt) {
-      if (b.chase === tgt) { b.chT += b.react; if (b.chT > b.gu) { if (td > b.chD * 0.8) { b.ign = tgt; b.ignT = rnd(4, 9); tgt = null; } b.chase = null; } }
-      else { b.chase = tgt; b.chT = 0; b.chD = td; b.gu = rnd(3, 7); }
+      if (b.chase === tgt) { b.chT += b.react; if (b.chT > b.gu) { if (td > b.chD * 0.9) { b.ign = tgt; b.ignT = rnd(2, 4); tgt = null; } b.chase = null; } }
+      else { b.chase = tgt; b.chT = 0; b.chD = td; b.gu = rnd(6, 11); } // hungry: chases for longer and gives up only briefly
     } else b.chase = null;
     let px = 0, py = 0;
     if (tgt) { const t = Math.min(1, td / Math.max(60, mySp)); px = tgt.x + (tgt.ux + tgt.vx) * t; py = tgt.y + (tgt.uy + tgt.vy) * t; }
-    if (tgt && !threats.length && lead.sc <= 0 && lead.m >= 2 * MINM && lead.m / 2 > tgt.m * 1.3 && ps.length < 4 && Math.random() < 0.35 + b.skill * 0.5) {
+    if (tgt && !threats.length && lead.sc <= 0 && lead.m >= 2 * MINM && lead.m / 2 > tgt.m * 1.3 && ps.length < 6 && Math.random() < 0.6 + b.skill * 0.4) {
       const dd = Math.hypot(px - lead.x, py - lead.y) || 1;
       if (dd < splitReach(lead.m) + lead.r * 0.3 && dd > lead.r * 0.6) {
         let safe = true;
@@ -333,7 +335,7 @@ class Game {
       let best = -1e9, ba = b.wa;
       for (let k = 0; k < 8; k++) {
         const a = b.wa + (k - 3.5) * 0.45; let n = 0;
-        for (const dist of [220, 420, 650]) { const x = cx + Math.cos(a) * dist, y = cy + Math.sin(a) * dist; if (x < 0 || y < 0 || x > WS || y > WS) { n -= 25; continue; } n += grid[gi(y) * GN + gi(x)].length; }
+        for (const dist of [260, 520, 820]) { const x = cx + Math.cos(a) * dist, y = cy + Math.sin(a) * dist; if (x < 0 || y < 0 || x > WS || y > WS) { n -= 25; continue; } n += grid[gi(y) * GN + gi(x)].length; }
         n -= Math.abs(k - 3.5) * 0.8; n += Math.random() * 2; if (n > best) { best = n; ba = a; }
       }
       b.wa += (ba - b.wa) * 0.5; gx = cx + Math.cos(b.wa) * (250 + lead.r); gy = cy + Math.sin(b.wa) * (250 + lead.r);
