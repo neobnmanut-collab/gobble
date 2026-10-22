@@ -890,7 +890,10 @@ function connectedFresh() { return performance.now() - connAt > 2000; }
 for (const c of chatStore) addChat(c, true);
 
 /* ---------- party voice chat: browser-to-browser audio (WebRTC) between members of the same party ---------- */
-const ICE = [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }];
+// STUN finds a direct route; the free public relay (TURN) carries the sound when routers block direct connections
+const ICE = [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' },
+  { urls: ['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:443', 'turn:openrelay.metered.ca:443?transport=tcp'], username: 'openrelayproject', credential: 'openrelayproject' }];
+const pendIce = new Map(); // call-setup messages that arrive before the call itself is ready
 let openMic = false, voiceOn = false, voiceSelf = 0, mic = null, pttDown = false, vctx = null;
 try { openMic = localStorage.getItem('gobbleopenmic') === '1'; } catch (e) {}
 const peers = new Map(); // party member id -> { pc, audio, an, name, talk }
@@ -923,17 +926,21 @@ function makePeer(id, name) {
     const a = document.createElement('audio'); a.autoplay = true; a.srcObject = st; a.style.display = 'none'; document.body.append(a); a.play().catch(() => {}); p.audio = a;
     try { const src = vctx.createMediaStreamSource(st), an = vctx.createAnalyser(); an.fftSize = 256; src.connect(an); p.an = an; } catch (e) {}
   };
-  pc.onconnectionstatechange = () => { if (pc.connectionState === 'failed') { dropPeer(id); if (voiceOn && roster.some(m => m.vid === id) && voiceSelf < id) setTimeout(() => callPeer(id, name), 1500); } };
+  pc.onconnectionstatechange = () => { renderVoice(); if (pc.connectionState === 'failed') { dropPeer(id); if (voiceOn && roster.some(m => m.vid === id) && voiceSelf < id) setTimeout(() => callPeer(id, name), 1500); } };
   return p;
 }
 async function callPeer(id, name) { const p = makePeer(id, name); const o = await p.pc.createOffer(); await p.pc.setLocalDescription(o); signal(id, { t: 'offer', d: p.pc.localDescription }); }
+async function flushIce(from, p) { const q = pendIce.get(from); pendIce.delete(from); if (q) for (const c of q) { try { await p.pc.addIceCandidate(c); } catch (e) {} } }
 async function onVoiceSignal(from, data) {
   if (!voiceOn) return; let m; try { m = JSON.parse(data); } catch (e) { return; }
   let p = peers.get(from);
-  if (m.t === 'offer') { if (!p) p = makePeer(from, (roster.find(r => r.vid === from) || {}).name || '?'); await p.pc.setRemoteDescription(m.d); const a = await p.pc.createAnswer(); await p.pc.setLocalDescription(a); signal(from, { t: 'answer', d: p.pc.localDescription }); }
-  else if (m.t === 'answer' && p) await p.pc.setRemoteDescription(m.d);
-  else if (m.t === 'ice' && p) { try { await p.pc.addIceCandidate(m.d); } catch (e) {} }
+  if (m.t === 'offer') { if (!p) p = makePeer(from, (roster.find(r => r.vid === from) || {}).name || '?'); await p.pc.setRemoteDescription(m.d); await flushIce(from, p); const a = await p.pc.createAnswer(); await p.pc.setLocalDescription(a); signal(from, { t: 'answer', d: p.pc.localDescription }); }
+  else if (m.t === 'answer' && p) { await p.pc.setRemoteDescription(m.d); await flushIce(from, p); }
+  else if (m.t === 'ice') { if (!p || !p.pc.remoteDescription) { let q = pendIce.get(from); if (!q) pendIce.set(from, q = []); q.push(m.d); } else { try { await p.pc.addIceCandidate(m.d); } catch (e) {} } }
 }
+// browsers (Brave especially) may refuse to play sound until you click or press a key: retry on every click/key
+function unblockAudio() { try { if (vctx && vctx.state !== 'running') vctx.resume(); } catch (e) {} for (const p of peers.values()) if (p.audio && p.audio.paused) p.audio.play().catch(() => {}); }
+addEventListener('pointerdown', unblockAudio, true); addEventListener('keydown', unblockAudio, true);
 function onRoster(m) {
   voiceSelf = m.self; roster = m.list;
   if (!voiceOn) return renderVoice();
@@ -954,7 +961,8 @@ function renderVoice() {
   b.textContent = voiceOn ? (micLive() ? '🎙️' : '🎤') + (openMic ? '' : ' ' + label(binds.ptt)) : '🎤';
   const l = $('vlist'); l.textContent = ''; l.hidden = !voiceOn;
   if (!voiceOn) return;
-  for (const r of roster) { const s = document.createElement('span'); const me = r.vid === voiceSelf, talk = me ? micLive() : (peers.get(r.vid) || {}).talk; s.className = 'vm' + (talk ? ' talk' : ''); s.textContent = (talk ? '🔊 ' : '🔈 ') + r.name; l.append(s); }
+  for (const r of roster) { const s = document.createElement('span'); const me = r.vid === voiceSelf, pr = peers.get(r.vid), st = me ? 'connected' : pr ? pr.pc.connectionState : 'new', talk = me ? micLive() : pr && pr.talk;
+    const ic = talk ? '🔊 ' : st === 'connected' ? '🔈 ' : st === 'failed' ? '⚠️ ' : '⏳ '; s.className = 'vm' + (talk ? ' talk' : '') + (st === 'failed' ? ' bad' : ''); s.textContent = ic + r.name; s.title = st; l.append(s); }
 }
 $('vbtn').addEventListener('click', e => { e.currentTarget.blur(); if (voiceOn) leaveVoice(); else joinVoice(); });
 
