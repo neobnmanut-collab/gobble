@@ -101,7 +101,7 @@ button{font:700 1rem var(--font);cursor:pointer}
 /* chat: no panel, just messages floating on the left middle of the screen, each in the sender's colour, and a message box under them */
 #chat{position:fixed;left:calc(env(safe-area-inset-left,0px) + 12px);top:50%;transform:translateY(-50%);width:min(360px,calc(100vw - 24px));z-index:7;display:flex;flex-direction:column;gap:8px;pointer-events:none}
 #chead{display:none}
-#clog{display:flex;flex-direction:column;align-items:flex-start;gap:4px;max-height:38vh;overflow-y:auto;scrollbar-width:none;overscroll-behavior:contain;pointer-events:auto;-webkit-mask-image:linear-gradient(transparent,#000 18%);mask-image:linear-gradient(transparent,#000 18%)}
+#clog{display:flex;flex-direction:column;align-items:flex-start;gap:4px;max-height:30vh;overflow-y:auto;scrollbar-width:none;overscroll-behavior:contain;pointer-events:auto;-webkit-mask-image:linear-gradient(transparent,#000 18%);mask-image:linear-gradient(transparent,#000 18%)}
 #clog::-webkit-scrollbar{display:none}
 #clog:empty::before{content:attr(data-empty);color:var(--muted);font-size:.85rem;text-shadow:0 1px 3px #000}
 .cm{font-size:.95rem;line-height:1.35;color:#fff;overflow-wrap:anywhere;user-select:text;-webkit-user-select:text;cursor:text;background:rgba(0,0,0,.5);border-left:3px solid var(--pc,#888);border-radius:8px;padding:4px 10px;max-width:100%;text-shadow:0 1px 2px rgba(0,0,0,.6);transition:opacity .6s}
@@ -140,6 +140,9 @@ button{font:700 1rem var(--font);cursor:pointer}
 @keyframes blink{50%{border-color:#ffd0d0}}
 @media (prefers-reduced-motion:reduce){#fxb{transition:none}#fxb.warn{animation:none}}
 .c-fx{--c:#ff9a3c}
+#fxb.chat{background:#06202c;border:2px solid #7cc6ff;color:#d6f0ff;box-shadow:0 0 50px rgba(124,198,255,.45)}
+#chat.flash .cm,#chat.flash #ctx{animation:cflash .5s ease-in-out 6}
+@keyframes cflash{50%{box-shadow:0 0 0 3px #7cc6ff,0 0 24px rgba(124,198,255,.7)}}
 /* settings: one colour per group, taken from the logo, used only as a thin accent */
 #st .card{padding:0;gap:0}
 #st .top{position:sticky;top:0;z-index:2;background:var(--surface);padding:18px 20px 12px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:12px}
@@ -243,9 +246,9 @@ button{font:700 1rem var(--font);cursor:pointer}
   <div class="btns"><button class="kb" id="rs" data-t="reset">Reset defaults</button><button class="primary" id="cl" data-t="done">Done</button></div>
   </div>
 </div></div>
-<script src="i18n.js?v=45"></script>
-<script src="servers.js?v=45"></script>
-<script src="net.js?v=45"></script>
-<script src="game.js?v=45"></script>
+<script src="i18n.js?v=47"></script>
+<script src="servers.js?v=47"></script>
+<script src="net.js?v=47"></script>
+<script src="game.js?v=47"></script>
 </body>
 </html>

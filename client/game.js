@@ -10,8 +10,8 @@ let WS = 12000, SPEED = 1685, W = 0, H = 0, dpr = 1, T = 0;
 const cam = { x: 6000, y: 6000, s: 0.5 }; let zm = 1;
 
 /* ---------- settings (same controls as the offline game) ---------- */
-const DEF = { fx_quake: 'KeyK', fx_warn: 'KeyJ', fx_disco: 'KeyL', split: 'Space', dsplit: 'KeyD', psplit: 'KeyQ', tsplit: 'KeyF', qsplit: 'KeyG', eject: 'KeyW', hline: 'KeyS', vline: 'KeyT', fline: '', respawn: 'KeyB', ping: 'KeyR', swap: 'Mouse2', feed: 'KeyE' };
-const ACT = ['split', 'dsplit', 'psplit', 'tsplit', 'qsplit', 'eject', 'hline', 'vline', 'fline', 'respawn', 'ping', 'swap', 'feed', 'fx_quake', 'fx_warn', 'fx_disco'].map(k => [k, 'a_' + k]);
+const DEF = { fx_quake: 'KeyK', fx_warn: 'KeyJ', fx_disco: 'KeyL', fx_chat: 'KeyH', split: 'Space', dsplit: 'KeyD', psplit: 'KeyQ', tsplit: 'KeyF', qsplit: 'KeyG', eject: 'KeyW', hline: 'KeyS', vline: 'KeyT', fline: '', respawn: 'KeyB', ping: 'KeyR', swap: 'Mouse2', feed: 'KeyE' };
+const ACT = ['split', 'dsplit', 'psplit', 'tsplit', 'qsplit', 'eject', 'hline', 'vline', 'fline', 'respawn', 'ping', 'swap', 'feed', 'fx_quake', 'fx_warn', 'fx_disco', 'fx_chat'].map(k => [k, 'a_' + k]);
 const MACROS = [['none', 'm_none'], ['split', 'a_split'], ['dsplit', 'a_dsplit'], ['psplit', 'a_psplit'], ['tsplit', 'a_tsplit'], ['qsplit', 'a_qsplit'], ['eject', 'a_eject'], ['swap', 'm_swap']];
 let binds = Object.assign({}, DEF), dd = 60, rf = 25, pd = 50, ppd = 120, lsi = false, lsn = 2, mal = true, ltg = false, ftg = false, mbtn = { 0: 'none', 2: 'none' };
 // test mode: open the page with ?test=1 to start one orb at 35,000 that never loses mass
@@ -140,7 +140,7 @@ function handle(m) {
       break;
     case 2: myBoxes = m.ids; active = m.active; break;
     case 3: for (const o of m.list) owners.set(o.id, o); break;
-    case 16: if (m.fx === 0) quakeT = 2; else if (m.fx === 1) showBanner('warn'); else discoT = 8; break;
+    case 16: if (m.fx === 0) quakeT = 2; else if (m.fx === 1) showBanner('warn'); else if (m.fx === 2) discoT = 8; else showBanner('chat', m); break;
     case 17: rec = m; renderRecord(); if (m.announce) { showBanner('record', m); confettiT = 3.5; } break;
     case 15: ownerCol.clear(); for (const [id, hex] of m.list) ownerCol.set(id, { hex, txt: textFor(hex), clash: false }); markClashes(); break;
     case 4: {
@@ -290,7 +290,7 @@ function act(k, down) {
     case 'fline': lineKey('f', down); break;
     case 'respawn': if (down) send(Net.enc.respawn()); break;
     case 'ping': if (down) { const w = s2w(mx, my); pings.push({ x: w.x, y: w.y, t: 3 }); if (pings.length > 5) pings.shift(); } break;
-    case 'fx_quake': case 'fx_warn': case 'fx_disco': if (down) send(Net.enc.effect(['fx_quake', 'fx_warn', 'fx_disco'].indexOf(k))); break;
+    case 'fx_quake': case 'fx_warn': case 'fx_disco': case 'fx_chat': if (down) send(Net.enc.effect(['fx_quake', 'fx_warn', 'fx_disco', 'fx_chat'].indexOf(k))); break;
     case 'swap': if (down && multiChosen) { const w = aimPoint(); send(Net.enc.swap(clamp(w.x, 0, WS), clamp(w.y, 0, WS))); } break;
   }
 }
@@ -580,7 +580,7 @@ function release(c) { held.delete(c); for (const k in binds) if (binds[k] === c)
 function assign(a, code) { for (const k in binds) if (k !== a && binds[k] === code) binds[k] = binds[a]; binds[a] = code; saveCfg(); updateHelp(); }
 function updateHelp() {
   const kb = $('keys'); kb.textContent = '';
-  for (const [k, v] of [[tr('k_move'), tr('k_mouse')], [tr('a_split'), label(binds.split)], [tr('a_dsplit'), label(binds.dsplit)], [tr('a_psplit'), label(binds.psplit)], [tr('effects'), [binds.fx_quake, binds.fx_warn, binds.fx_disco].map(label).join(' ')], [tr('a_eject'), label(binds.eject)], [tr('k_line'), label(binds.hline) + ' / ' + label(binds.vline)]]) { const s = document.createElement('span'); s.append(k + ' '); const b = document.createElement('kbd'); b.textContent = v; s.append(b); kb.append(s); }
+  for (const [k, v] of [[tr('k_move'), tr('k_mouse')], [tr('a_split'), label(binds.split)], [tr('a_dsplit'), label(binds.dsplit)], [tr('a_psplit'), label(binds.psplit)], [tr('effects'), [binds.fx_quake, binds.fx_warn, binds.fx_disco, binds.fx_chat].map(label).join(' ')], [tr('a_eject'), label(binds.eject)], [tr('k_line'), label(binds.hline) + ' / ' + label(binds.vline)]]) { const s = document.createElement('span'); s.append(k + ' '); const b = document.createElement('kbd'); b.textContent = v; s.append(b); kb.append(s); }
   setMode(watchChosen ? 'watch' : multiChosen);
 }
 function renderSettings() {
@@ -702,7 +702,7 @@ function addChat(m) {
   const li = document.createElement('div'); li.className = 'cm'; li.style.setProperty('--pc', 'hsl(' + m.hue + ' 75% 60%)'); setTimeout(() => li.classList.add('old'), 30000);
   if (m.channel === 1) { const t = document.createElement('span'); t.className = 'ctag'; t.textContent = tr('party'); li.append(t); }
   const n = document.createElement('b'); n.textContent = m.name + ': '; n.style.color = 'hsl(' + m.hue + ' 75% 65%)'; li.append(n, document.createTextNode(m.text));
-  log.append(li); while (log.children.length > 60) log.firstChild.remove();
+  log.append(li); while (log.children.length > 20) log.firstChild.remove(); // keep the last 20
   if (atBottom) log.scrollTop = log.scrollHeight;
   if ($('chat').classList.contains('min')) $('cmin').textContent = tr('new_msg');
 }
@@ -735,6 +735,10 @@ function showBanner(kind, r) {
     $('fxt').textContent = tr('warn_title'); $('fxs').textContent = tr('warn_text');
     showBanner.t2 = setTimeout(() => { $('fxt').textContent = '😄'; $('fxs').textContent = tr('warn_joke'); }, 3000);
     showBanner.t = setTimeout(() => el.classList.remove('in'), 5000);
+  } else if (kind === 'chat') { // someone wants everyone to read the chat: banner plus a flashing chat
+    $('fxt').textContent = '👀 ' + tr('look_chat'); $('fxs').textContent = '← ' + tr('look_chat_s', { name: r.name || '?' });
+    const c = $('chat'); c.classList.remove('flash'); void c.offsetWidth; c.classList.add('flash');
+    showBanner.t = setTimeout(() => el.classList.remove('in'), 4000);
   } else {
     $('fxt').textContent = '🏆 ' + tr('record_title'); $('fxs').textContent = r.name + ' · ' + dm(r.m).toLocaleString();
     showBanner.t = setTimeout(() => el.classList.remove('in'), 5000);

@@ -45,6 +45,7 @@ wss.on('connection', (ws, req) => {
   game.clients.add(cl);
   ws.binaryType = 'nodebuffer';
   send(cl, enc.hello(C.WORLD, C.SPEED, BUILD));
+  for (const b of chatLog) send(cl, b); // the last chat messages, so newcomers see the conversation
   if (humans >= C.MAX_PLAYERS) send(cl, enc.full());
   cl.onDeath = d => send(cl, enc.dead(d.peak, d.kills, d.alive));
   ws.on('pong', () => { cl.alive = true; });
@@ -69,7 +70,7 @@ wss.on('connection', (ws, req) => {
       case 9: if (cl.ws.readyState === 1) cl.ws.send(enc.pong(m.token)); break;
       case 16: { // fun effects everyone sees (earthquake, fake warning, disco); one every 20 s per player
         const now = Date.now(); if (now - (cl.quakeT || 0) < 20000) return; cl.quakeT = now;
-        const buf = enc.effect(m.fx); for (const o of game.clients) send(o, buf); break;
+        const buf = enc.effect(m.fx, (!cl.dead && cl.name) || cl.chatName || 'Guest'); for (const o of game.clients) send(o, buf); break;
       }
       case 14: // viewer mode: watch the arena without playing
         if (m.spec === 0) cl.spec = false;
@@ -85,6 +86,7 @@ wss.on('connection', (ws, req) => {
         let hue = 0; for (const ch of who) hue = (hue * 31 + ch.charCodeAt(0)) % 360; // each name gets its own chat colour
         const buf = enc.chat(m.channel, hue, who, text);
         for (const o of game.clients) if (m.channel === 0 || (o.party && o.party === cl.party)) send(o, buf);
+        if (m.channel === 0) { chatLog.push(buf); if (chatLog.length > 20) chatLog.shift(); }
         break;
       }
     }
@@ -170,6 +172,7 @@ function sendLeaderboard() {
   }
 }
 // the colours each multibox player picked, so everyone sees their orbs (and fed blobs) in those colours
+const chatLog = []; // last 20 messages to everyone (party messages stay private and aren't kept)
 function sendColours() {
   const list = [];
   for (const cl of game.clients) if (!cl.dead && cl.multi && cl.colA !== undefined && cl.boxes) cl.boxes.forEach((id, i) => list.push([id, i === cl.active ? cl.colA : cl.colI]));

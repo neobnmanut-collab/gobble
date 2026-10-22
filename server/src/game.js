@@ -6,7 +6,9 @@ const WS = C.WORLD, G = C.GRID, GN = WS / G, TAU = Math.PI * 2;
 const MINM = C.MIN_PIECE, MAXC = C.MAX_PIECES, VPOP = C.SPIKE_POP_MASS;
 const rnd = (a, b) => a + Math.random() * (b - a);
 const rad = m => 4 * Math.sqrt(m);
-const spd = m => C.SPEED * Math.pow(m, -0.25);
+// speed: orbs at the starting size move as before; smaller ones are clearly faster, bigger ones a little slower
+const SPD_AT_START = C.SPEED * Math.pow(C.START_MASS, -0.25);
+const spd = m => SPD_AT_START * Math.pow(C.START_MASS / m, C.SPEED_EXP);
 // split launch speed grows with size, so a big orb's split flies clear of it instead of staying buried inside
 const splitV = m => C.SPLIT_SPEED * Math.max(1, Math.pow(rad(m / 2) / 80, C.SPLIT_GROWTH));
 const splitReach = m => splitV(m) / 4; // how far a split piece travels (speed fades at 4 per second)

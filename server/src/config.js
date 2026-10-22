@@ -29,7 +29,8 @@ module.exports = {
   EJECT_MASS: 16,
   EJECT_MIN_MS: 20,      // fastest allowed rapid feed
   EJECT_SPEED: 1960,     // launch speed of a fed blob (40% further than 1400)
-  SPEED: 1938,           // speed = SPEED * mass^-0.25 (15% faster than 1685)
+  SPEED: 1938,           // base speed constant (15% faster than 1685)
+  SPEED_EXP: 0.3,        // how much faster smaller orbs are: speed grows as (start mass / mass)^this (0.25 before)
   SPLIT_SPEED: 806,      // launch speed of a split piece for small orbs...
   SPLIT_GROWTH: 0.5,     // ...bigger orbs launch a bit faster: 0 = same for all sizes, 1 = in proportion to size
   EAT_RATIO: 1.25,

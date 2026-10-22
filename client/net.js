@@ -44,7 +44,7 @@
       case 7: return { op, peak: u32(), kills: u16(), alive: u32() };
       case 8: return { op };
       case 9: return { op, token: u32() };
-      case 16: return { op, fx: ab.byteLength > 1 ? u8() : 0 };
+      case 16: { const fx = ab.byteLength > 1 ? u8() : 0; let name = ''; if (o < ab.byteLength) { const n = u8(); name = td.decode(new Uint8Array(ab, o, n)); } return { op, fx, name }; }
       case 17: { const m = u32(), announce = u8() === 1, n = u8(); return { op, m, announce, name: td.decode(new Uint8Array(ab, o, n)) }; }
       case 15: { const n = u16(), list = []; for (let i = 0; i < n; i++) { const id = u32(), r = u8(), gg = u8(), b = u8(); list.push([id, '#' + ((1 << 24) | (r << 16) | (gg << 8) | b).toString(16).slice(1)]); } return { op, list }; }
       case 13: { const parts = []; while (o + 4 <= ab.byteLength) { const n = u32(); parts.push(ab.slice(o, o + n)); o += n; } return { op, parts }; }
