@@ -187,7 +187,7 @@ class Game {
     const sv = v * (1 + (Math.random() - 0.5) * (stream ? 0.14 : j * 0.6)), ih = j > 0.1 || stream ? 1 : 0;
     const side = stream ? (Math.random() - 0.5) * 2 * v * 0.075 : 0; // sideways drift that outlasts the forward push, so the end spreads
     this.ejected.push({
-      id: this.nextPellet++, x: c.x + ex * (c.r + 4), y: c.y + ey * (c.r + 4), m: C.EJECT_MASS, own: c.o, src: c, imm: 0.35, hb: this.owners.get(c.o)?.hue ?? 0,
+      id: this.nextPellet++, x: c.x + ex * Math.max(0, c.r - 14), y: c.y + ey * Math.max(0, c.r - 14), /* starts just inside the orb's edge, so it comes out of the orb itself */ m: C.EJECT_MASS, own: c.o, src: c, imm: 0.35, hb: this.owners.get(c.o)?.hue ?? 0,
       vx: ex * sv + ih * (c.ux * 0.4 + c.vx * 0.3), vy: ey * sv + ih * (c.uy * 0.4 + c.vy * 0.3), sp: stream ? 0 : (Math.random() - 0.5) * j * 4,
       lx: -ey * side, ly: ex * side,
     });
