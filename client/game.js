@@ -305,30 +305,45 @@ function drawSpikeBody(v, R) {
   g.closePath(); g.fillStyle = 'rgba(255,210,63,.94)'; g.fill(); g.strokeStyle = '#a8790f'; g.lineWidth = Math.max(3, R * 0.06); g.stroke();
 }
 if (!CanvasRenderingContext2D.prototype.roundRect) CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h) { this.rect(x, y, w, h); }; // older browsers
-/* ---------- bot faces: 12 original cartoon faces, drawn once into small images and reused every frame ---------- */
+/* ---------- bot stickers: 12 original cartoon faces, each a complete sticker (white die-cut edge, shaded body,
+   gloss and shadow). Drawn once into small images at load and reused every frame, so they cost almost nothing. ---------- */
+const STICK = 1.16; // a sticker image is this many times the orb's radius (the extra is its shadow margin)
 const FACES = (() => {
-  const out = [], K = '#1b1b1b', P = '#ff7a9a';
+  const out = [], K = '#22151a', TONGUE = '#ff5f7e';
   const dot = (f, x, y, r, c) => { f.fillStyle = c || K; f.beginPath(); f.arc(x, y, r, 0, TAU); f.fill(); };
-  const eye = (f, x, y, r, px, py) => { dot(f, x, y, r, '#fff'); f.lineWidth = 0.035; f.strokeStyle = K; f.stroke(); dot(f, x + px * r, y + py * r, r * 0.48); dot(f, x + px * r - r * 0.15, y + py * r - r * 0.18, r * 0.13, '#fff'); };
-  const arc = (f, x, y, r, a, b, w) => { f.lineWidth = w || 0.075; f.strokeStyle = K; f.beginPath(); f.arc(x, y, r, a * Math.PI, b * Math.PI); f.stroke(); };
-  const line = (f, pts, w) => { f.lineWidth = w || 0.07; f.strokeStyle = K; f.beginPath(); f.moveTo(pts[0], pts[1]); for (let i = 2; i < pts.length; i += 2) f.lineTo(pts[i], pts[i + 1]); f.stroke(); };
+  const oval = (f, x, y, rx, ry, c) => { f.fillStyle = c || K; f.beginPath(); f.ellipse(x, y, rx, ry, 0, 0, TAU); f.fill(); };
+  const gloss = (f, x, y, s) => { dot(f, x - s * 0.35, y - s * 0.4, s * 0.32, '#fff'); dot(f, x + s * 0.3, y + s * 0.3, s * 0.14, '#fff'); };
+  const bigEye = (f, x, y, rx, ry) => { oval(f, x, y, rx, ry); gloss(f, x, y, rx); };
+  const whiteEye = (f, x, y, r, px, py) => { oval(f, x, y, r, r * 1.08, '#fff'); f.lineWidth = 0.035; f.strokeStyle = K; f.stroke(); bigEye(f, x + px * r * 0.45, y + py * r * 0.45, r * 0.5, r * 0.55); };
+  const stroke = (f, w) => { f.lineWidth = w; f.strokeStyle = K; f.stroke(); };
+  const arc = (f, x, y, r, a, b, w) => { f.beginPath(); f.arc(x, y, r, a * Math.PI, b * Math.PI); stroke(f, w || 0.07); };
+  const line = (f, p, w) => { f.beginPath(); f.moveTo(p[0], p[1]); for (let i = 2; i < p.length; i += 2) f.lineTo(p[i], p[i + 1]); stroke(f, w || 0.07); };
+  const blush = (f, y, a) => { f.fillStyle = 'rgba(255,90,120,' + (a || 0.38) + ')'; f.beginPath(); f.ellipse(-0.56, y, 0.16, 0.1, 0, 0, TAU); f.ellipse(0.56, y, 0.16, 0.1, 0, 0, TAU); f.fill(); };
+  const openMouth = (f, x, y, w, h, tongue) => { f.save(); f.beginPath(); f.moveTo(x - w, y); f.quadraticCurveTo(x, y + h * 2, x + w, y); f.closePath(); f.fillStyle = K; f.fill(); f.clip(); if (tongue) oval(f, x + w * 0.15, y + h * 1.25, w * 0.55, h * 0.6, TONGUE); f.restore(); };
   const designs = [
-    f => { dot(f, -0.33, -0.22, 0.1); dot(f, 0.33, -0.22, 0.1); arc(f, 0, 0.02, 0.45, 0.15, 0.85); },                                     // happy
-    f => { eye(f, -0.3, -0.25, 0.23, 0.35, 0.3); eye(f, 0.33, -0.2, 0.18, -0.4, 0.35); dot(f, 0, 0.38, 0.1); },                              // googly
-    f => { arc(f, -0.33, -0.25, 0.14, 0, 1); arc(f, 0.33, -0.25, 0.14, 0, 1); arc(f, 0, 0.25, 0.16, 0.1, 0.9, 0.06); f.fillStyle = K; f.font = '800 0.32px sans-serif'; f.fillText('z', 0.5, -0.5); f.font = '800 0.22px sans-serif'; f.fillText('z', 0.68, -0.72); }, // sleepy
-    f => { line(f, [-0.58, -0.48, -0.14, -0.3]); line(f, [0.58, -0.48, 0.14, -0.3]); dot(f, -0.33, -0.15, 0.09); dot(f, 0.33, -0.15, 0.09); arc(f, 0, 0.65, 0.35, 1.2, 1.8); }, // grumpy
-    f => { f.fillStyle = K; f.beginPath(); f.roundRect(-0.68, -0.42, 0.58, 0.32, 0.12); f.roundRect(0.1, -0.42, 0.58, 0.32, 0.12); f.fill(); line(f, [-0.12, -0.32, 0.12, -0.32], 0.06); line(f, [-0.55, -0.34, -0.38, -0.34], 0.04); f.strokeStyle = 'rgba(255,255,255,.6)'; f.stroke(); arc(f, 0.12, 0.12, 0.3, 0.15, 0.65); }, // cool shades
-    f => { dot(f, -0.33, -0.22, 0.1); dot(f, 0.33, -0.22, 0.1); f.fillStyle = K; f.beginPath(); f.arc(0, 0.12, 0.38, 0, Math.PI); f.closePath(); f.fill(); dot(f, 0.08, 0.38, 0.14, P); }, // tongue out
-    f => { eye(f, 0, -0.22, 0.32, 0, 0.35); f.fillStyle = K; f.beginPath(); f.roundRect(-0.38, 0.26, 0.76, 0.24, 0.1); f.fill(); f.fillStyle = '#fff'; for (let i = 0; i < 4; i++) f.fillRect(-0.3 + i * 0.16, 0.28, 0.11, 0.1); }, // cyclops
-    f => { eye(f, -0.3, -0.22, 0.17, 0, 0); eye(f, 0.3, -0.22, 0.17, 0, 0); f.fillStyle = K; f.beginPath(); f.ellipse(0, 0.36, 0.14, 0.19, 0, 0, TAU); f.fill(); }, // surprised
-    f => { dot(f, -0.32, -0.2, 0.09); dot(f, 0.32, -0.2, 0.09); f.fillStyle = P; f.beginPath(); f.moveTo(-0.07, 0.04); f.lineTo(0.07, 0.04); f.lineTo(0, 0.12); f.fill(); arc(f, -0.1, 0.16, 0.1, 0, 1, 0.055); arc(f, 0.1, 0.16, 0.1, 0, 1, 0.055); for (const s of [-1, 1]) { line(f, [s * 0.3, 0.1, s * 0.75, 0.02], 0.035); line(f, [s * 0.3, 0.18, s * 0.75, 0.22], 0.035); } }, // cat
-    f => { line(f, [-0.5, -0.42, -0.18, -0.36], 0.06); line(f, [0.5, -0.42, 0.18, -0.36], 0.06); dot(f, -0.33, -0.2, 0.09); dot(f, 0.33, -0.2, 0.09); arc(f, 0, -0.05, 0.45, 0.2, 0.8); f.fillStyle = '#fff'; f.strokeStyle = K; f.lineWidth = 0.03; for (const s of [-1, 1]) { f.beginPath(); f.moveTo(s * 0.12, 0.38); f.lineTo(s * 0.26, 0.36); f.lineTo(s * 0.2, 0.55); f.closePath(); f.fill(); f.stroke(); } }, // fangs
-    f => { arc(f, -0.33, -0.12, 0.13, 1, 2); arc(f, 0.33, -0.12, 0.13, 1, 2); f.fillStyle = 'rgba(255,110,140,.55)'; f.beginPath(); f.ellipse(-0.52, 0.12, 0.16, 0.09, 0, 0, TAU); f.ellipse(0.52, 0.12, 0.16, 0.09, 0, 0, TAU); f.fill(); arc(f, 0, 0.18, 0.12, 0.15, 0.85, 0.055); }, // shy
-    f => { for (const x of [-0.33, 0.33]) { line(f, [x - 0.11, -0.33, x + 0.11, -0.11], 0.065); line(f, [x + 0.11, -0.33, x - 0.11, -0.11], 0.065); } f.lineWidth = 0.065; f.strokeStyle = K; f.beginPath(); f.moveTo(-0.32, 0.3); f.quadraticCurveTo(-0.16, 0.16, 0, 0.3); f.quadraticCurveTo(0.16, 0.44, 0.32, 0.3); f.stroke(); }, // dizzy
+    ['#ffcf3a', f => { bigEye(f, -0.3, -0.16, 0.11, 0.16); bigEye(f, 0.3, -0.16, 0.11, 0.16); openMouth(f, 0, 0.16, 0.36, 0.22, true); blush(f, 0.12); }],                       // sunny
+    ['#8bd346', f => { line(f, [-0.5, -0.56, -0.18, -0.6], 0.06); line(f, [0.16, -0.58, 0.5, -0.5], 0.06); whiteEye(f, -0.3, -0.22, 0.24, 0.5, 0.3); whiteEye(f, 0.32, -0.18, 0.19, -0.5, 0.5); oval(f, 0, 0.38, 0.1, 0.12); }], // googly
+    ['#6ec6ff', f => { arc(f, -0.3, -0.18, 0.15, 0.05, 0.95, 0.07); arc(f, 0.3, -0.18, 0.15, 0.05, 0.95, 0.07); line(f, [-0.42, -0.08, -0.47, 0.0], 0.04); line(f, [0.42, -0.08, 0.47, 0.0], 0.04); oval(f, 0.05, 0.32, 0.1, 0.07); f.fillStyle = '#fff'; f.font = '900 0.34px sans-serif'; f.fillText('z', 0.5, -0.55); f.font = '900 0.24px sans-serif'; f.fillText('z', 0.7, -0.76); }], // sleepy
+    ['#ff5a4e', f => { line(f, [-0.6, -0.5, -0.14, -0.3], 0.09); line(f, [0.6, -0.5, 0.14, -0.3], 0.09); bigEye(f, -0.3, -0.12, 0.1, 0.11); bigEye(f, 0.3, -0.12, 0.1, 0.11); arc(f, 0, 0.68, 0.36, 1.22, 1.78, 0.085); }], // grumpy
+    ['#a46bff', f => { f.fillStyle = K; f.beginPath(); f.roundRect(-0.72, -0.44, 0.62, 0.36, 0.14); f.roundRect(0.1, -0.44, 0.62, 0.36, 0.14); f.fill(); line(f, [-0.12, -0.34, 0.12, -0.34], 0.07); f.strokeStyle = 'rgba(255,255,255,.75)'; f.lineWidth = 0.05; f.beginPath(); f.moveTo(-0.6, -0.36); f.lineTo(-0.45, -0.36); f.moveTo(0.22, -0.36); f.lineTo(0.37, -0.36); f.stroke(); arc(f, 0.12, 0.1, 0.32, 0.15, 0.6, 0.08); }], // cool
+    ['#ff9a3c', f => { arc(f, -0.3, -0.1, 0.13, 1.1, 1.9, 0.08); bigEye(f, 0.3, -0.16, 0.11, 0.16); openMouth(f, -0.02, 0.14, 0.34, 0.2, true); oval(f, 0.1, 0.42, 0.13, 0.15, TONGUE); blush(f, 0.14); }], // silly wink
+    ['#3fd6b4', f => { whiteEye(f, 0, -0.2, 0.33, 0, 0.35); f.fillStyle = K; f.beginPath(); f.roundRect(-0.4, 0.24, 0.8, 0.27, 0.12); f.fill(); f.fillStyle = '#fff'; for (let i = 0; i < 5; i++) f.fillRect(-0.33 + i * 0.135, 0.26, 0.1, 0.1); }], // cyclops
+    ['#ff6fae', f => { whiteEye(f, -0.3, -0.2, 0.19, 0, 0); whiteEye(f, 0.3, -0.2, 0.19, 0, 0); oval(f, 0, 0.36, 0.15, 0.2); line(f, [-0.48, -0.5, -0.2, -0.56], 0.06); line(f, [0.2, -0.56, 0.48, -0.5], 0.06); }], // shocked
+    ['#ffb070', f => { bigEye(f, -0.3, -0.18, 0.1, 0.13); bigEye(f, 0.3, -0.18, 0.1, 0.13); f.fillStyle = TONGUE; f.beginPath(); f.moveTo(-0.08, 0.02); f.lineTo(0.08, 0.02); f.lineTo(0, 0.11); f.fill(); arc(f, -0.1, 0.15, 0.1, 0, 1, 0.06); arc(f, 0.1, 0.15, 0.1, 0, 1, 0.06); for (const s of [-1, 1]) { line(f, [s * 0.32, 0.08, s * 0.78, -0.02], 0.035); line(f, [s * 0.32, 0.17, s * 0.78, 0.22], 0.035); } blush(f, 0.08, 0.3); }], // cat
+    ['#7ed957', f => { line(f, [-0.52, -0.44, -0.16, -0.34], 0.07); line(f, [0.52, -0.44, 0.16, -0.34], 0.07); bigEye(f, -0.3, -0.16, 0.1, 0.12); bigEye(f, 0.3, -0.16, 0.1, 0.12); arc(f, 0, -0.04, 0.46, 0.2, 0.8, 0.08); f.fillStyle = '#fff'; f.strokeStyle = K; f.lineWidth = 0.03; for (const s of [-1, 1]) { f.beginPath(); f.moveTo(s * 0.1, 0.38); f.lineTo(s * 0.27, 0.35); f.lineTo(s * 0.2, 0.56); f.closePath(); f.fill(); f.stroke(); } }], // vampire
+    ['#ff8fa3', f => { arc(f, -0.3, -0.1, 0.13, 1.05, 1.95, 0.08); arc(f, 0.3, -0.1, 0.13, 1.05, 1.95, 0.08); blush(f, 0.12, 0.6); arc(f, 0, 0.16, 0.12, 0.15, 0.85, 0.06); }], // shy
+    ['#4dd9e8', f => { for (const x of [-0.3, 0.3]) { line(f, [x - 0.12, -0.32, x + 0.12, -0.08], 0.08); line(f, [x + 0.12, -0.32, x - 0.12, -0.08], 0.08); } f.beginPath(); f.moveTo(-0.34, 0.3); f.quadraticCurveTo(-0.17, 0.14, 0, 0.3); f.quadraticCurveTo(0.17, 0.46, 0.34, 0.3); stroke(f, 0.075); f.fillStyle = '#ffe14d'; for (const [x, y] of [[-0.62, -0.62], [0.66, -0.5]]) { f.beginPath(); for (let i = 0; i < 10; i++) { const a = i / 10 * TAU - Math.PI / 2, r = i % 2 ? 0.05 : 0.12; f.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r); } f.fill(); } }], // dizzy
   ];
-  for (const d of designs) {
-    const cv2 = document.createElement('canvas'); cv2.width = cv2.height = 192; const f = cv2.getContext('2d');
-    f.translate(96, 96); f.scale(92, 92); f.lineCap = f.lineJoin = 'round'; f.textAlign = 'center'; f.textBaseline = 'middle'; d(f); out.push(cv2);
+  for (const [col, d] of designs) {
+    const S = 256, U = S / 2 / STICK, cv2 = document.createElement('canvas'); cv2.width = cv2.height = S; const f = cv2.getContext('2d');
+    f.translate(S / 2, S / 2); f.scale(U, U); f.lineCap = f.lineJoin = 'round'; f.textAlign = 'center'; f.textBaseline = 'middle';
+    f.save(); f.shadowColor = 'rgba(0,0,0,.5)'; f.shadowBlur = U * 0.1; f.shadowOffsetY = U * 0.05; dot(f, 0, 0, 1, '#fff'); f.restore(); // die-cut white edge
+    const gr = f.createRadialGradient(-0.3, -0.35, 0.1, 0, 0, 0.92); gr.addColorStop(0, '#fff'); gr.addColorStop(0.08, col); gr.addColorStop(1, col);
+    dot(f, 0, 0, 0.9, col); f.save(); f.globalAlpha = 0.28; dot(f, 0, 0, 0.9, gr); f.restore();
+    f.save(); f.beginPath(); f.arc(0, 0, 0.9, 0, TAU); f.clip(); f.fillStyle = 'rgba(0,0,0,.16)'; f.beginPath(); f.arc(0.12, 0.16, 0.92, 0, TAU); f.arc(-0.06, -0.08, 0.86, 0, TAU, true); f.fill('evenodd'); f.restore(); // shaded lower edge
+    d(f);
+    f.fillStyle = 'rgba(255,255,255,.35)'; f.beginPath(); f.ellipse(-0.4, -0.55, 0.22, 0.1, -0.6, 0, TAU); f.fill(); // gloss
+    out.push({ img: cv2, col });
   }
   return out;
 })();
@@ -337,9 +352,10 @@ function drawOrb(c, multi) {
   const box = multi && mineC, act = box && c.o === activeId(), tx = box && !ring ? (act ? txtA : txtI) : null;
   const mate = !mineC && partyIds.has(c.o);
   g.fillStyle = box && !ring ? (act ? colA : colI) : box ? 'hsl(' + (ow ? ow.hue : 0) + ' 72% 52%)' : mate ? 'hsl(' + partyHue() + ' 80% 58%)' : 'hsl(' + (ow ? ow.hue : 0) + ' 72% 52%)';
-  g.beginPath(); g.arc(c.x, c.y, R, 0, TAU); g.fill();
-  if (ring && act) { g.lineWidth = Math.max(2.5 / cam.s, R * 0.07); g.strokeStyle = '#fff'; g.stroke(); } // white ring on the orb you control
-  if (faces && ow && !ow.human && R * cam.s > 9) { const fc = FACES[ow.id % FACES.length]; g.drawImage(fc, c.x - R, c.y - R, R * 2, R * 2); }
+  const st = faces && ow && !ow.human ? FACES[ow.id % FACES.length] : null;
+  if (st && R * cam.s > 7) g.drawImage(st.img, c.x - R * STICK, c.y - R * STICK, R * 2 * STICK, R * 2 * STICK); // bots are stickers
+  else { if (st) g.fillStyle = st.col; g.beginPath(); g.arc(c.x, c.y, R, 0, TAU); g.fill(); }
+  if (ring && act) { g.beginPath(); g.arc(c.x, c.y, R, 0, TAU); g.lineWidth = Math.max(2.5 / cam.s, R * 0.07); g.strokeStyle = '#fff'; g.stroke(); } // white ring on the orb you control
   if (R * cam.s > 18) {
     const fs = Math.max(12, R * 0.34), name = ow ? ow.name : '';
     g.font = '800 ' + fs + "px 'Bricolage Grotesque',system-ui,sans-serif"; g.textAlign = 'center'; g.textBaseline = 'middle';
