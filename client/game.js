@@ -69,7 +69,7 @@ let partyCode = '', partyIds = new Set(), showChat = true, chatOpen = false, cha
 const smooth = k => 1 - Math.exp(-k);
 
 /* ---------- connection ---------- */
-let ws = null, connected = false, retry = 0, full = false;
+let connAt = 0, ws = null, connected = false, retry = 0, full = false;
 // regions: every listed server that has an address; this page's own server counts as one too
 const SERVERS = (window.GAME_SERVERS || []).filter(s => s.url);
 const here = location.protocol + '//' + location.host;
@@ -109,7 +109,7 @@ function connect() {
   wake();
   try { ws = new WebSocket(wsUrl()); } catch (e) { return reconnect(); }
   ws.binaryType = 'arraybuffer';
-  ws.onopen = () => { connected = true; everConnected = true; retry = 0; full = false; $('wake').hidden = true; setStatus(''); ws.send(Net.enc.size(innerWidth, innerHeight, zm)); sendPing(); sendName(); sendCols(); };
+  ws.onopen = () => { connAt = performance.now(); chatSeen.clear(); for (const c of chatStore) { const k = c.channel + '|' + c.name + '|' + c.text; chatSeen.set(k, (chatSeen.get(k) || 0) + 1); } connected = true; everConnected = true; retry = 0; full = false; $('wake').hidden = true; setStatus(''); ws.send(Net.enc.size(innerWidth, innerHeight, zm)); sendPing(); sendName(); sendCols(); };
   ws.onmessage = e => { if (typeof e.data !== 'string') handle(Net.decode(e.data, WS)); };
   ws.onclose = () => { connected = false; if (playing) { playing = false; showMenu(tr('lost'), tr('lost_s')); } ents.clear(); spikes.clear(); blobs.clear(); pellets.clear(); owners.clear(); reconnect(); };
   ws.onerror = () => {};
@@ -228,7 +228,8 @@ function startGame() {
   try { localStorage.setItem('gobblename', nm); } catch (e) {}
   const pc = cleanCode($('pty').value); $('pty').value = pc; try { localStorage.setItem('gobbleparty', pc); } catch (e) {}
   send(Net.enc.join(multiChosen, innerWidth, innerHeight, nm, pc, TEST)); send(Net.enc.growth(growth));
-  playing = true; paused = false; peak = 0; xpRun = 0; xpFrac = 0; aliveXP = 0; $('xpl').hidden = true; lock = null; sq.length = 0; feedOn = false; held.clear();
+  playing = true; paused = false; peak = 0; xpRun = 0; xpFrac = 0; aliveXP = 0; $('xpl').hidden = true;
+  if (!pass.welcomed && !TEST) { pass.welcomed = true; const L = passLevel(); if (L.lv < 2) setTimeout(() => addXP(needXP(1) - L.xp), 1200); else savePass(); } // first game: straight to level 2 and its reward lock = null; sq.length = 0; feedOn = false; held.clear();
   $('ov').hidden = true; menuMode(false); $('sts').hidden = true; showMultiBtns(multiChosen);
 }
 function showMultiBtns(on) { $('bsw').hidden = $('bfd').hidden = !on; }
@@ -712,7 +713,16 @@ $('pcopy').addEventListener('click', () => {
 });
 
 /* ---------- chat panel: always on screen in the bottom left ---------- */
-function addChat(m) {
+// chat is also kept in this browser (last 20), so it's still there after a reload or a server update
+let chatStore = []; try { chatStore = JSON.parse(localStorage.getItem('gobblechatlog') || '[]').slice(-20); } catch (e) {}
+const chatSeen = new Map(); for (const c of chatStore) { const k = c.channel + '|' + c.name + '|' + c.text; chatSeen.set(k, (chatSeen.get(k) || 0) + 1); }
+function addChat(m, restoring) {
+  if (!restoring) { // a message the server repeats after a reconnect that we already show from our own copy: skip it
+    const k = m.channel + '|' + m.name + '|' + m.text, n = chatSeen.get(k) || 0;
+    if (n > 0 && !connectedFresh()) { chatSeen.set(k, n - 1); return; }
+    chatStore.push({ channel: m.channel, hue: m.hue, name: m.name, text: m.text }); chatStore = chatStore.slice(-20);
+    try { localStorage.setItem('gobblechatlog', JSON.stringify(chatStore)); } catch (e) {}
+  }
   if (!showChat) return;
   const log = $('clog'), atBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 30;
   const li = document.createElement('div'); li.className = 'cm'; li.style.setProperty('--pc', 'hsl(' + m.hue + ' 75% 60%)'); setTimeout(() => li.classList.add('old'), 30000);
@@ -864,6 +874,9 @@ function drawConfetti(dt) { // a burst of paper bits falling over the whole scre
 function toast(t) { const el = $('toast'); el.textContent = t; el.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => el.hidden = true, 1800); }
 $('mpass').addEventListener('click', openPass); $('bpx').addEventListener('click', closePass); $('bpdone').addEventListener('click', closePass);
 renderPassBtn();
+
+function connectedFresh() { return performance.now() - connAt > 2000; }
+for (const c of chatStore) addChat(c, true);
 
 /* ---------- language ---------- */
 function renderLang() {
