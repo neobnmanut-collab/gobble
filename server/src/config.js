@@ -1,7 +1,7 @@
 'use strict';
 // Every gameplay number lives here, so balance can be tuned without touching the game code.
 module.exports = {
-  WORLD: 22700,          // arena width and height (40% bigger than 16,200; must be a multiple of GRID)
+  WORLD: 18200,          // arena width and height (must be a multiple of GRID)
   GRID: 100,             // pellet grid cell size
   TICK_HZ: 25,           // simulation steps per second
   SEND_EVERY: 1,         // send a world update every step (25 updates per second)
@@ -32,7 +32,7 @@ module.exports = {
   SPEED: 1938,           // base speed constant (15% faster than 1685)
   SPEED_EXP: 0.3,        // how much faster smaller orbs are: speed grows as (start mass / mass)^this (0.25 before)
   SPLIT_SPEED: 806,      // launch speed of a split piece for small orbs...
-  SPLIT_GROWTH: 0.5,     // ...bigger orbs launch a bit faster: 0 = same for all sizes, 1 = in proportion to size
+  SPLIT_GROWTH: 0.35,     // ...bigger orbs launch a bit faster: 0 = same for all sizes, 1 = in proportion to size
   EAT_RATIO: 1.25,
   MERGE_BASE: 18,        // seconds split pieces must wait before they can join again...
   MERGE_PER_MASS: 0.004, // ...plus this many seconds per unit of piece mass...

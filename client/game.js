@@ -329,14 +329,7 @@ function camera(dt) {
   const pr = mine.length ? (dd <= 0 ? smooth(dt * 30) : smooth(dt / Math.max(0.025, dd / 1000 * 0.9))) : smooth(dt * 3); cam.x += (cx - cam.x) * pr; cam.y += (cy - cam.y) * pr; cam.s += (s - cam.s) * smooth(dt * 3);
 }
 function drawSpike(v) {
-  const R = v.r, ph = v.ph || 0;
-  if (ph > 0.02) { // something smaller is passing through: ripples spread out and the spike turns see-through
-    g.lineWidth = Math.max(2 / cam.s, R * 0.05);
-    for (const off of [0, 0.5]) { const q = (v.rp + off) % 1; g.strokeStyle = 'rgba(255,226,120,' + (ph * (1 - q) * 0.95).toFixed(3) + ')'; g.beginPath(); g.arc(v.x, v.y, R * (1 + q * 0.7), 0, TAU); g.stroke(); }
-    g.globalAlpha = 1 - ph * 0.6;
-  }
-  const now = performance.now(), fade = Math.min(1, (now - (v.born || 0)) / 350) * (v.gone ? Math.max(0, 1 - (now - v.gone) / 300) : 1);
-  if (fade < 1) g.globalAlpha *= fade;
+  const R = v.r; if (v.gone) return; // a needle that left simply disappears
   drawSpikeBody(v, R);
   g.globalAlpha = 1;
 }
@@ -459,8 +452,7 @@ function draw(dt) {
   }
   for (const v of spikes.values()) { const p = dd <= 0 || v.ox === undefined ? 1 : Math.min(1, (now - v.lt) / dd); if (v.ox !== undefined) { v.x = v.ox + (v.tx - v.ox) * p; v.y = v.oy + (v.ty - v.oy) * p; }
     // needles stay perfectly still; they only turn while sliding after being shot or while something passes through
-    const moving = v.ox !== undefined && Math.abs(v.tx - v.ox) + Math.abs(v.ty - v.oy) > 0.5;
-    if (moving || (v.ph || 0) > 0.02) v.rot += dt * (moving ? 1.2 : 0.4);
+        // (needles never animate)
   }
   for (const [id, b] of blobs) {
     if (b.ghost && now - b.ghost > 250) { blobs.delete(id); continue; }
@@ -509,19 +501,9 @@ function draw(dt) {
     for (const c of list) if (c.o === a) { g.moveTo(c.x, c.y); g.lineTo(aim.x, aim.y); }
     g.strokeStyle = 'rgba(190,190,205,.5)'; g.lineWidth = 1.5 / cam.s; g.stroke();
   }
+  // needles are drawn under every orb, so an orb rolling onto one covers it, as if the needle goes inside
+  for (const v of spikes.values()) if (!(v.x < x0 - v.r || v.x > x1 + v.r || v.y < y0 - v.r || v.y > y1 + v.r)) drawSpike(v);
   for (const c of list) drawOrb(c, multi);
-  // spikes: an orb smaller than a spike can't burst on it and simply passes through. While one is
-  // inside, the spike turns see-through and sends out ripples, and the orb is drawn on top of it.
-  const thru = [];
-  for (const v of spikes.values()) {
-    if (v.x < x0 - v.r || v.x > x1 + v.r || v.y < y0 - v.r || v.y > y1 + v.r) continue;
-    let inside = false;
-    for (const c of list) if (c.r < v.r && Math.abs(c.x - v.x) < c.r + v.r && Math.abs(c.y - v.y) < c.r + v.r && Math.hypot(c.x - v.x, c.y - v.y) < c.r + v.r) { inside = true; if (!thru.includes(c)) thru.push(c); }
-    v.ph = (v.ph || 0) + ((inside ? 1 : 0) - (v.ph || 0)) * Math.min(1, dt * (inside ? 14 : 5));
-    if (v.ph > 0.02) v.rp = ((v.rp || 0) + dt * 1.6) % 1;
-    drawSpike(v);
-  }
-  for (const c of thru) drawOrb(c, multi);
   if (playing && lock) {
     g.strokeStyle = 'rgba(255,255,255,.22)'; g.lineWidth = 2 / cam.s; g.setLineDash([10 / cam.s, 8 / cam.s]); g.beginPath();
     if (lock.t === 'h') { g.moveTo(Math.max(0, x0), lock.y); g.lineTo(Math.min(WS, x1), lock.y); }

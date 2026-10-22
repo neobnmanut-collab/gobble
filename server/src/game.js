@@ -182,8 +182,8 @@ class Game {
   }
   // stream = rapid feed: one tight, straight jet (like water from a straw) that fans out gently as it slows down
   shoot(c, dx, dy, v, j = 0.3, stream = false) {
-    if (stream) j = 0.09;
-    const a = (Math.random() - 0.5) * j, co = Math.cos(a), si = Math.sin(a), ex = dx * co - dy * si, ey = dx * si + dy * co;
+    if (stream) j = 0.03;
+    const a = (Math.random() - 0.5) * j + (stream ? Math.sin(this.t * 13 + c.o) * 0.08 : 0), co = Math.cos(a), si = Math.sin(a), ex = dx * co - dy * si, ey = dx * si + dy * co; /* the stream sways gently side to side */
     const sv = v * (1 + (Math.random() - 0.5) * (stream ? 0.14 : j * 0.6)), ih = j > 0.1 || stream ? 1 : 0;
     const side = stream ? (Math.random() - 0.5) * 2 * v * 0.075 : 0; // sideways drift that outlasts the forward push, so the end spreads
     this.ejected.push({
@@ -218,11 +218,16 @@ class Game {
   popCell(c) {
     if (c.dead) return;
     const owned = this.oc.get(c.o) || 1, total = c.m;
-    const n = Math.min(C.SPIKE_PIECES, MAXC - owned + 1, Math.floor(total / MINM)); if (n < 2) return;
-    const w = []; let ws = 0; for (let i = 0; i < n; i++) { const v = Math.random() ** 2 * 3 + 0.1; w.push(v); ws += v; }
-    const extra = total - n * MINM, mt = Math.min(C.MERGE_MAX, C.MERGE_BASE + total / n * C.MERGE_PER_MASS), a0 = rnd(0, TAU), x = c.x, y = c.y;
+    // burst into as many pieces as the piece limit allows: a few big chunks plus a ring of small ones
+    const n = Math.min(MAXC - owned + 1, Math.floor(total / MINM)); if (n < 2) return;
+    const big = n >= 6 ? 3 : n >= 3 ? 2 : 1, small = n - big, sm = [];
+    for (let i = 0; i < small; i++) sm.push(MINM * rnd(1, 1.35));
+    let smTot = sm.reduce((s, m) => s + m, 0); if (smTot > total * 0.45) { const f = total * 0.45 / smTot; for (let i = 0; i < small; i++) sm[i] = Math.max(MINM, sm[i] * f); smTot = sm.reduce((s, m) => s + m, 0); }
+    const bw = []; for (let i = 0; i < big; i++) bw.push(rnd(0.8, 1.2)); const bws = bw.reduce((s, x) => s + x, 0);
+    const masses = [...bw.map(x => (total - smTot) * x / bws), ...sm];
+    const mt = Math.min(C.MERGE_MAX, C.MERGE_BASE + total / n * C.MERGE_PER_MASS), a0 = rnd(0, TAU), x = c.x, y = c.y;
     for (let i = 0; i < n; i++) {
-      const m = MINM + extra * w[i] / ws, a = a0 + i / n * TAU, v = rnd(420, 560);
+      const m = masses[i], isBig = i < big, a = isBig ? a0 + i / big * TAU : a0 + (i - big + 0.5) / small * TAU, v = isBig ? rnd(220, 360) : rnd(520, 700);
       const t = i === 0 ? c : this.mkCell(c.o, x, y, m);
       t.m = m; t.r = rad(m); t.mt = mt; t.sc = 7; t.fr = 0.5; t.vx = Math.cos(a) * v; t.vy = Math.sin(a) * v;
       if (i > 0) { t.prot = c.prot; t.ux = c.ux; t.uy = c.uy; this.cells.push(t); }
@@ -405,7 +410,7 @@ class Game {
         if (a.o === b.o) {
           if (a.mt > 0 || b.mt > 0) {
             const ov = rr - d;
-            if (ov > 0 && !(a.fr > 0 || b.fr > 0)) { const k = Math.min(1, dt * 14), px = dx / d * ov * k, py = dy / d * ov * k; a.x -= px * 0.5; a.y -= py * 0.5; b.x += px * 0.5; b.y += py * 0.5; }
+            if (ov > 0 && !(a.fr > 0 || b.fr > 0)) { const k = Math.min(1, dt * 11), px = dx / d * ov * k, py = dy / d * ov * k, wa = b.m / (a.m + b.m), wb = 1 - wa; a.x -= px * wa; a.y -= py * wa; b.x += px * wb; b.y += py * wb; } /* heavier pieces move less */
           } else {
             const big = a.m >= b.m ? a : b, sm = big === a ? b : a, sg = sm === a ? 1 : -1, ux = dx / d, uy = dy / d, pull = Math.min(d, (208 + sm.r * 2.6) * dt);
             sm.x += sg * ux * pull * 0.7; sm.y += sg * uy * pull * 0.7; big.x -= sg * ux * pull * 0.3; big.y -= sg * uy * pull * 0.3;
@@ -459,7 +464,7 @@ class Game {
       if (c.dead || c.m < VPOP) continue;
       for (const v of this.spikes) {
         if (v.dead) continue; const dx = v.x - c.x, dy = v.y - c.y; if (Math.abs(dx) > c.r || Math.abs(dy) > c.r) continue;
-        if (Math.hypot(dx, dy) + v.r <= c.r) { v.dead = true; c.m += C.SPIKE_GAIN; pops.push(c); break; }
+        if (c.r > v.r && c.r - Math.hypot(dx, dy) >= v.r * 0.6) { v.dead = true; /* 80% of the needle is inside the orb */ c.m += C.SPIKE_GAIN; pops.push(c); break; }
       }
     }
     // fed mass: slide, then settle into the pellet grid
