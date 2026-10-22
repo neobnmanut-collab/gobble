@@ -506,8 +506,23 @@ class Game {
   }
 
   /* ---------- what one player can see ---------- */
+  // viewer mode: owners ranked by total mass; returns the one after `after` (or the biggest)
+  watchNext(after) {
+    const tot = new Map(); for (const c of this.cells) tot.set(c.o, (tot.get(c.o) || 0) + c.m);
+    const list = [...tot].sort((a, b) => b[1] - a[1]); if (!list.length) return null;
+    const i = list.findIndex(e => e[0] === after); return list[i < 0 ? 0 : (i + 1) % list.length][0];
+  }
   viewOf(cl) {
     let sx = 0, sy = 0, sm = 0, ext = 0; const mine = [];
+    if (cl.spec) { // watching: follow the chosen player (or the biggest once they're gone), seeing a wider area than a player would
+      if (!cl.specO || !this.owners.has(cl.specO) || !this.cells.some(c => c.o === cl.specO)) cl.specO = this.watchNext(null);
+      for (const c of this.cells) if (c.o === cl.specO) { mine.push(c); sx += c.x * c.m; sy += c.y * c.m; sm += c.m; }
+      const cx = sm ? sx / sm : WS / 2, cy = sm ? sy / sm : WS / 2; for (const c of mine) ext = Math.max(ext, Math.hypot(c.x - cx, c.y - cy) + c.r);
+      const W = clamp(cl.W || 1280, 320, 3840), H = clamp(cl.H || 720, 320, 2160), base = clamp(Math.min(W, H) / 600, 0.7, 1.4) * 1.35;
+      const sN = Math.min(base / (1 + Math.sqrt(sm || C.START_MASS) / 26), Math.min(W, H) * 0.45 / (ext + 80)) * C.SPEC_ZOOM;
+      const vw = W / 2 / sN * C.VIEW_SCALE, vh = H / 2 / sN * C.VIEW_SCALE;
+      return { x0: cx - vw, x1: cx + vw, y0: cy - vh, y1: cy + vh, cx, cy };
+    }
     if (cl.boxes) for (const c of this.cells) if (cl.boxes.includes(c.o)) { mine.push(c); sx += c.x * c.m; sy += c.y * c.m; sm += c.m; }
     let cx, cy;
     if (sm) { cx = sx / sm; cy = sy / sm; for (const c of mine) ext = Math.max(ext, Math.hypot(c.x - cx, c.y - cy) + c.r); cl.lastX = cx; cl.lastY = cy; }

@@ -39,5 +39,6 @@ module.exports = {
   MAX_PLAYERS: 120,      // human players allowed at once
   SPAWN_PROTECT: 3,      // seconds a new orb cannot be eaten
 
+  SPEC_ZOOM: 0.55,       // viewer mode zoom compared with a player's view (smaller = wider): 0.55 shows about 1.8x the area
   VIEW_SCALE: 1.0,       // how far past the screen a player can see (client/game.js has the same number)
 };

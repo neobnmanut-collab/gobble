@@ -56,7 +56,7 @@ wss.on('connection', (ws, req) => {
         const now = Date.now(); if (now - cl.lastJoin < 800) return; cl.lastJoin = now;
         let h = 0; for (const c of game.clients) if (!c.dead && c !== cl) h++;
         if (h >= C.MAX_PLAYERS) return send(cl, enc.full());
-        cl.W = m.W; cl.H = m.H; cl.test = m.test; game.join(cl, m.name, m.multi, m.party); cl.sentParty = ''; break;
+        cl.W = m.W; cl.H = m.H; cl.test = m.test; cl.spec = false; game.join(cl, m.name, m.multi, m.party); cl.sentParty = ''; break;
       }
       case 2: if (!cl.dead) game.setTarget(cl, m.x, m.y); break;
       case 3: if (!cl.dead && cl.splitBudget >= 1) { cl.splitBudget--; game.split(cl); } break;
@@ -66,6 +66,10 @@ wss.on('connection', (ws, req) => {
       case 7: if (!cl.dead) game.respawn(cl); break;
       case 8: cl.W = m.W; cl.H = m.H; break;
       case 9: if (cl.ws.readyState === 1) cl.ws.send(enc.pong(m.token)); break;
+      case 14: // viewer mode: watch the arena without playing
+        if (m.spec === 0) cl.spec = false;
+        else { if (!cl.dead) game.leave(cl, true); cl.spec = true; cl.specO = m.spec === 2 ? game.watchNext(cl.specO) : game.watchNext(null); }
+        break;
       case 12: cl.chatName = String(m.name).replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 14); break;
       case 11: cl.growth = Math.max(1, Math.min(C.GROWTH, m.growth | 0)) || C.GROWTH_DEFAULT; break;
       case 10: { // chat: everyone in this arena, or just your party
@@ -172,7 +176,7 @@ function loop() {
   for (const cl of game.clients) cl.splitBudget = Math.min(8, cl.splitBudget + 0.5); // at most ~20 splits a second
   batching = true;
   // people on the menu only watch the arena in the background: 5 updates a second is plenty for them
-  if (n % C.SEND_EVERY === 0) for (const cl of game.clients) if (!cl.dead || n % 5 === 0) sendWorld(cl);
+  if (n % C.SEND_EVERY === 0) for (const cl of game.clients) if (!cl.dead || cl.spec || n % 5 === 0) sendWorld(cl);
   if (n % 15 === 0) { sendLeaderboard(); sendParties(); }
   if (n % 15 === 0) sendMinimap();
   batching = false;

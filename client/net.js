@@ -60,6 +60,7 @@
       dv.setUint8(6, pb.length); new Uint8Array(ab, 7).set(pb); new Uint8Array(ab, 7 + pb.length).set(nb); return ab;
     },
     name(n) { const nb = te.encode(String(n).slice(0, 14)).slice(0, 48), ab = new ArrayBuffer(1 + nb.length); new Uint8Array(ab)[0] = 12; new Uint8Array(ab, 1).set(nb); return ab; },
+    spec(v) { return msg(2, d => { d.setUint8(0, 14); d.setUint8(1, v); }); },
     growth(v) { return msg(2, d => { d.setUint8(0, 11); d.setUint8(1, v); }); },
     chat(channel, text) {
       const tb = te.encode(String(text).slice(0, 120)).slice(0, 240), ab = new ArrayBuffer(2 + tb.length);

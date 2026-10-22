@@ -44,7 +44,7 @@ function label(b) { if (!b) return tr('unbound'); if (b.startsWith('Mouse')) { c
 
 /* ---------- world as last seen from the server ---------- */
 const ents = new Map(), spikes = new Map(), blobs = new Map(), pellets = new Map(), owners = new Map();
-let myBoxes = [], active = 0, playing = false, multiChosen = true, view = { x: 6000, y: 6000 };
+let myBoxes = [], active = 0, playing = false, multiChosen = true, watchChosen = false, watching = false, view = { x: 6000, y: 6000 };
 let lb = { rank: 0, total: 0, top: [] }, mini = { spikes: [], big: [], people: [] }, peak = 0, lastTick = 0;
 let partyCode = '', partyIds = new Set(), showChat = true, chatOpen = false, chatChan = 0;
 const smooth = k => 1 - Math.exp(-k);
@@ -118,6 +118,7 @@ function handle(m) {
       WS = m.world; SPEED = m.speed || SPEED;
       // the server was updated since this page loaded: reload to get the new game for everyone
       if (m.build) { if (serverBuild && m.build !== serverBuild) { reloadForUpdate(); return; } serverBuild = m.build; }
+      if (watching) send(Net.enc.spec(1)); // reconnected while watching: keep watching
       break;
     case 2: myBoxes = m.ids; active = m.active; break;
     case 3: for (const o of m.list) owners.set(o.id, o); break;
@@ -187,16 +188,18 @@ function showMenu(t, s) { $('ot').textContent = t; $('ot').hidden = false; delet
 // while the game keeps running, and Continue or Esc goes straight back.
 function menuMode(inGame) {
   const go = $('go'); go.dataset.t = inGame ? 'continue' : (go.dataset.t === 'continue' ? 'play' : go.dataset.t); go.textContent = tr(go.dataset.t);
-  $('gearT').dataset.t = playing ? 'menu' : 'controls'; $('gearT').textContent = tr($('gearT').dataset.t); $('gearK').hidden = !playing;
+  const on = playing || watching; $('gearT').dataset.t = on ? 'menu' : 'controls'; $('gearT').textContent = tr($('gearT').dataset.t); $('gearK').hidden = !on;
 }
 function openMenu() {
-  if (!playing) return; releaseAll(); paused = true;
+  if (!playing && !watching) return; releaseAll(); paused = true;
   $('ot').hidden = true; $('sts').hidden = true; $('os').dataset.t = 'menu_ingame'; $('os').textContent = tr('menu_ingame');
   $('ov').hidden = false; menuMode(true); probeRegions(); renderRegions();
 }
 function resumeGame() { $('ov').hidden = true; paused = !$('st').hidden; menuMode(false); }
 function startGame() {
+  if (watchChosen) return startWatching();
   if (!connected || full) return;
+  stopWatching();
   const nm = ($('nm').value.trim() || tr('player')).slice(0, 12);
   try { localStorage.setItem('gobblename', nm); } catch (e) {}
   const pc = cleanCode($('pty').value); $('pty').value = pc; try { localStorage.setItem('gobbleparty', pc); } catch (e) {}
@@ -205,11 +208,20 @@ function startGame() {
   $('ov').hidden = true; menuMode(false); $('sts').hidden = true; showMultiBtns(multiChosen);
 }
 function showMultiBtns(on) { $('bsw').hidden = $('bfd').hidden = !on; }
-function setMode(m) {
-  multiChosen = m; $('mSolo').setAttribute('aria-pressed', !m); $('mMulti').setAttribute('aria-pressed', m);
-  $('mbh').textContent = m ? tr('mode_multi', { key: label(binds.swap) }) : tr('mode_solo');
-  try { localStorage.setItem('gobblemb', m ? '1' : '0'); } catch (e) {}
+function setMode(m) { // true = multibox, false = solo, 'watch' = viewer mode
+  watchChosen = m === 'watch'; if (!watchChosen) multiChosen = m;
+  $('mSolo').setAttribute('aria-pressed', !watchChosen && !multiChosen); $('mMulti').setAttribute('aria-pressed', !watchChosen && multiChosen); $('mWatch').setAttribute('aria-pressed', watchChosen);
+  $('mbh').textContent = watchChosen ? tr('mode_watch') : multiChosen ? tr('mode_multi', { key: label(binds.swap) }) : tr('mode_solo');
+  try { localStorage.setItem('gobblemb', watchChosen ? '2' : multiChosen ? '1' : '0'); } catch (e) {}
+  if (!playing && !watching) { const go = $('go'); if (go.dataset.t !== 'play_again' || watchChosen) { go.dataset.t = watchChosen ? 'watch_btn' : 'play'; go.textContent = tr(go.dataset.t); } }
 }
+// viewer mode: no orb of your own; the camera follows a player and Space switches to the next one
+function startWatching() {
+  if (!connected) return; if (playing) { playing = false; myBoxes = []; }
+  watching = true; paused = false; send(Net.enc.spec(1));
+  $('ov').hidden = true; $('sts').hidden = true; menuMode(false); showMultiBtns(false);
+}
+function stopWatching() { if (!watching) return; watching = false; send(Net.enc.spec(0)); }
 
 /* ---------- aiming, line locks, splits ---------- */
 let mx = 0, my = 0, lock = null, unlockT = 0, feedOn = false, sq = [], pings = [], paused = false, listening = null;
@@ -264,8 +276,12 @@ function camera(dt) {
   const mine = playing ? mineCells() : [];
   let cx = view.x, cy = view.y, sm = 1600, ext = 0;
   if (mine.length) { let sx = 0, sy = 0; sm = 0; for (const c of mine) { sx += c.x * c.m; sy += c.y * c.m; sm += c.m; } cx = sx / sm; cy = sy / sm; for (const c of mine) ext = Math.max(ext, Math.hypot(c.x - cx, c.y - cy) + c.r); }
+  else if (watching) { // the server centres the view on the player being watched: size the zoom to that player
+    let big = null, bd = 1e9; for (const e of ents.values()) { const d = Math.hypot(e.x - cx, e.y - cy) - e.r; if (d < bd || (d < 0 && big && e.m > big.m)) { bd = d; big = e; } }
+    if (big) { sm = 0; for (const e of ents.values()) if (e.o === big.o) { sm += e.m; ext = Math.max(ext, Math.hypot(e.x - cx, e.y - cy) + e.r); } }
+  }
   const base = clamp(Math.min(W, H) / 600, 0.7, 1.4) * 1.35;
-  const sN = Math.min(base / (1 + Math.sqrt(sm) / 26), Math.min(W, H) * 0.45 / (ext + 80)), fit = Math.min(W, H) / (WS * 2.1), s = Math.max(fit, sN * zm);
+  const sN = Math.min(base / (1 + Math.sqrt(sm) / 26), Math.min(W, H) * 0.45 / (ext + 80)) * (watching && !mine.length ? 0.55 : 1), fit = Math.min(W, H) / (WS * 2.1), s = Math.max(fit, sN * zm);
   const vs = VIEW_SCALE; cam.v = [cx - W / 2 / sN * vs, cx + W / 2 / sN * vs, cy - H / 2 / sN * vs, cy + H / 2 / sN * vs];
   const pr = mine.length ? (dd <= 0 ? smooth(dt * 30) : smooth(dt / Math.max(0.025, dd / 1000 * 0.9))) : smooth(dt * 3); cam.x += (cx - cam.x) * pr; cam.y += (cy - cam.y) * pr; cam.s += (s - cam.s) * smooth(dt * 3);
 }
@@ -407,7 +423,7 @@ function hud() {
   $('rk').textContent = playing && lb.rank ? lb.rank + ' / ' + lb.total : '–';
   $('sec').textContent = playing && sm ? 'ABCDE'[clamp(Math.floor(sy / sm / WS * 5), 0, 4)] + (clamp(Math.floor(sx / sm / WS * 5), 0, 4) + 1) : '–';
   const multi = myBoxes.length > 1, ao = owners.get(activeId());
-  $('ct').textContent = playing && multi && ao ? tr('controlling', { name: ao.name, key: label(binds.swap) }) : '';
+  $('ct').textContent = watching && !playing ? tr('watch_hint') : playing && multi && ao ? tr('controlling', { name: ao.name, key: label(binds.swap) }) : '';
   const ol = $('lb'); ol.textContent = '';
   const row = (id, m, i) => { const li = document.createElement('li'); li.value = i + 1; const o = owners.get(id); li.textContent = (o ? o.name : '…') + ' · ' + dm(m).toLocaleString(); if (myBoxes.includes(id)) li.className = 'me'; ol.appendChild(li); };
   lb.top.slice(0, 6).forEach((t, i) => row(t.id, t.m, i));
@@ -459,7 +475,7 @@ function assign(a, code) { for (const k in binds) if (k !== a && binds[k] === co
 function updateHelp() {
   const kb = $('keys'); kb.textContent = '';
   for (const [k, v] of [[tr('k_move'), tr('k_mouse')], [tr('a_split'), label(binds.split)], [tr('a_dsplit'), label(binds.dsplit)], [tr('a_eject'), label(binds.eject)], [tr('k_line'), label(binds.hline) + ' / ' + label(binds.vline)]]) { const s = document.createElement('span'); s.append(k + ' '); const b = document.createElement('kbd'); b.textContent = v; s.append(b); kb.append(s); }
-  setMode(multiChosen);
+  setMode(watchChosen ? 'watch' : multiChosen);
 }
 function renderSettings() {
   const kl = $('kl'); kl.textContent = '';
@@ -494,10 +510,11 @@ addEventListener('keydown', e => {
   if (listening) { e.preventDefault(); e.stopPropagation(); const k = listening; listening = null; if (e.code === 'Backspace' || e.code === 'Delete') { binds[k] = ''; saveCfg(); updateHelp(); } else if (e.code !== 'Escape') assign(k, e.code); renderSettings(); return; }
   if (!$('st').hidden) { if (e.code === 'Escape') closeSettings(); return; }
   if (e.code === 'Escape' && !isBound('Escape') && e.target.id !== 'ctx') { // Esc: game → menu → game; on the start screen it opens Settings
-    e.preventDefault(); if (playing) { if ($('ov').hidden) openMenu(); else resumeGame(); } else openSettings(); return;
+    e.preventDefault(); if (playing || watching) { if ($('ov').hidden) openMenu(); else resumeGame(); } else openSettings(); return;
   }
   const tag = e.target.tagName; if (tag === 'INPUT' || tag === 'SELECT') return;
   if (e.code === 'Enter' && !isBound('Enter') && connected) { e.preventDefault(); openChat(); return; }
+  if (watching && $('ov').hidden && e.code === 'Space') { e.preventDefault(); send(Net.enc.spec(2)); return; }
   if (!playing) return;
   if ((e.ctrlKey || e.metaKey) && e.code === 'KeyC' && String(getSelection()).length) return; // copy selected chat text
   e.preventDefault();
@@ -527,7 +544,7 @@ function tbtn(id, fn, hold) {
   for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) b.addEventListener(ev, () => hold && fn(false));
 }
 tbtn('bsp', d => d && multiSplit(1)); tbtn('bds', d => d && multiSplit(2)); tbtn('bej', d => act('eject', d), true); tbtn('bsw', d => d && act('swap', true)); tbtn('bfd', d => act('feed', d), true);
-$('gear').addEventListener('click', () => { if (playing) { if ($('ov').hidden) openMenu(); else resumeGame(); } else openSettings(); }); $('mset').addEventListener('click', openSettings);
+$('gear').addEventListener('click', () => { if (playing || watching) { if ($('ov').hidden) openMenu(); else resumeGame(); } else openSettings(); }); $('mset').addEventListener('click', openSettings);
 for (const b of document.querySelectorAll('.nav button')) b.addEventListener('click', () => $(b.dataset.go).scrollIntoView({ behavior: 'smooth', block: 'start' })); $('cl').addEventListener('click', closeSettings); $('cl2').addEventListener('click', closeSettings);
 $('rs').addEventListener('click', () => { binds = Object.assign({}, DEF); dd = 60; fcap = 0; lines = true; setCols(); rf = 40; pd = 50; lsi = false; lsn = 2; mal = true; ltg = false; ftg = false; mbtn = { 0: 'none', 2: 'none' }; saveCfg(); updateHelp(); renderSettings(); });
 const setting = (id, ev, fn) => $(id).addEventListener(ev, e => { fn(e.target); saveCfg(); renderSettings(); });
@@ -535,8 +552,8 @@ setting('dd', 'input', t => dd = +t.value); setting('lines', 'change', t => line
 setting('lsi', 'change', t => lsi = t.checked); setting('lsn', 'change', t => lsn = clamp(Math.round(+t.value) || 1, 1, 4)); setting('mal', 'change', t => mal = t.checked);
 setting('ltg', 'change', t => { ltg = t.checked; lock = null; }); setting('ftg', 'change', t => { ftg = t.checked; feedOn = false; });
 setting('mm0', 'change', t => mbtn[0] = t.value); setting('mm2', 'change', t => mbtn[2] = t.value);
-$('mSolo').addEventListener('click', () => setMode(false)); $('mMulti').addEventListener('click', () => setMode(true));
-$('go').addEventListener('click', () => (playing ? resumeGame() : startGame()));
+$('mSolo').addEventListener('click', () => setMode(false)); $('mMulti').addEventListener('click', () => setMode(true)); $('mWatch').addEventListener('click', () => setMode('watch'));
+$('go').addEventListener('click', () => { const viewing = watching && watchChosen; if ((playing && !watchChosen) || viewing) resumeGame(); else startGame(); });
 $('nm').addEventListener('keydown', e => { if (e.key === 'Enter') startGame(); });
 
 /* ---------- growth speed, 1x to 3x, each player's own choice ---------- */
@@ -616,7 +633,7 @@ I18N.apply(); renderLang(); $('clog').dataset.empty = tr('no_msgs');
 
 /* ---------- start ---------- */
 document.title = GAME_NAME; $('ot').textContent = GAME_NAME;
-try { $('nm').value = localStorage.getItem('gobblename') || ''; multiChosen = localStorage.getItem('gobblemb') !== '0'; $('pty').value = localStorage.getItem('gobbleparty') || ''; showChat = localStorage.getItem('gobblechat') !== '0'; } catch (e) {}
+try { $('nm').value = localStorage.getItem('gobblename') || ''; multiChosen = localStorage.getItem('gobblemb') !== '0'; watchChosen = localStorage.getItem('gobblemb') === '2'; if (watchChosen) multiChosen = true; $('pty').value = localStorage.getItem('gobbleparty') || ''; showChat = localStorage.getItem('gobblechat') !== '0'; } catch (e) {}
 { // invite links: ?party=CODE&r=region
   const q = new URLSearchParams(location.search), pq = cleanCode(q.get('party')), rq = q.get('r');
   if (pq) $('pty').value = pq;

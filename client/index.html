@@ -162,7 +162,7 @@ button{font:700 1rem var(--font);cursor:pointer}
   <p id="os" data-t="intro">Eat pellets, swallow orbs a quarter smaller than you, and steer clear of the spikes once you’re big. Pick how fast you grow below.</p>
   <div class="stats" id="sts" hidden><div><span data-t="peak">Peak mass</span><b id="s1">0</b></div><div><span data-t="swallowed">Swallowed</span><b id="s2">0</b></div><div><span data-t="survived">Survived</span><b id="s3">0:00</b></div></div>
   <input type="text" id="nm" maxlength="12" placeholder="Your name" data-tp="name_ph" autocomplete="off">
-  <div class="seg" role="group" aria-label="Game mode"><button type="button" id="mSolo" aria-pressed="false" data-t="solo">Solo</button><button type="button" id="mMulti" aria-pressed="true" data-t="multibox">Multibox</button></div>
+  <div class="seg" id="modes" role="group" aria-label="Game mode" style="grid-template-columns:repeat(3,1fr)"><button type="button" id="mSolo" aria-pressed="false" data-t="solo">Solo</button><button type="button" id="mMulti" aria-pressed="true" data-t="multibox">Multibox</button><button type="button" id="mWatch" aria-pressed="false" data-t="watch">Viewer</button></div>
   <p id="mbh"></p>
   <p id="tmode" hidden data-t="test_mode" style="color:var(--warn);font-size:.85rem;margin:-4px 0 0">Test mode: one orb starts at 35,000 and you never lose mass.</p>
   <div class="seg" id="regions" role="group" aria-label="Server region"></div>
@@ -222,9 +222,9 @@ button{font:700 1rem var(--font);cursor:pointer}
   <div class="btns"><button class="kb" id="rs" data-t="reset">Reset defaults</button><button class="primary" id="cl" data-t="done">Done</button></div>
   </div>
 </div></div>
-<script src="i18n.js?v=30"></script>
-<script src="servers.js?v=30"></script>
-<script src="net.js?v=30"></script>
-<script src="game.js?v=30"></script>
+<script src="i18n.js?v=31"></script>
+<script src="servers.js?v=31"></script>
+<script src="net.js?v=31"></script>
+<script src="game.js?v=31"></script>
 </body>
 </html>
