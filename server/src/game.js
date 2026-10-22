@@ -150,7 +150,11 @@ class Game {
   doSplit(c, dx, dy) {
     c.m /= 2; c.r = rad(c.m);
     const t = this.mkCell(c.o, c.x, c.y, c.m);
-    const v = splitV(c.m * 2); t.vx = dx * v + c.vx * 0.5; t.vy = dy * v + c.vy * 0.5; t.ux = c.ux; t.uy = c.uy; t.sc = 7; t.prot = c.prot;
+    // the new piece flies exactly toward the mouse; only the part of the orb's own push that already
+    // points that way is kept, so leftover sideways speed (from an earlier split or a wall) can't bend it
+    const v = splitV(c.m * 2), along = Math.max(0, c.vx * dx + c.vy * dy) * 0.5;
+    t.vx = dx * (v + along); t.vy = dy * (v + along); t.x += dx * 2; t.y += dy * 2;
+    t.ux = c.ux; t.uy = c.uy; t.sc = 7; t.prot = c.prot;
     t.fr = 0.4; c.mt = t.mt = Math.min(C.MERGE_MAX, C.MERGE_BASE + c.m * C.MERGE_PER_MASS); c.sc = 7;
     this.cells.push(t); return t;
   }
