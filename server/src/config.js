@@ -22,7 +22,7 @@ module.exports = {
 
   START_MASS: 40000,     // every orb a player starts with (shown as 20,000)
   REVIVE_MASS: 800,      // a multibox orb brought back after being eaten starts this small (shown as 400)
-  RESPAWN_BLOCK: 40000,  // full respawn is refused while any of your orbs is bigger than this (shown as 20,000)
+  RESPAWN_BLOCK: 20000,  // full respawn only works while your total mass (all pieces of both boxes) is below this (shown as 10,000)
   MIN_PIECE: 320,        // no orb is ever smaller than this (shown as 160); orbs can split from twice this
   MAX_PIECES: 16,
   MAX_MASS: 120000,      // an orb above this splits in two (shown as 60,000)

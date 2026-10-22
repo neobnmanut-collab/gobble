@@ -173,8 +173,9 @@ class Game {
   }
   respawn(client) {
     if (!client.boxes || !client.boxes.length) return;
-    // no starting over while you have a big orb
-    for (const c of this.cells) if (client.boxes.includes(c.o) && c.m > C.RESPAWN_BLOCK) return;
+    // no starting over while you're still big: everything you have (both boxes, every piece) must be under the limit
+    let tot = 0; for (const c of this.cells) if (client.boxes.includes(c.o)) tot += c.m;
+    if (tot >= C.RESPAWN_BLOCK) return;
     this.join(client, client.name, client.multi, client.party);
   }
   // stream = rapid feed: one tight, straight jet (like water from a straw) that fans out gently as it slows down
