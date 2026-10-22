@@ -28,12 +28,11 @@ let colA = COL_DEF[0], colI = COL_DEF[1], txtA = null, txtI = null, colsReady = 
 function light(hex) { const n = parseInt(hex.slice(1), 16), r = n >> 16, g2 = n >> 8 & 255, b = n & 255; return 0.299 * r + 0.587 * g2 + 0.114 * b > 165; }
 function textFor(hex) { return light(hex) ? { name: '#1a1a1a', mass: 'rgba(0,0,0,.4)', stroke: false } : { name: '#fff', mass: 'rgba(255,255,255,.45)', stroke: true }; }
 function setCols(a, i) { const ok = v => typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v); colA = ok(a) ? a.toLowerCase() : COL_DEF[0]; colI = ok(i) ? i.toLowerCase() : COL_DEF[1]; txtA = textFor(colA); txtI = textFor(colI); if (colsReady) { markClashes(); setTimeout(sendCols, 0); } }
-// other multibox players' chosen colours (owner id -> { hex, txt, clash }). If someone picked (nearly) the same
-// colours as you, you see their orbs in their normal colour instead, so you never mix them up with your own.
+// other multibox players' chosen colours (owner id -> { hex, txt, clash }), always shown exactly as they picked them
 const ownerCol = new Map(); colsReady = true;
 function rgbOf(h) { const n = parseInt(h.slice(1), 16); return [n >> 16, n >> 8 & 255, n & 255]; }
 function near(a, b) { const x = rgbOf(a), y = rgbOf(b); return Math.hypot(x[0] - y[0], x[1] - y[1], x[2] - y[2]) < 80; }
-function markClashes() { for (const v of ownerCol.values()) v.clash = near(v.hex, colA) || near(v.hex, colI); }
+function markClashes() { for (const v of ownerCol.values()) v.clash = false; } // everyone is always shown in the colours they picked, even if they match yours
 function sendCols() { if (connected) send(Net.enc.cols(colA, colI, pass.skin, pass.badge)); }
 const ownerSkin = new Map(); // owner id -> sticker skin other players picked
 function ownerFill(o) { // the colour an owner's orbs and fed blobs are drawn in
