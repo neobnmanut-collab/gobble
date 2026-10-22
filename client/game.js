@@ -173,7 +173,9 @@ function handle(m) {
         else {
           // new blob: place it where it sits on the orb that shot it, as that orb is drawn right now
           let from = null, bd = 90; for (const o of ents.values()) { const d = Math.hypot(b.x - o.tx, b.y - o.ty) - o.tr; if (d < bd) { bd = d; from = o; } }
-          const sx = from ? from.x + (b.x - from.tx) : b.x, sy = from ? from.y + (b.y - from.ty) : b.y;
+          // it has already flown a little before we first see it: start it just inside the edge of the orb that fed it, so it visibly comes out of that orb
+          let sx = b.x, sy = b.y;
+          if (from) { const dx = b.x - from.tx, dy = b.y - from.ty, d = Math.hypot(dx, dy) || 1, k = Math.max(0, from.r - BLOB_R * 0.6); sx = from.x + dx / d * k; sy = from.y + dy / d * k; }
           blobs.set(b.id, { x: sx, y: sy, ox: sx, oy: sy, tx: b.x, ty: b.y, vx: 0, vy: 0, lt: lastTick, o: b.o, ghost: 0, s: 0.55, sv: 0, d: 0, dv: 0, ang: 0 });
         }
       }
