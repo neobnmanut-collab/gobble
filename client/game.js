@@ -558,13 +558,13 @@ $('go').addEventListener('click', () => { const viewing = watching && watchChose
 $('nm').addEventListener('keydown', e => { if (e.key === 'Enter') startGame(); });
 
 /* ---------- growth speed, 1x to 3x, each player's own choice ---------- */
-let growth = 2; try { growth = Math.min(3, Math.max(1, +localStorage.getItem('gobblegrowth3') || 2)); } catch (e) {}
+const growth = 1; // growth speed is fixed at 1x for everyone (the picker was removed)
 function renderGrowth() {
   for (const id of ['grow', 'growc']) {
     const box = $(id); if (!box) continue; box.textContent = '';
     for (let v = 1; v <= 3; v++) {
       const b = document.createElement('button'); b.type = 'button'; b.textContent = v + '×'; b.setAttribute('aria-pressed', v === growth);
-      b.onclick = () => { growth = v; try { localStorage.setItem('gobblegrowth3', v); } catch (e) {} renderGrowth(); if (playing) send(Net.enc.growth(v)); };
+      b.onclick = () => {};
       box.append(b);
     }
   }
