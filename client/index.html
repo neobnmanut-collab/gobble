@@ -140,6 +140,21 @@ button{font:700 1rem var(--font);cursor:pointer}
 @keyframes blink{50%{border-color:#ffd0d0}}
 @media (prefers-reduced-motion:reduce){#fxb{transition:none}#fxb.warn{animation:none}}
 .c-fx{--c:#ff9a3c}
+#toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 80px);transform:translateX(-50%);z-index:9;padding:8px 14px;border-radius:999px;background:rgba(20,20,20,.92);border:1px solid var(--line);font-weight:700;font-size:.9rem;pointer-events:none}
+#fxb.level{background:linear-gradient(180deg,#1d1438,#120c24);border:2px solid #c792ff;color:#eadcff;box-shadow:0 0 50px rgba(199,146,255,.45)}
+/* battle pass */
+#bp{z-index:10}#bp .card{gap:14px}#bp .card>*{flex-shrink:0}
+.bphead{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}.bphead b{font-size:1.8rem;color:#ffd166}
+#bpseason{color:var(--muted);font-size:.85rem}
+.bpbar{height:12px;border-radius:999px;background:var(--bg);border:1px solid var(--line);overflow:hidden}#bpbar{height:100%;background:linear-gradient(90deg,#ffd166,#ff9a3c);border-radius:999px;transition:width .4s}
+#bpxp{font-size:.8rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.bppick{display:flex;flex-wrap:wrap;gap:6px}.bppick button{min-width:44px;height:48px;padding:2px 8px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-size:1.3rem;display:flex;align-items:center;justify-content:center}
+.bppick button canvas{width:38px;height:38px}.bppick button[aria-pressed="true"]{border-color:#ffd166;box-shadow:0 0 0 2px #ffd16655}
+#bptrack{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:6px}
+.bpt{position:relative;border:1px solid var(--line);border-radius:10px;background:var(--bg);min-height:66px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;opacity:.45;filter:grayscale(.8)}
+.bpt.on{opacity:1;filter:none;border-color:color-mix(in srgb,#ffd166 40%,var(--line))}.bpt.now{box-shadow:0 0 0 2px #ffd166}
+.bpt small{position:absolute;top:3px;left:6px;font-size:.65rem;color:var(--muted);font-weight:800}.bpt span{font-size:1.4rem}.bpt canvas{width:34px;height:34px}
+
 #fxb.chat{background:#06202c;border:2px solid #7cc6ff;color:#d6f0ff;box-shadow:0 0 50px rgba(124,198,255,.45)}
 #chat.flash .cm,#chat.flash #ctx{animation:cflash .5s ease-in-out 6}
 @keyframes cflash{50%{box-shadow:0 0 0 3px #7cc6ff,0 0 24px rgba(124,198,255,.7)}}
@@ -164,7 +179,9 @@ button{font:700 1rem var(--font);cursor:pointer}
 .pres button{display:flex;padding:6px 9px;border-radius:999px;border:1px solid var(--line);background:var(--bg)}
 .pres button[aria-pressed="true"]{border-color:var(--ink)}
 .pres i{width:16px;height:16px;border-radius:50%;display:block}.pres i+i{margin-left:-4px;box-shadow:0 0 0 2px var(--bg)}
-.mbtns{display:grid;grid-template-columns:auto 1fr;gap:10px}
+.mbtns{display:grid;grid-template-columns:auto auto 1fr;gap:8px}
+.ghost.pass{border-color:color-mix(in srgb,#ffd166 45%,var(--line))}.ghost.pass::before{display:none}
+#xpl{margin:-4px 0 0;font-weight:800;color:#ffd166;font-size:.9rem}
 .ghost{padding:12px 16px;border-radius:10px;border:1px solid color-mix(in srgb,#c792ff 40%,var(--line));background:var(--bg);color:var(--ink);display:flex;align-items:center;gap:8px}
 .ghost::before{content:"";width:8px;height:8px;border-radius:50%;background:#c792ff}
 @media (max-width:400px){.cols{grid-template-columns:1fr}}
@@ -175,6 +192,7 @@ button{font:700 1rem var(--font);cursor:pointer}
 <canvas id="mm"></canvas>
 <div class="hud" id="hud"><span class="k" data-t="mass">Mass</span><b id="sc">0</b><span class="k" data-t="best">Best</span><b id="bs">0</b><span class="k" data-t="rank">Rank</span><b id="rk">–</b><span class="k" data-t="sector">Sector</span><b id="sec">–</b><span class="k" data-t="ping">Ping</span><b id="png">–</b><span class="k">FPS</span><b id="fpsv">–</b><span class="k" data-t="online">Online</span><b id="onl">–</b><div id="ct"></div></div>
 <div class="hud" id="lbw"><h2 data-t="top">Top orbs</h2><ol id="lb"></ol><p id="rec" hidden></p></div>
+<div id="toast" hidden></div>
 <div id="fxb" hidden><b id="fxt"></b><span id="fxs"></span></div>
 <div id="tc"><button id="bsp" data-t="split">Split</button><button id="bds" data-t="split2">2× Split</button><button id="bej" data-t="eject">Eject</button><button id="bsw" hidden data-t="swap">Swap</button><button id="bfd" hidden data-t="feed">Feed</button></div>
 <div class="ov" id="ov"><div class="card">
@@ -189,7 +207,8 @@ button{font:700 1rem var(--font);cursor:pointer}
   <div class="seg" id="regions" role="group" aria-label="Server region"></div>
   <div class="party"><input type="text" id="pty" maxlength="8" placeholder="Party code (optional)" data-tp="party_ph" autocomplete="off" aria-label="Party code"><button type="button" id="pnew" data-t="new_party">New party</button></div>
   <div id="pinv" hidden><span id="plink"></span><button type="button" id="pcopy" data-t="copy_link">Copy link</button><p id="pnote"></p></div>
-  <div class="mbtns"><button type="button" class="ghost" id="mset" data-t="controls">Settings</button><button class="primary" id="go" data-t="play">Play</button></div>
+  <p id="xpl" hidden></p>
+  <div class="mbtns"><button type="button" class="ghost" id="mset" data-t="controls">Settings</button><button type="button" class="ghost pass" id="mpass">🎖</button><button class="primary" id="go" data-t="play">Play</button></div>
   <p id="net" hidden></p>
   <p id="wake" hidden data-t="wake">The server was resting while nobody played. It wakes up in under a minute; the game connects by itself.</p>
   <p id="pc"></p>
@@ -198,6 +217,16 @@ button{font:700 1rem var(--font);cursor:pointer}
 <div id="chat"><div id="chead"><span data-t="chat">Chat</span><button type="button" id="cmin" aria-label="Hide chat">–</button></div><div id="clog" aria-live="polite"></div><div id="cin"><button type="button" id="cch">All</button><input type="text" id="ctx" maxlength="120" placeholder="Press Play to chat" autocomplete="off" aria-label="Chat message" disabled><button type="button" id="csend" disabled data-t="send">Send</button></div></div>
 <div id="live" hidden><i></i><span id="livet"></span></div>
 <button id="gear">⚙ <span id="gearT" data-t="controls">Settings</span> <kbd id="gearK" hidden>Esc</kbd></button>
+<div class="ov" id="bp" hidden><div class="card wide">
+  <div class="sh"><h1 style="font-size:1.6rem">🎖 <span data-t="bp_title">Battle Pass</span></h1><button class="x" id="bpx" aria-label="Close" data-ta="close">✕</button></div>
+  <div class="bphead"><b id="bplv"></b><span id="bpseason"></span></div>
+  <div class="bpbar"><div id="bpbar"></div></div><span id="bpxp"></span>
+  <p class="hint" data-t="bp_hint">Play to earn XP: grow, eat players and stay alive. Rewards stay yours forever; levels start again each season. Saved in this browser.</p>
+  <div class="sec c-gen"><h2 data-t="bp_skin">Skin</h2><div class="bppick" id="bpskins"></div></div>
+  <div class="sec c-key"><h2 data-t="bp_badge">Chat badge</h2><div class="bppick" id="bpbadges"></div></div>
+  <div class="sec c-fx"><h2 data-t="bp_rewards">Rewards</h2><div id="bptrack"></div></div>
+  <button class="primary" id="bpdone" data-t="done">Done</button>
+</div></div>
 <div class="ov" id="st" hidden><div class="card wide">
   <div class="top"><div class="sh"><h1 style="font-size:1.6rem" data-t="controls">Settings</h1><button class="x" id="cl2" aria-label="Close" data-ta="close">✕</button></div>
   <nav class="nav" aria-label="Sections"><button type="button" class="c-gen" data-go="g-gen" data-t="nav_general">General</button><button type="button" class="c-key" data-go="g-key" data-t="keys">Keys</button><button type="button" class="c-play" data-go="g-play" data-t="nav_gameplay">Gameplay</button><button type="button" class="c-fx" data-go="g-fx" data-t="effects">Effects</button><button type="button" class="c-dis" data-go="g-dis" data-t="display">Display</button></nav></div>
@@ -246,9 +275,9 @@ button{font:700 1rem var(--font);cursor:pointer}
   <div class="btns"><button class="kb" id="rs" data-t="reset">Reset defaults</button><button class="primary" id="cl" data-t="done">Done</button></div>
   </div>
 </div></div>
-<script src="i18n.js?v=47"></script>
-<script src="servers.js?v=47"></script>
-<script src="net.js?v=47"></script>
-<script src="game.js?v=47"></script>
+<script src="i18n.js?v=48"></script>
+<script src="servers.js?v=48"></script>
+<script src="net.js?v=48"></script>
+<script src="game.js?v=48"></script>
 </body>
 </html>

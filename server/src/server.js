@@ -66,7 +66,7 @@ wss.on('connection', (ws, req) => {
       case 6: if (!cl.dead) game.swap(cl, m.x, m.y); break;
       case 7: if (!cl.dead) game.respawn(cl); break;
       case 8: cl.W = m.W; cl.H = m.H; cl.zoom = Math.max(0.01, Math.min(3, m.zoom || 1)); break;
-      case 15: cl.colA = m.a; cl.colI = m.i; break;
+      case 15: cl.colA = m.a; cl.colI = m.i; cl.skin = m.skin < 12 ? m.skin : 255; cl.badge = m.badge < BADGES.length ? m.badge : 255; break;
       case 9: if (cl.ws.readyState === 1) cl.ws.send(enc.pong(m.token)); break;
       case 16: { // fun effects everyone sees (earthquake, fake warning, disco); one every 20 s per player
         const now = Date.now(); if (now - (cl.quakeT || 0) < 20000) return; cl.quakeT = now;
@@ -80,7 +80,7 @@ wss.on('connection', (ws, req) => {
       case 11: cl.growth = Math.max(1, Math.min(C.GROWTH, m.growth | 0)) || C.GROWTH_DEFAULT; break;
       case 10: { // chat: everyone in this arena, or just your party
         const now = Date.now(); if (now - (cl.chatT || 0) < 700) return; cl.chatT = now;
-        const who = (!cl.dead && cl.name) || cl.chatName || cl.name || 'Guest';
+        const who = (cl.badge !== undefined && cl.badge !== 255 ? BADGES[cl.badge] + ' ' : '') + ((!cl.dead && cl.name) || cl.chatName || cl.name || 'Guest');
         const text = m.text.replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120); if (!text) return;
         if (m.channel === 1 && !cl.party) return;
         let hue = 0; for (const ch of who) hue = (hue * 31 + ch.charCodeAt(0)) % 360; // each name gets its own chat colour
@@ -172,10 +172,15 @@ function sendLeaderboard() {
   }
 }
 // the colours each multibox player picked, so everyone sees their orbs (and fed blobs) in those colours
+const BADGES = ['⭐', '🔥', '💎', '🚀', '🌈', '⚡', '🦈', '👑', '🎯', '🍀']; // battle pass chat badges (same list as the page)
 const chatLog = []; // last 20 messages to everyone (party messages stay private and aren't kept)
 function sendColours() {
   const list = [];
-  for (const cl of game.clients) if (!cl.dead && cl.multi && cl.colA !== undefined && cl.boxes) cl.boxes.forEach((id, i) => list.push([id, i === cl.active ? cl.colA : cl.colI]));
+  for (const cl of game.clients) {
+    if (cl.dead || !cl.boxes) continue; const col = cl.multi && cl.colA !== undefined, skin = cl.skin ?? 255;
+    if (!col && skin === 255) continue;
+    cl.boxes.forEach((id, i) => list.push([id, col ? (i === cl.active ? cl.colA : cl.colI) : -1, skin]));
+  }
   const buf = enc.colours(list); for (const cl of game.clients) send(cl, buf);
 }
 function sendMinimap() {

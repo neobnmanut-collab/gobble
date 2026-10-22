@@ -10,7 +10,7 @@
 //   6 SWAP    f32 x, f32 y          (where the box you leave keeps heading)
 //   7 RESPAWN
 //   8 SIZE    u16 screenW, u16 screenH, u16 zoom x1000 (how far this player has zoomed out with the wheel)
-//  15 COLOURS u8 r,g,b of the active multibox orb, u8 r,g,b of the other one
+//  15 LOOK    u8 r,g,b of the active multibox orb, u8 r,g,b of the other one, u8 sticker skin (255 none), u8 chat badge (255 none)
 //   9 PING    u32 token             (answered at once with PONG, for the ping display)
 //  10 CHAT    u8 channel 0=everyone 1=party, utf8 text
 //  12 NAME    utf8 name (so people on the menu can chat before playing)
@@ -35,7 +35,7 @@
 //   9 PONG    u32 token
 //  13 BATCH   repeated (u32 length, message): several messages sent as one, to save per-message work
 //  10 CHAT    u8 channel, u16 hue, u8 name length, name, utf8 text
-//  15 COLOURS u16 n, n x (u32 owner, u8 r, u8 g, u8 b): the colours multibox players picked for their orbs
+//  15 LOOKS   u16 n, n x (u32 owner, u8 r, u8 g, u8 b, u8 1 = has a picked colour, u8 sticker skin or 255): how each player's orbs look
 //  16 EFFECT  u8 effect (0 earthquake, 1 fake server warning, 2 disco, 3 look at the chat), u8 len, utf8 name of who set it off
 //  17 RECORD  u32 mass, u8 1 = announce it big, u8 len, utf8 name: the arena's mass record (since the server started)
 //  11 PARTY   u8 code length, code, u8 n, n x u32 owner id of every box in your party
@@ -95,7 +95,7 @@ const enc = {
     const cb = Buffer.from(String(code || ''), 'utf8').subarray(0, 16), list = ids.slice(0, 64);
     const w = new Writer(3 + cb.length + list.length * 4); w.u8(11); w.u8(cb.length); w.bytes(cb); w.u8(list.length); for (const id of list) w.u32(id); return w.done();
   },
-  colours(list) { const w = new Writer(3 + list.length * 7); w.u8(15); w.u16(list.length); for (const [id, rgb] of list) { w.u32(id); w.u8(rgb >> 16 & 255); w.u8(rgb >> 8 & 255); w.u8(rgb & 255); } return w.done(); },
+  colours(list) { const w = new Writer(3 + list.length * 9); w.u8(15); w.u16(list.length); for (const [id, rgb, skin] of list) { w.u32(id); w.u8(rgb >> 16 & 255); w.u8(rgb >> 8 & 255); w.u8(rgb & 255); w.u8(rgb < 0 ? 0 : 1); w.u8(skin); } return w.done(); },
   effect(fx, name) { const nb = Buffer.from(String(name || '').slice(0, 16), 'utf8').subarray(0, 48); return Buffer.concat([Buffer.from([16, fx, nb.length]), nb]); },
   record(m, name, announce) { const nb = Buffer.from(String(name).slice(0, 16), 'utf8').subarray(0, 48); const w = new Writer(7 + nb.length); w.u8(17); w.u32(m); w.u8(announce ? 1 : 0); w.u8(nb.length); w.bytes(nb); return w.done(); },
   pong(token) { const w = new Writer(5); w.u8(9); w.u32(token); return w.done(); },
@@ -112,10 +112,10 @@ function decode(buf) {
       case 3: case 7: return { op };
       case 4: case 5: if (buf.length < 4) return null; return { op, on: !!buf[1], ms: buf.readUInt16LE(2) };
       case 8: if (buf.length < 5) return null; return { op, W: buf.readUInt16LE(1), H: buf.readUInt16LE(3), zoom: buf.length >= 7 ? buf.readUInt16LE(5) / 1000 : 1 };
-      case 15: if (buf.length < 7) return null; return { op, a: buf[1] << 16 | buf[2] << 8 | buf[3], i: buf[4] << 16 | buf[5] << 8 | buf[6] };
+      case 15: if (buf.length < 7) return null; return { op, a: buf[1] << 16 | buf[2] << 8 | buf[3], i: buf[4] << 16 | buf[5] << 8 | buf[6], skin: buf.length > 7 ? buf[7] : 255, badge: buf.length > 8 ? buf[8] : 255 };
       case 9: if (buf.length < 5) return null; return { op, token: buf.readUInt32LE(1) };
       case 11: if (buf.length < 2) return null; return { op, growth: buf[1] };
-      case 16: return { op, fx: buf.length > 1 ? Math.min(3, buf[1]) : 0 };
+      case 16: return { op, fx: buf.length > 1 ? Math.min(8, buf[1]) : 0 };
       case 14: if (buf.length < 2) return null; return { op, spec: buf[1] };
       case 12: return { op, name: buf.subarray(1, 49).toString('utf8') };
       case 10: if (buf.length < 3) return null; return { op, channel: buf[1] === 1 ? 1 : 0, text: buf.subarray(2, 2 + 240).toString('utf8') };

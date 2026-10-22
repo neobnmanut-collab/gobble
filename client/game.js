@@ -10,8 +10,8 @@ let WS = 12000, SPEED = 1685, W = 0, H = 0, dpr = 1, T = 0;
 const cam = { x: 6000, y: 6000, s: 0.5 }; let zm = 1;
 
 /* ---------- settings (same controls as the offline game) ---------- */
-const DEF = { fx_quake: 'KeyK', fx_warn: 'KeyJ', fx_disco: 'KeyL', fx_chat: 'KeyH', split: 'Space', dsplit: 'KeyD', psplit: 'KeyQ', tsplit: 'KeyF', qsplit: 'KeyG', eject: 'KeyW', hline: 'KeyS', vline: 'KeyT', fline: '', respawn: 'KeyB', ping: 'KeyR', swap: 'Mouse2', feed: 'KeyE' };
-const ACT = ['split', 'dsplit', 'psplit', 'tsplit', 'qsplit', 'eject', 'hline', 'vline', 'fline', 'respawn', 'ping', 'swap', 'feed', 'fx_quake', 'fx_warn', 'fx_disco', 'fx_chat'].map(k => [k, 'a_' + k]);
+const DEF = { fx_quake: 'KeyK', fx_warn: 'KeyJ', fx_disco: 'KeyL', fx_chat: 'KeyH', fx_confetti: 'KeyU', fx_snow: 'KeyI', fx_flash: 'KeyO', fx_hearts: 'KeyP', fx_fireworks: 'KeyY', split: 'Space', dsplit: 'KeyD', psplit: 'KeyQ', tsplit: 'KeyF', qsplit: 'KeyG', eject: 'KeyW', hline: 'KeyS', vline: 'KeyT', fline: '', respawn: 'KeyB', ping: 'KeyR', swap: 'Mouse2', feed: 'KeyE' };
+const ACT = ['split', 'dsplit', 'psplit', 'tsplit', 'qsplit', 'eject', 'hline', 'vline', 'fline', 'respawn', 'ping', 'swap', 'feed', 'fx_quake', 'fx_warn', 'fx_disco', 'fx_chat', 'fx_confetti', 'fx_snow', 'fx_flash', 'fx_hearts', 'fx_fireworks'].map(k => [k, 'a_' + k]);
 const MACROS = [['none', 'm_none'], ['split', 'a_split'], ['dsplit', 'a_dsplit'], ['psplit', 'a_psplit'], ['tsplit', 'a_tsplit'], ['qsplit', 'a_qsplit'], ['eject', 'a_eject'], ['swap', 'm_swap']];
 let binds = Object.assign({}, DEF), dd = 60, rf = 25, pd = 50, ppd = 120, lsi = false, lsn = 2, mal = true, ltg = false, ftg = false, mbtn = { 0: 'none', 2: 'none' };
 // test mode: open the page with ?test=1 to start one orb at 35,000 that never loses mass
@@ -19,7 +19,7 @@ const TEST = /(^|[?&])test=1(&|$)/.test(location.search.slice(1));
 let lines = true; // lines from your orbs to the mouse
 let ring = false; // multibox: mark the active orb with a white ring instead of recolouring both
 let faces = true; // funny faces on bots
-let quakeT = 0, discoT = 0, confettiT = 0, rec = null, confetti = []; // seconds left of each effect
+let xpFrac = 0, aliveXP = 0, quakeT = 0, discoT = 0, confettiT = 0, rec = null, confetti = []; // seconds left of each effect
 let fcap = 0; // highest frames per second to draw; 0 = as many as the monitor shows
 // multibox colours: the orb you control and your other one. Text colours are worked out once, not per frame.
 const COL_DEF = ['#f4f4f4', '#e0443e'];
@@ -34,7 +34,8 @@ const ownerCol = new Map(); colsReady = true;
 function rgbOf(h) { const n = parseInt(h.slice(1), 16); return [n >> 16, n >> 8 & 255, n & 255]; }
 function near(a, b) { const x = rgbOf(a), y = rgbOf(b); return Math.hypot(x[0] - y[0], x[1] - y[1], x[2] - y[2]) < 80; }
 function markClashes() { for (const v of ownerCol.values()) v.clash = near(v.hex, colA) || near(v.hex, colI); }
-function sendCols() { if (connected) send(Net.enc.cols(colA, colI)); }
+function sendCols() { if (connected) send(Net.enc.cols(colA, colI, pass.skin, pass.badge)); }
+const ownerSkin = new Map(); // owner id -> sticker skin other players picked
 function ownerFill(o) { // the colour an owner's orbs and fed blobs are drawn in
   if (discoT > 0) return 'hsl(' + ((T * 400 + o * 67) % 360 | 0) + ' 90% 58%)';
   const mineC = myBoxes.includes(o), ow = owners.get(o);
@@ -140,9 +141,10 @@ function handle(m) {
       break;
     case 2: myBoxes = m.ids; active = m.active; break;
     case 3: for (const o of m.list) owners.set(o.id, o); break;
-    case 16: if (m.fx === 0) quakeT = 2; else if (m.fx === 1) showBanner('warn'); else if (m.fx === 2) discoT = 8; else showBanner('chat', m); break;
-    case 17: rec = m; renderRecord(); if (m.announce) { showBanner('record', m); confettiT = 3.5; } break;
-    case 15: ownerCol.clear(); for (const [id, hex] of m.list) ownerCol.set(id, { hex, txt: textFor(hex), clash: false }); markClashes(); break;
+    case 16: if (m.fx === 0) quakeT = 2; else if (m.fx === 1) showBanner('warn'); else if (m.fx === 2) discoT = 8; else if (m.fx === 3) showBanner('chat', m);
+      else if (m.fx === 4) confettiT = 3; else if (m.fx === 5) burst('snow', 8); else if (m.fx === 6) { flashT = 0.9; quakeT = Math.max(quakeT, 0.5); } else if (m.fx === 7) burst('hearts', 5); else burst('fireworks', 5); break;
+    case 17: rec = m; renderRecord(); if (m.announce) { showBanner('record', m); confettiT = 3.5; if (playing && owners.get(myBoxes[0]) && m.name === ($('nm').value.trim() || tr('player'))) addXP(150); } break;
+    case 15: ownerCol.clear(); ownerSkin.clear(); for (const [id, hex, skin] of m.list) { if (hex) ownerCol.set(id, { hex, txt: textFor(hex), clash: false }); if (skin < FACES.length) ownerSkin.set(id, skin); } markClashes(); break;
     case 4: {
       lastTick = performance.now(); view.x = m.vx; view.y = m.vy;
       const seen = new Set();
@@ -175,7 +177,7 @@ function handle(m) {
       for (const f of m.added) { pellets.set(f.id, f); blobs.delete(f.id); }
       for (const id of m.removed) pellets.delete(id);
       const mine = mineCells(); let tot = 0; for (const c of mine) tot += c.m;
-      if (playing && tot > peak) peak = tot;
+      if (playing && tot > peak) { if (peak > 0) { xpFrac += (tot - peak) / 200; if (xpFrac >= 1) { const w = Math.floor(xpFrac); xpFrac -= w; addXP(w); } } peak = tot; }
       break;
     }
     case 5: lb = m; break;
@@ -183,6 +185,7 @@ function handle(m) {
     case 7: { // eaten
       playing = false; held.clear(); feedOn = false; lock = null; sq.length = 0;
       const nb = m.peak > best; if (nb) { best = m.peak; try { localStorage.setItem('gobblebest_mp', best); } catch (e) {} }
+      addXP(m.kills * 15); const L = passLevel(); $('xpl').hidden = TEST; $('xpl').textContent = tr('bp_xp', { n: xpRun }) + ' · ' + tr('bp_level', { n: L.lv }) + (L.need ? ' (' + L.xp + ' / ' + L.need + ')' : '');
       $('sts').hidden = false; $('s1').textContent = dm(m.peak).toLocaleString(); $('s2').textContent = m.kills; $('s3').textContent = fmtT(m.alive);
       showMenu(tr('eaten'), nb ? tr('new_best') : tr('best_so_far', { m: dm(best).toLocaleString() })); $('go').dataset.t = 'play_again'; $('go').textContent = tr('play_again');
       break;
@@ -225,7 +228,7 @@ function startGame() {
   try { localStorage.setItem('gobblename', nm); } catch (e) {}
   const pc = cleanCode($('pty').value); $('pty').value = pc; try { localStorage.setItem('gobbleparty', pc); } catch (e) {}
   send(Net.enc.join(multiChosen, innerWidth, innerHeight, nm, pc, TEST)); send(Net.enc.growth(growth));
-  playing = true; paused = false; peak = 0; lock = null; sq.length = 0; feedOn = false; held.clear();
+  playing = true; paused = false; peak = 0; xpRun = 0; xpFrac = 0; aliveXP = 0; $('xpl').hidden = true; lock = null; sq.length = 0; feedOn = false; held.clear();
   $('ov').hidden = true; menuMode(false); $('sts').hidden = true; showMultiBtns(multiChosen);
 }
 function showMultiBtns(on) { $('bsw').hidden = $('bfd').hidden = !on; }
@@ -290,7 +293,8 @@ function act(k, down) {
     case 'fline': lineKey('f', down); break;
     case 'respawn': if (down) send(Net.enc.respawn()); break;
     case 'ping': if (down) { const w = s2w(mx, my); pings.push({ x: w.x, y: w.y, t: 3 }); if (pings.length > 5) pings.shift(); } break;
-    case 'fx_quake': case 'fx_warn': case 'fx_disco': case 'fx_chat': if (down) send(Net.enc.effect(['fx_quake', 'fx_warn', 'fx_disco', 'fx_chat'].indexOf(k))); break;
+    case 'fx_quake': case 'fx_warn': case 'fx_disco': case 'fx_chat': case 'fx_confetti': case 'fx_snow': case 'fx_flash': case 'fx_hearts': case 'fx_fireworks':
+      if (down) { if (fxUnlocked(k)) send(Net.enc.effect(FX_IDS.indexOf(k))); else toast('🔒 ' + tr('bp_locked', { n: fxLevel(k) })); } break;
     case 'swap': if (down && multiChosen) { const w = aimPoint(); send(Net.enc.swap(clamp(w.x, 0, WS), clamp(w.y, 0, WS))); } break;
   }
 }
@@ -374,12 +378,21 @@ const FACES = (() => {
 function drawOrb(c, multi) {
   const mineC = myBoxes.includes(c.o), ow = owners.get(c.o), R = c.r;
   const box = multi && mineC, act = box && c.o === activeId(), oc = !mineC && ownerCol.get(c.o);
-  const tx = box && !ring ? (act ? txtA : txtI) : oc && !oc.clash ? oc.txt : null;
+  const skin = mineC ? pass.skin : ownerSkin.has(c.o) ? ownerSkin.get(c.o) : -1;
+  let tx = box && !ring ? (act ? txtA : txtI) : oc && !oc.clash ? oc.txt : null;
   g.fillStyle = ownerFill(c.o);
+  if (skin >= 0 && R * cam.s > 7 && discoT <= 0) { // a sticker skin from the battle pass, with a ring in the multibox colour
+    const sk = FACES[skin]; g.drawImage(sk.img, c.x - R * STICK, c.y - R * STICK, R * 2 * STICK, R * 2 * STICK);
+    if (box || (oc && !oc.clash)) { g.beginPath(); g.arc(c.x, c.y, R * 1.02, 0, TAU); g.lineWidth = Math.max(3 / cam.s, R * 0.09); g.strokeStyle = g.fillStyle; g.stroke(); }
+    tx = null; return drawName(c, ow, R, tx);
+  }
   const st = faces && ow && !ow.human ? FACES[ow.id % FACES.length] : null;
   if (st && R * cam.s > 7 && discoT <= 0) g.drawImage(st.img, c.x - R * STICK, c.y - R * STICK, R * 2 * STICK, R * 2 * STICK); // bots are stickers
   else { if (st) g.fillStyle = st.col; g.beginPath(); g.arc(c.x, c.y, R, 0, TAU); g.fill(); }
   if (ring && act) { g.beginPath(); g.arc(c.x, c.y, R, 0, TAU); g.lineWidth = Math.max(2.5 / cam.s, R * 0.07); g.strokeStyle = '#fff'; g.stroke(); } // white ring on the orb you control
+  drawName(c, ow, R, tx);
+}
+function drawName(c, ow, R, tx) {
   if (R * cam.s > 18) {
     const fs = Math.max(12, R * 0.34), name = ow ? ow.name : '', px = fs * cam.s;
     g.globalAlpha = 0.55; // names and mass are see-through so faces and colours show through
@@ -499,6 +512,7 @@ function draw(dt) {
   for (const p of pings) { const a = clamp(p.t, 0, 1), r = (16 + ((3 - p.t) % 1) * 34) / cam.s; g.strokeStyle = 'rgba(255,210,90,' + a + ')'; g.lineWidth = 3 / cam.s; g.beginPath(); g.arc(p.x, p.y, r, 0, TAU); g.stroke(); }
   g.restore();
   if (confettiT > 0 || confetti.length) drawConfetti(dt);
+  if (fxParts.length || parts.length || flashT > 0) drawParts(dt);
 }
 let mmT = 0;
 function drawMM() {
@@ -562,6 +576,7 @@ function frame(t) {
   }
   fN++; if (t - fT >= 500) { fps = Math.round(fN * 1000 / (t - fT)); fN = 0; fT = t; }
   const dt = clamp((t - last) / 1000, 0, 0.1); last = t; T += dt;
+  if (playing) { aliveXP += dt; if (aliveXP >= 60) { aliveXP -= 60; addXP(20); } } // 20 XP for every minute alive
   if (playing && !paused) {
     for (let i = sq.length - 1; i >= 0; i--) { sq[i] -= dt; if (sq[i] <= 0) { sq.splice(i, 1); split(); } }
     if (unlockT > 0) { unlockT -= dt; if (unlockT <= 0) { unlockT = 0; lock = null; } }
@@ -580,14 +595,14 @@ function release(c) { held.delete(c); for (const k in binds) if (binds[k] === c)
 function assign(a, code) { for (const k in binds) if (k !== a && binds[k] === code) binds[k] = binds[a]; binds[a] = code; saveCfg(); updateHelp(); }
 function updateHelp() {
   const kb = $('keys'); kb.textContent = '';
-  for (const [k, v] of [[tr('k_move'), tr('k_mouse')], [tr('a_split'), label(binds.split)], [tr('a_dsplit'), label(binds.dsplit)], [tr('a_psplit'), label(binds.psplit)], [tr('effects'), [binds.fx_quake, binds.fx_warn, binds.fx_disco, binds.fx_chat].map(label).join(' ')], [tr('a_eject'), label(binds.eject)], [tr('k_line'), label(binds.hline) + ' / ' + label(binds.vline)]]) { const s = document.createElement('span'); s.append(k + ' '); const b = document.createElement('kbd'); b.textContent = v; s.append(b); kb.append(s); }
+  for (const [k, v] of [[tr('k_move'), tr('k_mouse')], [tr('a_split'), label(binds.split)], [tr('a_dsplit'), label(binds.dsplit)], [tr('a_psplit'), label(binds.psplit)], [tr('effects'), FX_IDS.filter(fxUnlocked).map(k => label(binds[k])).join(' ')], [tr('a_eject'), label(binds.eject)], [tr('k_line'), label(binds.hline) + ' / ' + label(binds.vline)]]) { const s = document.createElement('span'); s.append(k + ' '); const b = document.createElement('kbd'); b.textContent = v; s.append(b); kb.append(s); }
   setMode(watchChosen ? 'watch' : multiChosen);
 }
 function renderSettings() {
   const kl = $('kl'); kl.textContent = ''; $('fxl').textContent = '';
   for (const [k, n] of ACT) {
     const row = document.createElement('div'); row.className = 'kr';
-    const s = document.createElement('span'); s.textContent = tr(n);
+    const s = document.createElement('span'); s.textContent = tr(n) + (k.startsWith('fx_') && !fxUnlocked(k) ? '  🔒 ' + tr('bp_level', { n: fxLevel(k) }) : '');
     const b = document.createElement('button'); b.className = 'kb' + (listening === k ? ' wait' : ''); b.id = 'kb_' + k; b.textContent = listening === k ? tr('press_key') : label(binds[k]);
     b.onclick = e => { e.stopPropagation(); listening = k; renderSettings(); };
     row.append(s, b); (k.startsWith('fx_') ? $('fxl') : kl).appendChild(row);
@@ -615,6 +630,7 @@ addEventListener('pointerup', e => { if (e.pointerId === steer) steer = null; })
 addEventListener('keydown', e => {
   if (listening) { e.preventDefault(); e.stopPropagation(); const k = listening; listening = null; if (e.code === 'Backspace' || e.code === 'Delete') { binds[k] = ''; saveCfg(); updateHelp(); } else if (e.code !== 'Escape') assign(k, e.code); renderSettings(); return; }
   if (!$('st').hidden) { if (e.code === 'Escape') closeSettings(); return; }
+  if (!$('bp').hidden) { if (e.code === 'Escape') closePass(); return; }
   if (e.code === 'Escape' && !isBound('Escape') && e.target.id !== 'ctx') { // Esc: game → menu → game; on the start screen it opens Settings
     e.preventDefault(); if (playing || watching) { if ($('ov').hidden) openMenu(); else resumeGame(); } else openSettings(); return;
   }
@@ -727,6 +743,96 @@ $('ctx').addEventListener('keydown', e => {
 });
 $('shc').addEventListener('change', e => { showChat = e.target.checked; $('chat').hidden = !showChat; try { localStorage.setItem('gobblechat', showChat ? '1' : '0'); } catch (x) {} });
 
+/* ---------- battle pass: XP from playing, 30 levels a season, rewards kept forever (saved in this browser) ---------- */
+const BADGES = ['⭐', '🔥', '💎', '🚀', '🌈', '⚡', '🦈', '👑', '🎯', '🍀'];
+// one reward list per level (level 1 is what everyone has from the start)
+const PASS = [
+  [['fx', 'fx_quake'], ['fx', 'fx_chat']], [['skin', 0]], [['fx', 'fx_warn']], [['skin', 1]], [['skin', 2]], [['fx', 'fx_disco']],
+  [['skin', 3]], [['skin', 4]], [['fx', 'fx_confetti']], [['badge', 0]], [['skin', 5]], [['skin', 6]], [['fx', 'fx_snow']],
+  [['skin', 7]], [['badge', 1]], [['skin', 8]], [['fx', 'fx_flash']], [['skin', 9]], [['skin', 10]], [['badge', 2]],
+  [['fx', 'fx_hearts']], [['skin', 11]], [['badge', 3]], [['badge', 4]], [['fx', 'fx_fireworks']], [['badge', 5]],
+  [['badge', 6]], [['badge', 8]], [['badge', 9]], [['badge', 7]],
+];
+const FX_ICON = { fx_quake: '💥', fx_chat: '👀', fx_warn: '⚠️', fx_disco: '🪩', fx_confetti: '🎉', fx_snow: '❄️', fx_flash: '⚡', fx_hearts: '❤️', fx_fireworks: '🎆' };
+const FX_IDS = ['fx_quake', 'fx_warn', 'fx_disco', 'fx_chat', 'fx_confetti', 'fx_snow', 'fx_flash', 'fx_hearts', 'fx_fireworks'];
+function needXP(lv) { return 400 + 25 * (lv - 1); } // XP to go from level lv to lv + 1
+function seasonInfo(d = new Date()) { // Season 1 runs to the end of November 2026, then one season per calendar month
+  const y = d.getUTCFullYear(), mo = d.getUTCMonth(), idx = (y - 2026) * 12 + mo - 10; // 0 = Nov 2026
+  const n = Math.max(1, idx + 1), end = idx < 0 ? Date.UTC(2026, 11, 1) : Date.UTC(y, mo + 1, 1);
+  return { id: 'S' + n, n, days: Math.max(0, Math.ceil((end - d.getTime()) / 864e5)) };
+}
+let pass = { season: '', xp: 0, got: [], skin: -1, badge: -1 };
+try { const p = JSON.parse(localStorage.getItem('gobblepass') || 'null'); if (p && typeof p === 'object') pass = Object.assign(pass, p); } catch (e) {}
+if (pass.season !== seasonInfo().id) { pass.season = seasonInfo().id; pass.xp = 0; } // new season: levels start again, rewards stay
+function savePass() { try { localStorage.setItem('gobblepass', JSON.stringify(pass)); } catch (e) {} }
+function passLevel() { let lv = 1, xp = pass.xp; while (lv < PASS.length && xp >= needXP(lv)) { xp -= needXP(lv); lv++; } return { lv, xp, need: lv < PASS.length ? needXP(lv) : 0 }; }
+function rewardKey(r) { return r[0] + ':' + r[1]; }
+function has(r) { return pass.got.includes(rewardKey(r)); }
+function unlockUpTo(lv) { const fresh = []; for (let i = 0; i < lv; i++) for (const r of PASS[i]) if (!has(r)) { pass.got.push(rewardKey(r)); fresh.push(r); } return fresh; }
+function fxUnlocked(k) { return has(['fx', k]); }
+function fxLevel(k) { for (let i = 0; i < PASS.length; i++) if (PASS[i].some(r => r[0] === 'fx' && r[1] === k)) return i + 1; return 1; }
+function rewardName(r) { return r[0] === 'fx' ? FX_ICON[r[1]] + ' ' + tr('a_' + r[1]) : r[0] === 'skin' ? tr('bp_skin') + ' #' + (r[1] + 1) : tr('bp_badge') + ' ' + BADGES[r[1]]; }
+unlockUpTo(passLevel().lv);
+let xpRun = 0; // XP earned in the current life, shown after it ends
+function addXP(n) {
+  if (TEST || !(n > 0)) return; n = Math.round(n);
+  const before = passLevel().lv; pass.xp += n; xpRun += n; const after = passLevel().lv;
+  if (after > before) { const fresh = unlockUpTo(after); showBanner('level', { n: after, rewards: fresh }); confettiT = 1.5; }
+  savePass(); renderPassBtn();
+}
+// tell the server what others should see: skin and chat badge (with the multibox colours)
+function sendLook() { if (connected) send(Net.enc.cols(colA, colI, pass.skin, pass.badge)); }
+function renderPassBtn() { const b = $('mpass'); if (b) b.textContent = '🎖 ' + tr('bp_level', { n: passLevel().lv }); }
+function stickerThumb(i) { const c = document.createElement('canvas'); c.width = c.height = 48; c.getContext('2d').drawImage(FACES[i].img, 0, 0, 48, 48); return c; }
+function renderPass() {
+  const s = seasonInfo(), L = passLevel();
+  $('bpseason').textContent = tr('bp_season', { n: s.n, d: s.days });
+  $('bplv').textContent = tr('bp_level', { n: L.lv });
+  $('bpxp').textContent = L.need ? L.xp + ' / ' + L.need + ' XP' : 'MAX';
+  $('bpbar').style.width = (L.need ? Math.min(100, L.xp / L.need * 100) : 100) + '%';
+  const sk = $('bpskins'); sk.textContent = '';
+  const none = document.createElement('button'); none.type = 'button'; none.textContent = tr('bp_none'); none.setAttribute('aria-pressed', pass.skin < 0); none.onclick = () => { pass.skin = -1; savePass(); sendLook(); renderPass(); }; sk.append(none);
+  for (let i = 0; i < FACES.length; i++) if (has(['skin', i])) { const b = document.createElement('button'); b.type = 'button'; b.append(stickerThumb(i)); b.setAttribute('aria-pressed', pass.skin === i); b.onclick = () => { pass.skin = i; savePass(); sendLook(); renderPass(); }; sk.append(b); }
+  const bd = $('bpbadges'); bd.textContent = '';
+  const nb = document.createElement('button'); nb.type = 'button'; nb.textContent = tr('bp_none'); nb.setAttribute('aria-pressed', pass.badge < 0); nb.onclick = () => { pass.badge = -1; savePass(); sendLook(); renderPass(); }; bd.append(nb);
+  BADGES.forEach((e, i) => { if (!has(['badge', i])) return; const b = document.createElement('button'); b.type = 'button'; b.textContent = e; b.setAttribute('aria-pressed', pass.badge === i); b.onclick = () => { pass.badge = i; savePass(); sendLook(); renderPass(); }; bd.append(b); });
+  const tk = $('bptrack'); tk.textContent = '';
+  PASS.forEach((rs, i) => {
+    const t = document.createElement('div'); t.className = 'bpt' + (i + 1 <= L.lv ? ' on' : '') + (i + 1 === L.lv ? ' now' : '');
+    const n = document.createElement('small'); n.textContent = i + 1; t.append(n);
+    for (const r of rs) { if (r[0] === 'skin') t.append(stickerThumb(r[1])); else { const e = document.createElement('span'); e.textContent = r[0] === 'fx' ? FX_ICON[r[1]] : BADGES[r[1]]; t.append(e); } }
+    t.title = rs.map(rewardName).join(', '); tk.append(t);
+  });
+}
+function openPass() { renderPass(); $('bp').hidden = false; }
+function closePass() { $('bp').hidden = true; }
+// extra effects that come with the pass
+const parts = [];
+function burst(kind, sec) { fxParts.push({ kind, t: sec }); }
+const fxParts = [];
+let flashT = 0;
+function drawParts(dt) {
+  for (let i = fxParts.length - 1; i >= 0; i--) {
+    const f = fxParts[i]; f.t -= dt; if (f.t <= 0) { fxParts.splice(i, 1); continue; }
+    const k = f.kind;
+    if (k === 'snow') for (let j = 0; j < 3; j++) parts.push({ x: Math.random() * W, y: -10, vx: (Math.random() - 0.5) * 30, vy: 40 + Math.random() * 60, s: 2 + Math.random() * 4, c: '#fff', k: 'dot' });
+    if (k === 'hearts') if (Math.random() < 0.5) parts.push({ x: Math.random() * W, y: H + 20, vx: (Math.random() - 0.5) * 40, vy: -(90 + Math.random() * 120), s: 18 + Math.random() * 20, c: '#ff5f7e', k: 'heart' });
+    if (k === 'fireworks') if (Math.random() < 0.06) { const x = W * (0.15 + Math.random() * 0.7), y = H * (0.15 + Math.random() * 0.45), hue = Math.random() * 360 | 0; for (let j = 0; j < 46; j++) { const a = j / 46 * TAU, v = 140 + Math.random() * 120; parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, s: 3, c: 'hsl(' + (hue + Math.random() * 40 | 0) + ' 95% 62%)', k: 'spark', life: 1.4 }); } }
+  }
+  if (flashT > 0) { flashT -= dt; g.save(); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.fillStyle = 'rgba(235,240,255,' + (Math.max(0, Math.sin(flashT * 30)) * 0.55).toFixed(3) + ')'; g.fillRect(0, 0, W, H); g.restore(); }
+  if (!parts.length) return;
+  g.save(); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.textAlign = 'center'; g.textBaseline = 'middle';
+  for (let i = parts.length - 1; i >= 0; i--) {
+    const p = parts[i]; p.x += p.vx * dt; p.y += p.vy * dt;
+    if (p.k === 'spark') { p.vy += 120 * dt; p.vx *= 0.985; p.life -= dt; if (p.life <= 0) { parts.splice(i, 1); continue; } g.globalAlpha = Math.min(1, p.life); }
+    if (p.y > H + 30 || p.y < -60) { parts.splice(i, 1); continue; }
+    g.fillStyle = p.c;
+    if (p.k === 'heart') { g.font = p.s + 'px sans-serif'; g.fillText('❤', p.x, p.y); } else { g.beginPath(); g.arc(p.x, p.y, p.s, 0, TAU); g.fill(); }
+    g.globalAlpha = 1;
+  }
+  g.restore();
+}
+
 /* ---------- fun effects and the arena record ---------- */
 function showBanner(kind, r) {
   const el = $('fxb'); clearTimeout(showBanner.t); clearTimeout(showBanner.t2);
@@ -735,6 +841,9 @@ function showBanner(kind, r) {
     $('fxt').textContent = tr('warn_title'); $('fxs').textContent = tr('warn_text');
     showBanner.t2 = setTimeout(() => { $('fxt').textContent = '😄'; $('fxs').textContent = tr('warn_joke'); }, 3000);
     showBanner.t = setTimeout(() => el.classList.remove('in'), 5000);
+  } else if (kind === 'level') { // you levelled up in the battle pass
+    $('fxt').textContent = '🎖 ' + tr('bp_levelup', { n: r.n }); $('fxs').textContent = r.rewards.length ? tr('bp_unlocked') + ' ' + r.rewards.map(rewardName).join(', ') : '';
+    showBanner.t = setTimeout(() => el.classList.remove('in'), 4500);
   } else if (kind === 'chat') { // someone wants everyone to read the chat: banner plus a flashing chat
     $('fxt').textContent = '👀 ' + tr('look_chat'); $('fxs').textContent = '← ' + tr('look_chat_s', { name: r.name || '?' });
     const c = $('chat'); c.classList.remove('flash'); void c.offsetWidth; c.classList.add('flash');
@@ -751,6 +860,10 @@ function drawConfetti(dt) { // a burst of paper bits falling over the whole scre
   for (let i = confetti.length - 1; i >= 0; i--) { const p = confetti[i]; p.x += p.vx * dt; p.y += p.vy * dt; p.r += p.vr * dt; if (p.y > H + 20) { confetti.splice(i, 1); continue; } g.translate(p.x, p.y); g.rotate(p.r); g.fillStyle = p.c; g.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2); g.setTransform(dpr, 0, 0, dpr, 0, 0); }
   g.restore();
 }
+
+function toast(t) { const el = $('toast'); el.textContent = t; el.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => el.hidden = true, 1800); }
+$('mpass').addEventListener('click', openPass); $('bpx').addEventListener('click', closePass); $('bpdone').addEventListener('click', closePass);
+renderPassBtn();
 
 /* ---------- language ---------- */
 function renderLang() {
