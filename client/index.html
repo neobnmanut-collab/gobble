@@ -114,6 +114,11 @@ button{font:700 1rem var(--font);cursor:pointer}
 #ctx:focus{outline:none;border-color:#7cc6ff;background:rgba(20,20,20,.92)}
 #ctx:disabled{opacity:.6}
 #csend,#cch{display:none}
+#vbtn{padding:7px 11px;border-radius:999px;border:1px solid var(--line);background:rgba(20,20,20,.75);color:var(--ink);font-size:.9rem;white-space:nowrap}
+#vbtn.on{border-color:#3ecf6e;background:rgba(20,60,35,.85)}#vbtn.live{box-shadow:0 0 0 2px #3ecf6e,0 0 14px rgba(62,207,110,.6)}
+#vlist{display:flex;flex-wrap:wrap;gap:4px;pointer-events:auto}
+.vm{font-size:.78rem;padding:3px 9px;border-radius:999px;background:rgba(0,0,0,.55);border:1px solid var(--line);color:#cfd6df}
+.vm.talk{border-color:#3ecf6e;color:#fff;box-shadow:0 0 10px rgba(62,207,110,.5)}
 #cin:focus-within #csend,#cin:focus-within #cch{display:block}
 #csend{padding:8px 14px;border-radius:999px;border:0;background:var(--acc);color:#fff;font-size:.85rem;font-weight:700}
 #csend:disabled{opacity:.5}
@@ -214,7 +219,7 @@ button{font:700 1rem var(--font);cursor:pointer}
   <p id="pc"></p>
   <div class="keys" id="keys"></div>
 </div></div>
-<div id="chat"><div id="chead"><span data-t="chat">Chat</span><button type="button" id="cmin" aria-label="Hide chat">–</button></div><div id="clog" aria-live="polite"></div><div id="cin"><button type="button" id="cch">All</button><input type="text" id="ctx" maxlength="120" placeholder="Press Play to chat" autocomplete="off" aria-label="Chat message" disabled><button type="button" id="csend" disabled data-t="send">Send</button></div></div>
+<div id="chat"><div id="chead"><span data-t="chat">Chat</span><button type="button" id="cmin" aria-label="Hide chat">–</button></div><div id="clog" aria-live="polite"></div><div id="vlist" hidden></div><div id="cin"><button type="button" id="vbtn" aria-label="Join voice">🎤</button><button type="button" id="cch">All</button><input type="text" id="ctx" maxlength="120" placeholder="Press Play to chat" autocomplete="off" aria-label="Chat message" disabled><button type="button" id="csend" disabled data-t="send">Send</button></div></div>
 <div id="live" hidden><i></i><span id="livet"></span></div>
 <button id="gear">⚙ <span id="gearT" data-t="controls">Settings</span> <kbd id="gearK" hidden>Esc</kbd></button>
 <div class="ov" id="bp" hidden><div class="card wide">
@@ -233,6 +238,9 @@ button{font:700 1rem var(--font);cursor:pointer}
   <div class="body">
   <div class="grp c-gen" id="g-gen" data-t="nav_general">General</div>
   <div class="sec c-gen"><div class="row"><h2 data-t="language" style="margin:0">Language</h2><select id="lng" aria-label="Language"></select></div></div>
+  <div class="sec c-gen"><h2 data-t="voice">Voice chat</h2>
+    <label class="row"><span data-t="voice_open">Open mic (no push-to-talk)</span><input type="checkbox" id="omic"></label>
+    <p class="hint" data-t="voice_hint">Talk with your party: press 🎤 next to the chat box. Hold the push-to-talk key (V) to speak; you can change it under Keys.</p></div>
   <div class="sec c-col"><h2 data-t="colors">Multibox colours</h2>
     <div class="cols"><label class="cpick"><span data-t="col_active">Active orb</span><input type="color" id="cA"></label><label class="cpick"><span data-t="col_inactive">Other orb</span><input type="color" id="cI"></label></div>
     <div class="pres" id="cpres"></div>
@@ -275,9 +283,9 @@ button{font:700 1rem var(--font);cursor:pointer}
   <div class="btns"><button class="kb" id="rs" data-t="reset">Reset defaults</button><button class="primary" id="cl" data-t="done">Done</button></div>
   </div>
 </div></div>
-<script src="i18n.js?v=50"></script>
-<script src="servers.js?v=50"></script>
-<script src="net.js?v=50"></script>
-<script src="game.js?v=50"></script>
+<script src="i18n.js?v=51"></script>
+<script src="servers.js?v=51"></script>
+<script src="net.js?v=51"></script>
+<script src="game.js?v=51"></script>
 </body>
 </html>

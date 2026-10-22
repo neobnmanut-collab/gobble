@@ -44,6 +44,7 @@
       case 7: return { op, peak: u32(), kills: u16(), alive: u32() };
       case 8: return { op };
       case 9: return { op, token: u32() };
+      case 18: { const kind = u8(); if (kind === 0) { const self = u32(), n = u8(), list = []; for (let i = 0; i < n; i++) { const vid = u32(), l = u8(); list.push({ vid, name: td.decode(new Uint8Array(ab, o, l)) }); o += l; } return { op, kind, self, list }; } const from = u32(); return { op, kind, from, data: td.decode(new Uint8Array(ab, o)) }; }
       case 16: { const fx = ab.byteLength > 1 ? u8() : 0; let name = ''; if (o < ab.byteLength) { const n = u8(); name = td.decode(new Uint8Array(ab, o, n)); } return { op, fx, name }; }
       case 17: { const m = u32(), announce = u8() === 1, n = u8(); return { op, m, announce, name: td.decode(new Uint8Array(ab, o, n)) }; }
       case 15: { const n = u16(), list = []; for (let i = 0; i < n; i++) { const id = u32(), r = u8(), gg = u8(), b = u8(), has = u8(), skin = u8(); list.push([id, has ? '#' + ((1 << 24) | (r << 16) | (gg << 8) | b).toString(16).slice(1) : null, skin]); } return { op, list }; }
@@ -64,6 +65,8 @@
     },
     name(n) { const nb = te.encode(String(n).slice(0, 14)).slice(0, 48), ab = new ArrayBuffer(1 + nb.length); new Uint8Array(ab)[0] = 12; new Uint8Array(ab, 1).set(nb); return ab; },
     spec(v) { return msg(2, d => { d.setUint8(0, 14); d.setUint8(1, v); }); },
+    voice(kind) { return msg(2, d => { d.setUint8(0, 18); d.setUint8(1, kind); }); },
+    voiceSignal(to, data) { const b = te.encode(data), ab = new ArrayBuffer(6 + b.length), d = new DataView(ab); d.setUint8(0, 18); d.setUint8(1, 2); d.setUint32(2, to, true); new Uint8Array(ab, 6).set(b); return ab; },
     effect(fx) { return msg(2, d => { d.setUint8(0, 16); d.setUint8(1, fx); }); },
     growth(v) { return msg(2, d => { d.setUint8(0, 11); d.setUint8(1, v); }); },
     chat(channel, text) {

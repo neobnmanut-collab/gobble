@@ -10,8 +10,8 @@ let WS = 12000, SPEED = 1685, W = 0, H = 0, dpr = 1, T = 0;
 const cam = { x: 6000, y: 6000, s: 0.5 }; let zm = 1;
 
 /* ---------- settings (same controls as the offline game) ---------- */
-const DEF = { fx_quake: 'KeyK', fx_warn: 'KeyJ', fx_disco: 'KeyL', fx_chat: 'KeyH', fx_confetti: 'KeyU', fx_snow: 'KeyI', fx_flash: 'KeyO', fx_hearts: 'KeyP', fx_fireworks: 'KeyY', split: 'Space', dsplit: 'KeyD', psplit: 'KeyQ', tsplit: 'KeyF', qsplit: 'KeyG', eject: 'KeyW', hline: 'KeyS', vline: 'KeyT', fline: '', respawn: 'KeyB', ping: 'KeyR', swap: 'Mouse2', feed: 'KeyE' };
-const ACT = ['split', 'dsplit', 'psplit', 'tsplit', 'qsplit', 'eject', 'hline', 'vline', 'fline', 'respawn', 'ping', 'swap', 'feed', 'fx_quake', 'fx_warn', 'fx_disco', 'fx_chat', 'fx_confetti', 'fx_snow', 'fx_flash', 'fx_hearts', 'fx_fireworks'].map(k => [k, 'a_' + k]);
+const DEF = { ptt: 'KeyV', fx_quake: 'KeyK', fx_warn: 'KeyJ', fx_disco: 'KeyL', fx_chat: 'KeyH', fx_confetti: 'KeyU', fx_snow: 'KeyI', fx_flash: 'KeyO', fx_hearts: 'KeyP', fx_fireworks: 'KeyY', split: 'Space', dsplit: 'KeyD', psplit: 'KeyQ', tsplit: 'KeyF', qsplit: 'KeyG', eject: 'KeyW', hline: 'KeyS', vline: 'KeyT', fline: '', respawn: 'KeyB', ping: 'KeyR', swap: 'Mouse2', feed: 'KeyE' };
+const ACT = ['split', 'dsplit', 'psplit', 'tsplit', 'qsplit', 'eject', 'hline', 'vline', 'fline', 'respawn', 'ping', 'swap', 'feed', 'ptt', 'fx_quake', 'fx_warn', 'fx_disco', 'fx_chat', 'fx_confetti', 'fx_snow', 'fx_flash', 'fx_hearts', 'fx_fireworks'].map(k => [k, 'a_' + k]);
 const MACROS = [['none', 'm_none'], ['split', 'a_split'], ['dsplit', 'a_dsplit'], ['psplit', 'a_psplit'], ['tsplit', 'a_tsplit'], ['qsplit', 'a_qsplit'], ['eject', 'a_eject'], ['swap', 'm_swap']];
 let binds = Object.assign({}, DEF), dd = 60, rf = 25, pd = 50, ppd = 120, lsi = false, lsn = 2, mal = true, ltg = false, ftg = false, mbtn = { 0: 'none', 2: 'none' };
 // test mode: open the page with ?test=1 to start one orb at 35,000 that never loses mass
@@ -110,7 +110,7 @@ function connect() {
   ws.binaryType = 'arraybuffer';
   ws.onopen = () => { connAt = performance.now(); chatSeen.clear(); for (const c of chatStore) { const k = c.channel + '|' + c.name + '|' + c.text; chatSeen.set(k, (chatSeen.get(k) || 0) + 1); } connected = true; everConnected = true; retry = 0; full = false; $('wake').hidden = true; setStatus(''); ws.send(Net.enc.size(innerWidth, innerHeight, zm)); sendPing(); sendName(); sendCols(); };
   ws.onmessage = e => { if (typeof e.data !== 'string') handle(Net.decode(e.data, WS)); };
-  ws.onclose = () => { connected = false; if (playing) { playing = false; showMenu(tr('lost'), tr('lost_s')); } ents.clear(); spikes.clear(); blobs.clear(); pellets.clear(); owners.clear(); reconnect(); };
+  ws.onclose = () => { for (const id of [...peers.keys()]) dropPeer(id); connected = false; if (playing) { playing = false; showMenu(tr('lost'), tr('lost_s')); } ents.clear(); spikes.clear(); blobs.clear(); pellets.clear(); owners.clear(); reconnect(); };
   ws.onerror = () => {};
 }
 function reconnect() {
@@ -136,10 +136,12 @@ function handle(m) {
       WS = m.world; SPEED = m.speed || SPEED;
       // the server was updated since this page loaded: reload to get the new game for everyone
       if (m.build) { if (serverBuild && m.build !== serverBuild) { reloadForUpdate(); return; } serverBuild = m.build; }
+      if (voiceOn) send(Net.enc.voice(0)); // reconnected: rejoin party voice
       if (watching) send(Net.enc.spec(1)); // reconnected while watching: keep watching
       break;
     case 2: myBoxes = m.ids; active = m.active; break;
     case 3: for (const o of m.list) owners.set(o.id, o); break;
+    case 18: if (m.kind === 0) onRoster(m); else onVoiceSignal(m.from, m.data); break;
     case 16: if (m.fx === 0) quakeT = 2; else if (m.fx === 1) showBanner('warn'); else if (m.fx === 2) discoT = 8; else if (m.fx === 3) showBanner('chat', m);
       else if (m.fx === 4) confettiT = 3; else if (m.fx === 5) burst('snow', 8); else if (m.fx === 6) { flashT = 0.9; quakeT = Math.max(quakeT, 0.5); } else if (m.fx === 7) burst('hearts', 5); else burst('fireworks', 5); break;
     case 17: rec = m; renderRecord(); if (m.announce) { showBanner('record', m); confettiT = 3.5; if (playing && owners.get(myBoxes[0]) && m.name === ($('nm').value.trim() || tr('player'))) addXP(150); } break;
@@ -293,6 +295,7 @@ function act(k, down) {
     case 'fline': lineKey('f', down); break;
     case 'respawn': if (down) send(Net.enc.respawn()); break;
     case 'ping': if (down) { const w = s2w(mx, my); pings.push({ x: w.x, y: w.y, t: 3 }); if (pings.length > 5) pings.shift(); } break;
+    case 'ptt': pttDown = down; applyMic(); break;
     case 'fx_quake': case 'fx_warn': case 'fx_disco': case 'fx_chat': case 'fx_confetti': case 'fx_snow': case 'fx_flash': case 'fx_hearts': case 'fx_fireworks':
       if (down) { if (fxUnlocked(k)) send(Net.enc.effect(FX_IDS.indexOf(k))); else toast('🔒 ' + tr('bp_locked', { n: fxLevel(k) })); } break;
     case 'swap': if (down && multiChosen) { const w = aimPoint(); send(Net.enc.swap(clamp(w.x, 0, WS), clamp(w.y, 0, WS))); } break;
@@ -619,7 +622,7 @@ function renderSettings() {
     const key = opts.join() + '|' + tr('fps_monitor', { n: hz });
     if (el.dataset.k !== key) { el.dataset.k = key; el.textContent = ''; for (const r of opts) { const o = document.createElement('option'); o.value = r; o.textContent = r ? r + ' FPS' : tr('fps_monitor', { n: hz }); el.append(o); } }
     el.value = opts.includes(fcap) ? fcap : 0; $('fpsnow').textContent = fps + ' FPS · ' + tr('fps_screen', { n: hz }); }
-  $('cA').value = colA; $('cI').value = colI; $('lines').checked = lines; $('ring').checked = ring; $('faces').checked = faces;
+  $('cA').value = colA; $('cI').value = colI; $('lines').checked = lines; $('omic').checked = openMic; $('ring').checked = ring; $('faces').checked = faces;
   { const box = $('cpres'); if (!box.childElementCount) for (const [a, i] of COL_PRESETS) { const b = document.createElement('button'); b.type = 'button'; b.dataset.a = a; b.dataset.i = i; b.setAttribute('aria-label', a + ' / ' + i); const x = document.createElement('i'), y = document.createElement('i'); x.style.background = a; y.style.background = i; b.append(x, y); b.onclick = () => { setCols(a, i); saveCfg(); renderSettings(); }; box.append(b); }
     for (const b of box.children) b.setAttribute('aria-pressed', b.dataset.a === colA && b.dataset.i === colI); }
   $('dd').value = dd; $('ddv').textContent = dd + ' ms'; $('rf').value = rf; $('rfv').textContent = rf + ' ms'; $('pd').value = pd; $('pdv').textContent = pd + ' ms'; $('ppd').value = ppd; $('ppdv').textContent = ppd + ' ms';
@@ -677,7 +680,7 @@ $('gear').addEventListener('click', () => { if (playing || watching) { if ($('ov
 for (const b of document.querySelectorAll('.nav button')) b.addEventListener('click', () => $(b.dataset.go).scrollIntoView({ behavior: 'smooth', block: 'start' })); $('cl').addEventListener('click', closeSettings); $('cl2').addEventListener('click', closeSettings);
 $('rs').addEventListener('click', () => { binds = Object.assign({}, DEF); dd = 60; fcap = 0; lines = true; ring = false; faces = true; setCols(); rf = 25; pd = 50; ppd = 120; lsi = false; lsn = 2; mal = true; ltg = false; ftg = false; mbtn = { 0: 'none', 2: 'none' }; saveCfg(); updateHelp(); renderSettings(); });
 const setting = (id, ev, fn) => $(id).addEventListener(ev, e => { fn(e.target); saveCfg(); renderSettings(); });
-setting('dd', 'input', t => dd = +t.value); setting('lines', 'change', t => lines = t.checked); setting('ring', 'change', t => ring = t.checked); setting('faces', 'change', t => faces = t.checked); setting('cA', 'input', t => setCols(t.value, colI)); setting('cI', 'input', t => setCols(colA, t.value)); setting('fcap', 'change', t => { fcap = +t.value || 0; nextDraw = 0; }); setting('rf', 'input', t => rf = +t.value); setting('pd', 'input', t => pd = +t.value); setting('ppd', 'input', t => ppd = +t.value);
+setting('dd', 'input', t => dd = +t.value); setting('lines', 'change', t => lines = t.checked); setting('omic', 'change', t => { openMic = t.checked; try { localStorage.setItem('gobbleopenmic', openMic ? '1' : '0'); } catch (e) {} applyMic(); }); setting('ring', 'change', t => ring = t.checked); setting('faces', 'change', t => faces = t.checked); setting('cA', 'input', t => setCols(t.value, colI)); setting('cI', 'input', t => setCols(colA, t.value)); setting('fcap', 'change', t => { fcap = +t.value || 0; nextDraw = 0; }); setting('rf', 'input', t => rf = +t.value); setting('pd', 'input', t => pd = +t.value); setting('ppd', 'input', t => ppd = +t.value);
 setting('lsi', 'change', t => lsi = t.checked); setting('lsn', 'change', t => lsn = clamp(Math.round(+t.value) || 1, 1, 4)); setting('mal', 'change', t => mal = t.checked);
 setting('ltg', 'change', t => { ltg = t.checked; lock = null; }); setting('ftg', 'change', t => { ftg = t.checked; feedOn = false; });
 setting('mm0', 'change', t => mbtn[0] = t.value); setting('mm2', 'change', t => mbtn[2] = t.value);
@@ -883,6 +886,75 @@ renderPassBtn();
 
 function connectedFresh() { return performance.now() - connAt > 2000; }
 for (const c of chatStore) addChat(c, true);
+
+/* ---------- party voice chat: browser-to-browser audio (WebRTC) between members of the same party ---------- */
+const ICE = [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }];
+let openMic = false, voiceOn = false, voiceSelf = 0, mic = null, pttDown = false, vctx = null;
+try { openMic = localStorage.getItem('gobbleopenmic') === '1'; } catch (e) {}
+const peers = new Map(); // party member id -> { pc, audio, an, name, talk }
+let roster = [];
+function micLive() { return !!mic && (openMic || pttDown); }
+function applyMic() { if (mic) for (const t of mic.getAudioTracks()) t.enabled = micLive(); renderVoice(); }
+async function joinVoice() {
+  if (voiceOn) return;
+  if (!partyCode) { toast('🎤 ' + tr('voice_need_party')); return; }
+  try { mic = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } }); }
+  catch (e) { toast('🎤 ' + tr('voice_denied')); return; }
+  try { vctx = vctx || new (window.AudioContext || window.webkitAudioContext)(); vctx.resume(); } catch (e) {}
+  voiceOn = true; applyMic(); send(Net.enc.voice(0)); renderVoice();
+}
+function leaveVoice(silent) {
+  if (!voiceOn && !mic) return;
+  voiceOn = false; if (!silent && connected) send(Net.enc.voice(1));
+  for (const id of [...peers.keys()]) dropPeer(id);
+  if (mic) for (const t of mic.getTracks()) t.stop(); mic = null; roster = []; renderVoice();
+}
+function dropPeer(id) { const p = peers.get(id); if (!p) return; try { p.pc.close(); } catch (e) {} if (p.audio) { p.audio.srcObject = null; p.audio.remove(); } peers.delete(id); }
+function signal(to, obj) { send(Net.enc.voiceSignal(to, JSON.stringify(obj))); }
+function makePeer(id, name) {
+  const pc = new RTCPeerConnection({ iceServers: ICE }), p = { pc, audio: null, an: null, name, talk: false };
+  peers.set(id, p);
+  if (mic) for (const t of mic.getAudioTracks()) pc.addTrack(t, mic);
+  pc.onicecandidate = e => { if (e.candidate) signal(id, { t: 'ice', d: e.candidate }); };
+  pc.ontrack = e => {
+    const st = e.streams[0]; if (!st || p.audio) return;
+    const a = document.createElement('audio'); a.autoplay = true; a.srcObject = st; a.style.display = 'none'; document.body.append(a); a.play().catch(() => {}); p.audio = a;
+    try { const src = vctx.createMediaStreamSource(st), an = vctx.createAnalyser(); an.fftSize = 256; src.connect(an); p.an = an; } catch (e) {}
+  };
+  pc.onconnectionstatechange = () => { if (pc.connectionState === 'failed') { dropPeer(id); if (voiceOn && roster.some(m => m.vid === id) && voiceSelf < id) setTimeout(() => callPeer(id, name), 1500); } };
+  return p;
+}
+async function callPeer(id, name) { const p = makePeer(id, name); const o = await p.pc.createOffer(); await p.pc.setLocalDescription(o); signal(id, { t: 'offer', d: p.pc.localDescription }); }
+async function onVoiceSignal(from, data) {
+  if (!voiceOn) return; let m; try { m = JSON.parse(data); } catch (e) { return; }
+  let p = peers.get(from);
+  if (m.t === 'offer') { if (!p) p = makePeer(from, (roster.find(r => r.vid === from) || {}).name || '?'); await p.pc.setRemoteDescription(m.d); const a = await p.pc.createAnswer(); await p.pc.setLocalDescription(a); signal(from, { t: 'answer', d: p.pc.localDescription }); }
+  else if (m.t === 'answer' && p) await p.pc.setRemoteDescription(m.d);
+  else if (m.t === 'ice' && p) { try { await p.pc.addIceCandidate(m.d); } catch (e) {} }
+}
+function onRoster(m) {
+  voiceSelf = m.self; roster = m.list;
+  if (!voiceOn) return renderVoice();
+  if (!roster.some(r => r.vid === voiceSelf)) { leaveVoice(true); return; }
+  for (const id of [...peers.keys()]) if (!roster.some(r => r.vid === id)) dropPeer(id);
+  for (const r of roster) if (r.vid !== voiceSelf && !peers.has(r.vid) && voiceSelf < r.vid) callPeer(r.vid, r.name); // the lower id calls, so two calls never cross
+  renderVoice();
+}
+const lvlBuf = new Uint8Array(128);
+setInterval(() => { // who is talking right now (sound level of each member's audio)
+  if (!voiceOn) return; let ch = false;
+  for (const p of peers.values()) { if (!p.an) continue; p.an.getByteTimeDomainData(lvlBuf); let s = 0; for (const v of lvlBuf) s += (v - 128) * (v - 128); const talk = Math.sqrt(s / lvlBuf.length) > 2.5; if (talk !== p.talk) { p.talk = talk; ch = true; } }
+  if (ch) renderVoice();
+}, 200);
+function renderVoice() {
+  const b = $('vbtn'); b.classList.toggle('on', voiceOn); b.classList.toggle('live', micLive());
+  b.title = voiceOn ? tr('voice_leave') : tr('voice_join'); b.setAttribute('aria-label', b.title);
+  b.textContent = voiceOn ? (micLive() ? '🎙️' : '🎤') + (openMic ? '' : ' ' + label(binds.ptt)) : '🎤';
+  const l = $('vlist'); l.textContent = ''; l.hidden = !voiceOn;
+  if (!voiceOn) return;
+  for (const r of roster) { const s = document.createElement('span'); const me = r.vid === voiceSelf, talk = me ? micLive() : (peers.get(r.vid) || {}).talk; s.className = 'vm' + (talk ? ' talk' : ''); s.textContent = (talk ? '🔊 ' : '🔈 ') + r.name; l.append(s); }
+}
+$('vbtn').addEventListener('click', e => { e.currentTarget.blur(); if (voiceOn) leaveVoice(); else joinVoice(); });
 
 /* ---------- language ---------- */
 function renderLang() {

@@ -37,11 +37,11 @@ const server = http.createServer((req, res) => {
 });
 
 /* ---------- players ---------- */
-const wss = new WebSocketServer({ server, path: '/ws', maxPayload: 256, perMessageDeflate: false });
+const wss = new WebSocketServer({ server, path: '/ws', maxPayload: 16384 /* voice chat call setup messages are a few KB */, perMessageDeflate: false });
 
 wss.on('connection', (ws, req) => {
   let humans = 0; for (const c of game.clients) if (!c.dead) humans++;
-  const cl = { ws, dead: true, boxes: [], W: 1280, H: 720, knownPellets: new Set(), knownOwners: new Set(), sentBoxes: '', alive: true, splitBudget: 8, lastJoin: 0 };
+  const cl = { vid: ++voiceIds, voice: false, ws, dead: true, boxes: [], W: 1280, H: 720, knownPellets: new Set(), knownOwners: new Set(), sentBoxes: '', alive: true, splitBudget: 8, lastJoin: 0 };
   game.clients.add(cl);
   ws.binaryType = 'nodebuffer';
   send(cl, enc.hello(C.WORLD, C.SPEED, BUILD));
@@ -57,7 +57,9 @@ wss.on('connection', (ws, req) => {
         const now = Date.now(); if (now - cl.lastJoin < 800) return; cl.lastJoin = now;
         let h = 0; for (const c of game.clients) if (!c.dead && c !== cl) h++;
         if (h >= C.MAX_PLAYERS) return send(cl, enc.full());
-        cl.W = m.W; cl.H = m.H; cl.test = m.test; cl.spec = false; game.join(cl, m.name, m.multi, m.party); cl.sentParty = ''; break;
+        cl.W = m.W; cl.H = m.H; cl.test = m.test; const oldParty = cl.party; cl.spec = false; game.join(cl, m.name, m.multi, m.party); cl.sentParty = '';
+        if (cl.voice && oldParty !== cl.party) { if (oldParty) voiceRoster(oldParty); if (cl.party) voiceRoster(cl.party); else { cl.voice = false; send(cl, enc.voiceRoster(cl.vid, [])); } }
+        break;
       }
       case 2: if (!cl.dead) game.setTarget(cl, m.x, m.y); break;
       case 3: if (!cl.dead && cl.splitBudget >= 1) { cl.splitBudget--; game.split(cl); } break;
@@ -68,6 +70,14 @@ wss.on('connection', (ws, req) => {
       case 8: cl.W = m.W; cl.H = m.H; cl.zoom = Math.max(0.01, Math.min(3, m.zoom || 1)); break;
       case 15: cl.colA = m.a; cl.colI = m.i; cl.skin = m.skin < 12 ? m.skin : 255; cl.badge = m.badge < BADGES.length ? m.badge : 255; break;
       case 9: if (cl.ws.readyState === 1) cl.ws.send(enc.pong(m.token)); break;
+      case 18: { // party voice chat: the server only introduces party members to each other; the sound goes browser to browser
+        if (m.kind === 0) { if (!cl.party) { send(cl, enc.voiceRoster(cl.vid, [])); return; } cl.voice = true; voiceRoster(cl.party); }
+        else if (m.kind === 1) { const p = cl.voice && cl.party; cl.voice = false; send(cl, enc.voiceRoster(cl.vid, [])); if (p) voiceRoster(p); }
+        else if (m.kind === 2 && cl.voice && cl.party) {
+          const now = Date.now(); if (now - (cl.sigT || 0) > 1000) { cl.sigT = now; cl.sigN = 0; } if (++cl.sigN > 80) return; /* flood guard */
+          for (const o of game.clients) if (o.vid === m.to && o.voice && o.party === cl.party) { send(o, enc.voiceSignal(cl.vid, m.data)); break; } }
+        break;
+      }
       case 16: { // fun effects everyone sees (earthquake, fake warning, disco); one every 20 s per player
         const now = Date.now(); if (now - (cl.quakeT || 0) < 20000) return; cl.quakeT = now;
         const buf = enc.effect(m.fx, (!cl.dead && cl.name) || cl.chatName || 'Guest'); for (const o of game.clients) send(o, buf); break;
@@ -91,7 +101,7 @@ wss.on('connection', (ws, req) => {
       }
     }
   });
-  ws.on('close', () => game.leave(cl, false));
+  ws.on('close', () => { const p = cl.voice && cl.party; cl.voice = false; game.leave(cl, false); if (p) voiceRoster(p); });
   ws.on('error', () => {});
 });
 
@@ -173,6 +183,11 @@ function sendLeaderboard() {
 }
 // the colours each multibox player picked, so everyone sees their orbs (and fed blobs) in those colours
 const BADGES = ['⭐', '🔥', '💎', '🚀', '🌈', '⚡', '🦈', '👑', '🎯', '🍀']; // battle pass chat badges (same list as the page)
+let voiceIds = 0;
+function voiceRoster(party) { // tell everyone in this party's voice chat who else is in it
+  const list = []; for (const o of game.clients) if (o.voice && o.party === party) list.push({ vid: o.vid, name: (!o.dead && o.name) || o.chatName || 'Guest' });
+  for (const o of list) { const cl = [...game.clients].find(c => c.vid === o.vid); if (cl) send(cl, enc.voiceRoster(cl.vid, list)); }
+}
 const chatLog = []; // last 20 messages to everyone (party messages stay private and aren't kept)
 function sendColours() {
   const list = [];
