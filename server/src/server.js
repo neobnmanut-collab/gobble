@@ -27,7 +27,10 @@ const server = http.createServer((req, res) => {
     res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store', 'access-control-allow-origin': '*' });
     return res.end(JSON.stringify({ ok: true, players: humans, connections: game.clients.size, orbs: game.cells.length, tickMs: +stats.tickMs.toFixed(2), worstTickMs: +stats.worstMs.toFixed(1), slowTicks: stats.slow, ticks: stats.ticks, upMinutes: Math.round(process.uptime() / 60) }));
   }
-  let rel = decodeURIComponent(url.pathname); if (rel.endsWith('/')) rel += 'index.html';
+  /* old address: set MOVED_TO (e.g. https://blobbit.onrender.com) on the old Render service and every page link forwards there, party codes included */
+  const moved = (process.env.MOVED_TO || '').replace(/\/+$/, '');
+  if (moved) { res.writeHead(301, { location: moved + url.pathname + url.search, 'cache-control': 'no-cache' }); return res.end(); }
+  let rel = decodeURIComponent(url.pathname).replace(/[.,;:!)]+$/, ''); if (rel.endsWith('/')) rel += 'index.html';
   const file = path.resolve(CLIENT_DIR, '.' + rel);
   if (!file.startsWith(CLIENT_DIR + path.sep)) { res.writeHead(403); return res.end(); }
   fs.readFile(file, (err, data) => {
