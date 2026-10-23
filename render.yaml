@@ -1,7 +1,7 @@
 # Render blueprint: one web service in Frankfurt that runs the game server and serves the game page.
 services:
   - type: web
-    name: gobble
+    name: blobbit
     runtime: node
     region: frankfurt
     plan: free            # free instances sleep after a while without visitors; switch to a paid plan to keep it always on

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://gobble-n1zy.onrender.com/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
-  <url><loc>https://gobble-n1zy.onrender.com/press.html</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://gobble-n1zy.onrender.com/privacy.html</loc><changefreq>yearly</changefreq><priority>0.2</priority></url>
-  <url><loc>https://gobble-n1zy.onrender.com/terms.html</loc><changefreq>yearly</changefreq><priority>0.2</priority></url>
+  <url><loc>https://blobbit.onrender.com/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://blobbit.onrender.com/press.html</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://blobbit.onrender.com/privacy.html</loc><changefreq>yearly</changefreq><priority>0.2</priority></url>
+  <url><loc>https://blobbit.onrender.com/terms.html</loc><changefreq>yearly</changefreq><priority>0.2</priority></url>
 </urlset>
