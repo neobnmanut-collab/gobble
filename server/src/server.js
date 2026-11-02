@@ -19,6 +19,50 @@ const game = new Game();
 const BUILD = (process.env.RENDER_GIT_COMMIT || '').slice(0, 12) || String(Date.now());
 let stats = { tickMs: 0, bytesOut: 0, worstMs: 0, slow: 0, ticks: 0 };
 
+/* ---------- private stats: how many real, unique browsers actually played, last 30 days ----------
+   Each browser sends a random id (?b=...) it keeps in its own storage, so reconnects and region
+   switches are not double counted. Only you can read the number, at /stats?key=<STATS_KEY>; without
+   the exact key the page is a plain "Not found", so nobody stumbles on it. Nothing shows in the game.
+   Note: on Render's free plan the file resets on every code deploy (no persistent disk); add a disk
+   or set STATS_FILE to a mounted path to keep the history across deploys. */
+const STATS_KEY = process.env.STATS_KEY || 'b7k2-q9mx-blobbit-owner';
+const STATS_FILE = process.env.STATS_FILE || path.join(__dirname, '..', 'players.json');
+const playDays = new Map(); // 'YYYY-MM-DD' -> Set of browser ids that played that day
+let playDirty = false, mCache = 0, mCacheAt = 0;
+const dayKey = d => new Date(d).toISOString().slice(0, 10);
+function prunePlayDays() {
+  const keep = new Set(), now = Date.now();
+  for (let i = 0; i < 30; i++) keep.add(dayKey(now - i * 864e5));
+  for (const d of [...playDays.keys()]) if (!keep.has(d)) { playDays.delete(d); playDirty = true; }
+}
+function recordPlayer(bid) {
+  if (!bid) return; const d = dayKey(Date.now()); let s = playDays.get(d);
+  if (!s) { s = new Set(); playDays.set(d, s); }
+  if (!s.has(bid) && s.size < 500000) { s.add(bid); playDirty = true; mCacheAt = 0; }
+}
+function monthlyPlayers() {
+  const now = Date.now(); if (now - mCacheAt < 15000) return mCache;
+  prunePlayDays(); const all = new Set(); for (const s of playDays.values()) for (const b of s) all.add(b);
+  mCache = all.size; mCacheAt = now; return mCache;
+}
+function savePlayers() {
+  if (!playDirty) return; playDirty = false;
+  const out = { v: 1, days: {} }; for (const [d, s] of playDays) out.days[d] = [...s];
+  fs.writeFile(STATS_FILE, JSON.stringify(out), () => {});
+}
+try { const j = JSON.parse(fs.readFileSync(STATS_FILE, 'utf8')); for (const [d, a] of Object.entries(j.days || {})) playDays.set(d, new Set(a)); } catch (e) {}
+prunePlayDays();
+setInterval(savePlayers, 60000).unref();
+setInterval(prunePlayDays, 3600000).unref();
+function statsPage() {
+  prunePlayDays(); const now = Date.now();
+  const rows = []; for (let i = 0; i < 30; i++) { const d = dayKey(now - i * 864e5); rows.push([d, (playDays.get(d) || new Set()).size]); }
+  const today = rows[0][1], month = monthlyPlayers();
+  const bars = rows.map(([d, n]) => `<tr><td>${d}${i0(d)}</td><td class="n">${n}</td><td><span class="bar" style="width:${Math.min(100, n * 4)}%"></span></td></tr>`).join('');
+  return `<!doctype html><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>Blobbit · private stats</title><style>body{margin:0;background:#0e0f14;color:#eef0f5;font:15px/1.5 system-ui,sans-serif;padding:28px 18px;max-width:560px;margin:0 auto}h1{font-size:19px;margin:0 0 2px}.sub{color:#9aa0b4;font-size:13px;margin:0 0 22px}.big{display:flex;gap:14px;margin-bottom:24px;flex-wrap:wrap}.card{background:#171922;border:1px solid #262a38;border-radius:14px;padding:16px 20px;flex:1;min-width:150px}.card b{display:block;font-size:40px;line-height:1;color:#2aa58b}.card small{color:#9aa0b4}table{width:100%;border-collapse:collapse;font-size:13px}td{padding:4px 8px;border-bottom:1px solid #1c1f2a}td.n{text-align:right;width:48px;color:#ffd166}.bar{display:inline-block;height:9px;background:#2aa58b;border-radius:5px;min-width:0}.foot{color:#6b7085;font-size:12px;margin-top:20px}</style><h1>Blobbit — players</h1><p class=sub>Private. Unique browsers that actually played a game. Refresh to update.</p><div class=big><div class=card><b>${month}</b><small>last 30 days</small></div><div class=card><b>${today}</b><small>today (UTC)</small></div></div><table>${bars}</table><p class=foot>Counts real players only — reconnects from the same browser are not double counted. Free-plan note: this resets when the game is redeployed unless a persistent disk is attached.</p>`;
+}
+function i0(d) { return d === dayKey(Date.now()) ? ' · today' : ''; }
+
 /* ---------- web page ---------- */
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, 'http://x');
@@ -26,6 +70,13 @@ const server = http.createServer((req, res) => {
     let humans = 0; for (const c of game.clients) if (!c.dead) humans++;
     res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store', 'access-control-allow-origin': '*' });
     return res.end(JSON.stringify({ ok: true, players: humans, connections: game.clients.size, orbs: game.cells.length, tickMs: +stats.tickMs.toFixed(2), worstTickMs: +stats.worstMs.toFixed(1), slowTicks: stats.slow, ticks: stats.ticks, upMinutes: Math.round(process.uptime() / 60) }));
+  }
+  if (url.pathname === '/stats') { // private: only with the exact key; otherwise it looks like any missing page
+    if (STATS_KEY && url.searchParams.get('key') === STATS_KEY) {
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', 'x-robots-tag': 'noindex' });
+      return res.end(statsPage());
+    }
+    res.writeHead(404, { 'content-type': 'text/plain' }); return res.end('Not found');
   }
   /* old address: set MOVED_TO (e.g. https://blobbit.onrender.com) on the old Render service and every page link forwards there, party codes included */
   const moved = (process.env.MOVED_TO || '').replace(/\/+$/, '');
@@ -45,7 +96,8 @@ const wss = new WebSocketServer({ server, path: '/ws', maxPayload: 16384 /* voic
 
 wss.on('connection', (ws, req) => {
   let humans = 0; for (const c of game.clients) if (!c.dead) humans++;
-  const cl = { vid: ++voiceIds, voice: false, ws, dead: true, boxes: [], W: 1280, H: 720, knownPellets: new Set(), knownOwners: new Set(), sentBoxes: '', alive: true, splitBudget: 8, lastJoin: 0 };
+  let bid = ''; try { bid = (new URL(req.url, 'http://x').searchParams.get('b') || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 40); } catch (e) {}
+  const cl = { vid: ++voiceIds, voice: false, ws, dead: true, boxes: [], W: 1280, H: 720, knownPellets: new Set(), knownOwners: new Set(), sentBoxes: '', alive: true, splitBudget: 8, lastJoin: 0, bid };
   game.clients.add(cl);
   ws.binaryType = 'nodebuffer';
   send(cl, enc.hello(C.WORLD, C.SPEED, BUILD));
@@ -62,6 +114,7 @@ wss.on('connection', (ws, req) => {
         let h = 0; for (const c of game.clients) if (!c.dead && c !== cl) h++;
         if (h >= C.MAX_PLAYERS) return send(cl, enc.full());
         cl.W = m.W; cl.H = m.H; cl.test = m.test; const oldParty = cl.party; cl.spec = false; game.join(cl, m.name, m.multi, m.party); cl.sentParty = '';
+        recordPlayer(cl.bid); // count this browser as a player today (unique over 30 days)
         if (cl.voice && oldParty !== cl.party) { if (oldParty) voiceRoster(oldParty); if (cl.party) voiceRoster(cl.party); else { cl.voice = false; send(cl, enc.voiceRoster(cl.vid, [])); } }
         break;
       }

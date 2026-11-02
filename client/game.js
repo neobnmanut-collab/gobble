@@ -81,7 +81,9 @@ let region = null; try { region = localStorage.getItem('gobbleregion'); } catch 
 if (!SERVERS.some(s => s.id === region)) { const mine = SERVERS.find(s => s.url.replace(/\/$/, '') === here); region = (mine || SERVERS[0] || {}).id; }
 const regionPing = {};
 function serverUrl() { const s = SERVERS.find(x => x.id === region); return s ? s.url.replace(/\/$/, '') : here; }
-function wsUrl() { return serverUrl().replace(/^http/, 'ws') + '/ws'; }
+// a random id this browser keeps to itself, so the server can count unique players without double-counting reconnects
+let myBid = ''; try { myBid = localStorage.getItem('gobblebid') || ''; if (!myBid) { myBid = (Date.now().toString(36) + Math.random().toString(36).slice(2, 10)); localStorage.setItem('gobblebid', myBid); } } catch (e) {}
+function wsUrl() { return serverUrl().replace(/^http/, 'ws') + '/ws' + (myBid ? '?b=' + encodeURIComponent(myBid) : ''); }
 function renderRegions() {
   const box = $('regions'); box.textContent = ''; if (SERVERS.length < 2) return;
   for (const s of SERVERS) {
