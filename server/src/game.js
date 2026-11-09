@@ -593,8 +593,8 @@ class Game {
     const W = clamp(cl.W || 1280, 320, 3840), H = clamp(cl.H || 720, 320, 2160);
     const base = clamp(Math.min(W, H) / 600, 0.7, 1.4) * 1.35;
     const sN = Math.min(base / (1 + Math.sqrt(sm) / 26), Math.min(W, H) * 0.45 / (ext + 80));
-    // zooming out with the wheel widens what this player is sent, up to the whole arena (no vision limit)
-    const zo = 1 / Math.min(1, cl.zoom || 1), vw = Math.min(WS, W / 2 / sN * C.VIEW_SCALE * zo), vh = Math.min(WS, H / 2 / sN * C.VIEW_SCALE * zo);
+    // the view already scales with size (sN); the wheel can widen it a bit more, but only up to MAX_ZOOM_OUT times, not the whole arena
+    const zo = Math.min(C.MAX_ZOOM_OUT, 1 / Math.min(1, cl.zoom || 1)), vw = Math.min(WS, W / 2 / sN * C.VIEW_SCALE * zo), vh = Math.min(WS, H / 2 / sN * C.VIEW_SCALE * zo);
     return { x0: cx - vw, x1: cx + vw, y0: cy - vh, y1: cy + vh, cx, cy };
   }
 }

@@ -50,4 +50,5 @@ module.exports = {
 
   SPEC_ZOOM: 0.55,       // viewer mode zoom compared with a player's view (smaller = wider): 0.55 shows about 1.8x the area
   VIEW_SCALE: 1.0,       // how far past the screen a player can see (client/game.js has the same number)
+  MAX_ZOOM_OUT: 2.0,     // the view already widens with your size; the wheel can zoom out to this many times that size-based view, no further (client ZOOM_OUT_MIN = 1 / this)
 };

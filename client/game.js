@@ -8,6 +8,7 @@ const TAU = Math.PI * 2, clamp = (v, a, b) => (v < a ? a : v > b ? b : v), rad =
 const VIEW_SCALE = 1.0; // must match the server's VIEW_SCALE
 let WS = 12000, SPEED = 1685, W = 0, H = 0, dpr = 1, T = 0;
 const cam = { x: 6000, y: 6000, s: 0.5 }; let zm = 1;
+const ZOOM_OUT_MIN = 0.5; // the view grows with your size; the wheel can zoom out to 1/this (2x) that view, no further (server MAX_ZOOM_OUT = 1 / this)
 
 /* ---------- settings (same controls as the offline game) ---------- */
 // default keys follow what most players of this kind of game already use (Space split, W feed, D double, T triple, A 16-split, R respawn, Tab switch)
@@ -670,7 +671,7 @@ addEventListener('contextmenu', e => { if (e.target.closest && e.target.closest(
 addEventListener('blur', releaseAll);
 document.addEventListener('visibilitychange', () => { if (document.hidden) releaseAll(); else try { window.focus(); } catch (x) {} });
 // zoom: mouse wheel, two-finger scroll or pinch on a Mac trackpad (pinch arrives as wheel + Ctrl), or the = and − keys
-function setZoom(z) { zm = clamp(z, 0.01, 3); clearTimeout(resize.z); resize.z = setTimeout(() => { if (connected) send(Net.enc.size(W, H, zm)); }, 120); }
+function setZoom(z) { zm = clamp(z, ZOOM_OUT_MIN, 3); clearTimeout(resize.z); resize.z = setTimeout(() => { if (connected) send(Net.enc.size(W, H, zm)); }, 120); }
 cv.addEventListener('wheel', e => { e.preventDefault(); setZoom(zm * Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0015))); }, { passive: false });
 function tbtn(id, fn, hold) {
   const b = $(id);
