@@ -6,6 +6,7 @@ const te = new TextEncoder(), td = new TextDecoder();
 class Buf extends Uint8Array {
   static allocUnsafe(n) { return new Buf(n); }
   static from(v) { if (typeof v === 'string') { const u = te.encode(v); const b = new Buf(u.length); b.set(u); return b; } const b = new Buf(v.length); b.set(v); return b; }
+  static concat(list) { let n = 0; for (const b of list) n += b.length; const out = new Buf(n); let o = 0; for (const b of list) { out.set(b, o); o += b.length; } return out; }
   dv() { return new DataView(this.buffer, this.byteOffset, this.byteLength); }
   writeUInt8(v, o) { this[o] = v & 255; return o + 1; }
   writeUInt16LE(v, o) { this.dv().setUint16(o, v, true); return o + 2; }
@@ -32,7 +33,7 @@ window.__defineModule = (name, fn) => { defs[name] = fn; };
 // what the server needs from Node, reduced to what runs in a page
 let onConnection = null;
 defs.http = m => { m.exports = { createServer: () => ({ listen: (p, h, cb) => cb && cb() }) }; };
-defs.fs = m => { m.exports = {}; };
+defs.fs = m => { m.exports = { readFile: (p, cb) => cb && cb(new Error('no fs in browser'), null), writeFile: (p, d, cb) => cb && cb(), readFileSync: () => { throw new Error('no fs in browser'); } }; };
 defs.path = m => { m.exports = { resolve: (...a) => a.join('/'), join: (...a) => a.join('/'), sep: '/', extname: () => '' }; };
 defs.ws = m => { m.exports = { WebSocketServer: class { constructor() {} on(ev, fn) { if (ev === 'connection') onConnection = fn; } } }; };
 window.process = { env: {}, uptime: () => performance.now() / 1000 };

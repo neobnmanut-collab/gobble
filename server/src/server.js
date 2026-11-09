@@ -52,8 +52,8 @@ function savePlayers() {
 }
 try { const j = JSON.parse(fs.readFileSync(STATS_FILE, 'utf8')); for (const [d, a] of Object.entries(j.days || {})) playDays.set(d, new Set(a)); } catch (e) {}
 prunePlayDays();
-setInterval(savePlayers, 60000).unref();
-setInterval(prunePlayDays, 3600000).unref();
+setInterval(savePlayers, 60000).unref?.();      // unref lets Node exit on these timers; no-op in the offline (browser) build
+setInterval(prunePlayDays, 3600000).unref?.();
 function statsPage() {
   prunePlayDays(); const now = Date.now();
   const rows = []; for (let i = 0; i < 30; i++) { const d = dayKey(now - i * 864e5); rows.push([d, (playDays.get(d) || new Set()).size]); }

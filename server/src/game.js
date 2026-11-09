@@ -1,6 +1,7 @@
 'use strict';
 // The arena: one authoritative simulation shared by every player and bot.
 const C = require('./config');
+const { cleanName } = require('./filter');
 
 const WS = C.WORLD, G = C.GRID, GN = WS / G, TAU = Math.PI * 2;
 const MINM = C.MIN_PIECE, MAXC = C.MAX_PIECES, VPOP = C.SPIKE_POP_MASS;
@@ -295,7 +296,7 @@ class Game {
         if (this.owners.get(q.o)?.kind === 'human') sc *= 1.4;
         if ((oc.get(q.o) || 1) > 1 && q.mt > 2) sc *= 1.25; // split-up prey can't rejoin yet: easy pickings
         if (wall < q.r + 300) sc *= 1.2; // cornered prey can't run far
-        if (q.m * 6 < lead.m) { let feast = 0; for (const z of ps === null ? [] : cells) { if (z === q || z.o === o || z.m * C.EAT_RATIO >= lead.m) continue; const zx = z.x - q.x, zy = z.y - q.y; if (zx * zx + zy * zy < 160000) feast += z.m; } sc *= 1 + Math.min(2, feast / (q.m + 1) * 0.15); } // a cluster of small pieces: dinner
+        if (q.m * 6 < lead.m) { let feast = 0; for (const z of cells) { if (z === q || z.o === o || z.m * C.EAT_RATIO >= lead.m) continue; const zx = z.x - q.x, zy = z.y - q.y; if (zx * zx + zy * zy < 160000) feast += z.m; } sc *= 1 + Math.min(2, feast / (q.m + 1) * 0.15); } // a cluster of small pieces: dinner
         if (sc > bs) { bs = sc; tgt = q; td = d; }
       }
     }
@@ -599,4 +600,3 @@ class Game {
 }
 
 module.exports = { Game, rad, gi, GN };
-const { cleanName } = require('./filter');

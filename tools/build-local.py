@@ -15,7 +15,7 @@ def js(src):  # keep a closing script tag inside code from ending the inline blo
     return src.replace('</script', '<\\/script')
 scripts = [
     (root / 'tools/local-shim.js').read_text(),
-    mod('config', 'server/src/config.js') + mod('game', 'server/src/game.js') + mod('protocol', 'server/src/protocol.js') + mod('server', 'server/src/server.js'),
+    mod('config', 'server/src/config.js') + mod('filter', 'server/src/filter.js') + mod('game', 'server/src/game.js') + mod('protocol', 'server/src/protocol.js') + mod('server', 'server/src/server.js'),
     "__startLocalServer();",
     (root / 'client/i18n.js').read_text(),
     (root / 'client/net.js').read_text(),

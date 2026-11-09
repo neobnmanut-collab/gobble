@@ -32,8 +32,6 @@ function textFor(hex) { return light(hex) ? { name: '#1a1a1a', mass: 'rgba(0,0,0
 function setCols(a, i) { const ok = v => typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v); colA = ok(a) ? a.toLowerCase() : COL_DEF[0]; colI = ok(i) ? i.toLowerCase() : COL_DEF[1]; txtA = textFor(colA); txtI = textFor(colI); if (colsReady) { markClashes(); setTimeout(sendCols, 0); } }
 // other multibox players' chosen colours (owner id -> { hex, txt, clash }), always shown exactly as they picked them
 const ownerCol = new Map(); colsReady = true;
-function rgbOf(h) { const n = parseInt(h.slice(1), 16); return [n >> 16, n >> 8 & 255, n & 255]; }
-function near(a, b) { const x = rgbOf(a), y = rgbOf(b); return Math.hypot(x[0] - y[0], x[1] - y[1], x[2] - y[2]) < 80; }
 function markClashes() { for (const v of ownerCol.values()) v.clash = false; } // everyone is always shown in the colours they picked, even if they match yours
 function sendCols() { if (connected) send(Net.enc.cols(colA, colI, pass.skin, pass.badge)); }
 const ownerSkin = new Map(); // owner id -> sticker skin other players picked
@@ -162,7 +160,7 @@ function handle(m) {
           if (dtt > 0.008 && dtt < 0.5) { const k = 0.6; e.vx = e.vx * (1 - k) + (c.x - e.tx) / dtt * k; e.vy = e.vy * (1 - k) + (c.y - e.ty) / dtt * k; }
           e.ox = e.x; e.oy = e.y; e.or = e.r; e.tx = c.x; e.ty = c.y; e.tr = c.r; e.m = c.m; e.o = c.o; e.lt = lastTick;
         }
-        else ents.set(c.id, { id: c.id, o: c.o, x: c.x, y: c.y, r: c.r, ox: c.x, oy: c.y, or: c.r, tx: c.x, ty: c.y, tr: c.r, m: c.m, vx: 0, vy: 0, lt: lastTick, pux: 0, puy: 0 });
+        else ents.set(c.id, { id: c.id, o: c.o, x: c.x, y: c.y, r: c.r, ox: c.x, oy: c.y, or: c.r, tx: c.x, ty: c.y, tr: c.r, m: c.m, vx: 0, vy: 0, lt: lastTick });
       }
       for (const id of ents.keys()) if (!seen.has(id)) ents.delete(id);
       const ss = new Set();
@@ -439,21 +437,11 @@ function textSprite(str, devPx, weight, fill, stroke) {
 }
 const fb = Array.from({ length: 12 }, () => []), ejb = new Map(), BLOB_R = 23; // fed blobs look bigger than their real size (16)
 function draw(dt) {
-  const k = dd <= 0 ? 1 : smooth(dt / (dd / 1000 * 0.6)), now = performance.now(), aid = playing ? activeId() : -1, aim = playing ? aimPoint() : null;
+  const now = performance.now(), aim = playing ? aimPoint() : null;
   for (const e of ents.values()) {
     // draw delay: glide in a straight line from where the orb was drawn to its new position over dd milliseconds
     const since = now - e.lt, p = dd <= 0 ? 1 : Math.min(1, since / dd), over = Math.min(0.12, Math.max(0, since - Math.max(dd, 34)) / 1000);
     e.x = e.ox + (e.tx - e.ox) * p + e.vx * over; e.y = e.oy + (e.ty - e.oy) * p + e.vy * over; e.r = e.or + (e.tr - e.or) * p;
-    if (false) { // (local prediction switched off: it made orbs look closer or safer than they were)
-      // your own orb: move it locally toward the mouse right away, then pull it gently onto where the server has it
-      const lat = Math.min(0.3, ping / 2000 + age), sx = e.tx + e.vx * lat, sy = e.ty + e.vy * lat;
-      let dx = aim.x - e.x, dy = aim.y - e.y; const d = Math.hypot(dx, dy); let dvx = 0, dvy = 0;
-      if (d > 2) { const s = SPEED * Math.pow(e.m, -0.25) * Math.min(1, d / (e.r + 20)); dvx = dx / d * s; dvy = dy / d * s; }
-      const kk = Math.min(1, dt * 7); e.pux += (dvx - e.pux) * kk; e.puy += (dvy - e.puy) * kk;
-      e.x += e.pux * dt; e.y += e.puy * dt;
-      const ex = sx - e.x, ey = sy - e.y, err = Math.hypot(ex, ey), c = smooth(dt * (err > e.r * 0.5 ? 14 : 4));
-      e.x += ex * c; e.y += ey * c;
-    }
   }
   for (const v of spikes.values()) { const p = dd <= 0 || v.ox === undefined ? 1 : Math.min(1, (now - v.lt) / dd); if (v.ox !== undefined) { v.x = v.ox + (v.tx - v.ox) * p; v.y = v.oy + (v.ty - v.oy) * p; }
     // needles stay perfectly still; they only turn while sliding after being shot or while something passes through
@@ -702,19 +690,9 @@ $('mSolo').addEventListener('click', () => setMode(false)); $('mMulti').addEvent
 $('go').addEventListener('click', () => { const viewing = watching && watchChosen; if ((playing && !watchChosen) || viewing) resumeGame(); else startGame(); });
 $('nm').addEventListener('keydown', e => { if (e.key === 'Enter') startGame(); });
 
-/* ---------- growth speed, 1x to 3x, each player's own choice ---------- */
-const growth = 1; // growth speed is fixed at 1x for everyone (the picker was removed)
-function renderGrowth() {
-  for (const id of ['grow', 'growc']) {
-    const box = $(id); if (!box) continue; box.textContent = '';
-    for (let v = 1; v <= 3; v++) {
-      const b = document.createElement('button'); b.type = 'button'; b.textContent = v + '×'; b.setAttribute('aria-pressed', v === growth);
-      b.onclick = () => {};
-      box.append(b);
-    }
-  }
-}
-renderGrowth(); $('tmode').hidden = !TEST;
+/* ---------- growth speed: fixed at 1× for everyone (the per-player picker was removed) ---------- */
+const growth = 1;
+$('tmode').hidden = !TEST;
 
 /* ---------- parties ---------- */
 function cleanCode(s) { return String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8); }
